@@ -1471,8 +1471,8 @@
                     (err) => {
                         setGeoStatus('error');
                         setGeoError(err.code === err.PERMISSION_DENIED
-                            ? "Localisation refusée : autorisez l'accès à votre position pour voir les vétérinaires les plus proches."
-                            : "Impossible de récupérer votre position pour le moment.");
+                            ? "Localisation refusée : activez la géolocalisation de votre appareil (paramètres de localisation/GPS du téléphone) et autorisez ce site à accéder à votre position, puis réessayez."
+                            : "Impossible de récupérer votre position pour le moment. Vérifiez que la géolocalisation est activée sur votre appareil.");
                     },
                     { enableHighAccuracy: true, timeout: 10000 }
                 );
