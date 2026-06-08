@@ -125,9 +125,21 @@
             return { vaccinNames, lastWeight, currentMedications, observationTypes };
         };
 
-        // Format an animal's record as plain text, ready to be sent by email to a vétérinaire
+        // Format an animal's record as plain text, ready to be sent by email to a vétérinaire.
+        // Includes the full written content of every observation (mailto: links can't carry photo/audio attachments,
+        // so those are pointed to the printable dossier report instead).
         const buildDossierEmailBody = (animal) => {
-            const { vaccinNames, lastWeight, currentMedications, observationTypes } = getAnimalDossier(animal);
+            const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
+            const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const obsLines = observations.length > 0
+                ? observations.map(o => {
+                    const label = (TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '');
+                    const attachments = [o.photo ? '📷 photo' : null, o.audio ? '🎙️ audio' : null].filter(Boolean).join(' + ');
+                    return `  • [${o.date}] ${label}${o.description ? ' — ' + o.description : ''}${attachments ? ` (${attachments}, voir le dossier complet)` : ''}`;
+                })
+                : ['  • aucune observation enregistrée'];
+            const hasMedia = observations.some(o => o.photo || o.audio);
+
             return [
                 `Dossier santé de ${animal.nom} (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece}${animal.race ? ', ' + animal.race : ''})`,
                 animal.sexe ? `Sexe : ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}` : null,
@@ -135,11 +147,64 @@
                 '',
                 `💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`,
                 `⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`,
-                `💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map(m => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence}x/jour)`).join(', ') : 'aucun'}`,
-                `📋 Observations enregistrées : ${observationTypes.length > 0 ? observationTypes.map(t => (TYPE_LABELS[t] || t).replace(/^[^\s]+\s/, '')).join(', ') : 'aucune'}`,
+                `💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map(m => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence})`).join(', ') : 'aucun'}`,
+                '',
+                '📋 Observations :',
+                ...obsLines,
+                hasMedia ? "\nℹ️ Certaines observations contiennent des photos ou enregistrements audio : ouvrez le dossier complet (bouton « 🖨️ Dossier complet ») pour les consulter ou les joindre à cet e-mail." : null,
                 '',
                 'Envoyé depuis Carnet Santé PRO'
             ].filter(line => line !== null).join('\n');
+        };
+
+        // Escape text before injecting it into the printable HTML report (the report is built via document.write)
+        const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // Open a printable, standalone report with the full written record AND embedded photos/audio,
+        // so the owner can save it as PDF or print it to hand/send to the vétérinaire (mailto: can't carry attachments)
+        const openDossierReport = (animal) => {
+            const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
+            const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const win = window.open('', '_blank');
+            if (!win) return;
+
+            const obsHtml = observations.length > 0
+                ? observations.map(o => `
+                    <div class="obs">
+                        <p class="obs-head"><strong>${escapeHtml(TYPE_LABELS[o.type] || o.type)}</strong> — ${escapeHtml(o.date)}</p>
+                        ${o.description ? `<p>${escapeHtml(o.description)}</p>` : ''}
+                        ${o.photo ? `<img src="${escapeHtml(o.photo)}" alt="Photo observation" />` : ''}
+                        ${o.audio ? `<audio controls src="${escapeHtml(o.audio)}"></audio>` : ''}
+                    </div>`).join('')
+                : '<p>Aucune observation enregistrée</p>';
+
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dossier santé - ${escapeHtml(animal.nom)}</title>
+                <style>
+                    body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 800px; margin: 0 auto; }
+                    h1 { color: #10b981; margin-bottom: 4px; }
+                    h2 { margin-top: 28px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; font-size: 18px; }
+                    .obs { margin-bottom: 14px; padding: 12px; background: #f9fafb; border-radius: 8px; }
+                    .obs-head { margin: 0 0 6px; }
+                    img { max-width: 320px; display: block; margin-top: 8px; border-radius: 6px; }
+                    audio { margin-top: 8px; display: block; }
+                    .print-btn { padding: 10px 18px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 20px; }
+                    @media print { .print-btn { display: none; } }
+                </style></head>
+                <body>
+                    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+                    <h1>🐾 Dossier santé de ${escapeHtml(animal.nom)}</h1>
+                    <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
+                    ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(animal.dateNaissance)}</p>` : ''}
+                    <h2>💉 Vaccins</h2>
+                    <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
+                    <h2>⚖️ Poids actuel</h2>
+                    <p>${lastWeight ? `${escapeHtml(lastWeight.valeur)} kg (mesuré le ${escapeHtml(lastWeight.date)})` : 'Non renseigné'}</p>
+                    <h2>💊 Médicaments en cours</h2>
+                    <p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
+                    <h2>📋 Observations</h2>
+                    ${obsHtml}
+                </body></html>`);
+            win.document.close();
         };
 
         // Main App Component
@@ -609,7 +674,7 @@
             } else if (activeTab === 'poids') {
                 return <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'budget') {
-                return <BudgetTab animal={animal} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
                 return <VeterinairesTab animal={animal} updateAnimalFields={updateAnimalFields} />;
             } else if (activeTab === 'rappels') {
@@ -781,7 +846,8 @@
 
                     <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
                         <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
-                        <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal</p>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</p>
+                        <button onClick={(e) => { e.stopPropagation(); openDossierReport(animal); }} style={{ width: '100%', marginBottom: '8px', padding: '6px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos et audio)</button>
                         {(animal.partages && animal.partages.length > 0) ? (
                             animal.partages.map(p => (
                                 <div key={p.id} style={{ fontSize: '11px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1266,7 +1332,7 @@
             );
         }
 
-        function BudgetTab({ animal, budgetFilter, setBudgetFilter, getFilteredBudget, addAnimalItem, deleteAnimalItem }) {
+        function BudgetTab({ animal, animals, budgetFilter, setBudgetFilter, getFilteredBudget, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1277,10 +1343,7 @@
             const [type, setType] = React.useState('Vétérinaire');
             const [montant, setMontant] = React.useState('');
             const [date, setDate] = React.useState(todayStr);
-
-            const budget = animal.budget || [];
-            const filtered = getFilteredBudget(budget);
-            const total = filtered.reduce((s, b) => s + b.montant, 0);
+            const [budgetAnimalFilter, setBudgetAnimalFilter] = React.useState('tous');
 
             const handleAdd = () => {
                 const m = parseFloat(montant);
@@ -1292,9 +1355,30 @@
                 }
             };
 
+            // Tag every expense with its animal so they can be combined and sorted by animal
+            const taggedEntries = (a) => getFilteredBudget(a.budget || []).map(b => ({ ...b, animalId: a.id, animalNom: a.nom, animalEmoji: EMOJIS_ESPECE[a.espece] || '🐾' }));
+            const allEntries = animals.flatMap(taggedEntries);
+            const entries = budgetAnimalFilter === 'tous' ? allEntries : allEntries.filter(b => b.animalId === budgetAnimalFilter);
+            const total = entries.reduce((s, b) => s + b.montant, 0);
+            const perAnimalTotals = animals
+                .map(a => ({ id: a.id, nom: a.nom, emoji: EMOJIS_ESPECE[a.espece] || '🐾', total: taggedEntries(a).reduce((s, b) => s + b.montant, 0) }))
+                .filter(t => t.total > 0)
+                .sort((a, b) => b.total - a.total);
+
+            const filteredAnimal = animals.find(a => a.id === budgetAnimalFilter);
+            const titleSuffix = budgetAnimalFilter === 'tous' ? 'de tous mes animaux' : `de ${filteredAnimal ? filteredAnimal.nom : animal.nom}`;
+
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💰 Budget de {animal.nom}</h2>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💰 Budget {titleSuffix}</h2>
+
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>Trier par animal :</span>
+                        <select value={budgetAnimalFilter} onChange={(e) => setBudgetAnimalFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                            <option value="tous">🐾 Tous les animaux</option>
+                            {animals.map(a => <option key={a.id} value={a.id}>{EMOJIS_ESPECE[a.espece] || '🐾'} {a.nom}</option>)}
+                        </select>
+                    </div>
 
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
                         {['tout', 'semaine', 'mois', 'annee'].map(filter => (
@@ -1325,25 +1409,39 @@
                         </button>
                     )}
 
-                    {filtered.length > 0 && (
+                    {entries.length > 0 && (
                         <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', textAlign: 'center', marginBottom: '20px' }}>
-                            <p style={{ color: '#92400e', fontSize: '13px' }}>Total pour {animal.nom}</p>
+                            <p style={{ color: '#92400e', fontSize: '13px' }}>Total {titleSuffix}</p>
                             <h3 style={{ fontSize: '36px', fontWeight: '700', color: '#b45309' }}>{total.toFixed(2)}€</h3>
                         </div>
                     )}
 
+                    {budgetAnimalFilter === 'tous' && perAnimalTotals.length > 1 && (
+                        <div style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                            <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '10px' }}>Répartition par animal</h4>
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                                {perAnimalTotals.map(t => (
+                                    <div key={t.id} onClick={() => setBudgetAnimalFilter(t.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px', cursor: 'pointer' }}>
+                                        <span style={{ fontSize: '13px' }}>{t.emoji} {t.nom}</span>
+                                        <strong style={{ fontSize: '14px', color: '#f59e0b' }}>{t.total.toFixed(2)}€</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {filtered.length === 0 ? (
+                        {entries.length === 0 ? (
                             <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune dépense</p>
                         ) : (
-                            [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date)).map((b, i) => (
+                            [...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((b, i) => (
                                 <div key={b.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
-                                        <p style={{ fontWeight: '600' }}>{CATEGORY_EMOJIS[b.type] || ''} {b.type}</p>
+                                        <p style={{ fontWeight: '600' }}>{CATEGORY_EMOJIS[b.type] || ''} {b.type}{budgetAnimalFilter === 'tous' && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#10b981', background: '#f0fdf4', padding: '2px 8px', borderRadius: '4px' }}>{b.animalEmoji} {b.animalNom}</span>}</p>
                                         <p style={{ fontSize: '12px', color: '#6b7280' }}>{b.date}</p>
                                         <p style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b', marginTop: '4px' }}>{b.montant.toFixed(2)}€</p>
                                     </div>
-                                    {b.id && <button onClick={() => deleteAnimalItem(animal, 'budget', b.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    {b.id && <button onClick={() => deleteAnimalItem(animals.find(a => a.id === b.animalId) || animal, 'budget', b.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                 </div>
                             ))
                         )}
@@ -1474,6 +1572,7 @@
                     alert('Paramètres sauvegardés !');
                 } catch (error) {
                     console.error('Erreur saving settings:', error);
+                    alert("Échec de la sauvegarde des paramètres : les règles de sécurité Firestore du projet n'autorisent pas l'écriture dans la collection « settings » pour cet utilisateur. Mettez à jour les règles Firestore (Console Firebase) pour autoriser allow read, write sur /settings/{id} si request.auth.uid == resource.data.userId (et la création si request.auth.uid == request.resource.data.userId).");
                 }
             };
 
