@@ -94,11 +94,53 @@
             'Oméprazole', 'Famotidine', 'Lactulose', 'Probiotiques'
         ];
         const VETERINAIRES = [
-            { id: 1, nom: "Clinique Saint-Germain", distance: "2.3 km", telephone: "01 23 45 67 89", horaires: "Lun-Ven: 9h-19h", specialites: ["Chiens", "Chats"], rating: 4.8 },
-            { id: 2, nom: "Vétérinaire 24h/24", distance: "5.1 km", telephone: "01 98 76 54 32", horaires: "24h/24, 7j/7", specialites: ["Urgences"], rating: 4.6 },
-            { id: 3, nom: "Clinique Exotiques", distance: "3.8 km", telephone: "01 45 23 12 34", horaires: "Lun-Ven: 10h-18h", specialites: ["Reptiles", "Oiseaux"], rating: 4.9 },
+            { id: 1, nom: "Clinique Saint-Germain", distance: "2.3 km", lat: 48.8539, lng: 2.3340, telephone: "01 23 45 67 89", horaires: "Lun-Ven: 9h-19h", specialites: ["Chiens", "Chats"], rating: 4.8 },
+            { id: 2, nom: "Vétérinaire 24h/24", distance: "5.1 km", lat: 48.8907, lng: 2.3617, telephone: "01 98 76 54 32", horaires: "24h/24, 7j/7", specialites: ["Urgences"], rating: 4.6 },
+            { id: 3, nom: "Clinique Exotiques", distance: "3.8 km", lat: 48.8330, lng: 2.3708, telephone: "01 45 23 12 34", horaires: "Lun-Ven: 10h-18h", specialites: ["Reptiles", "Oiseaux"], rating: 4.9 },
         ];
+        const TYPE_LABELS = {
+            comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
+            blessure: '🩹 Blessure', maladie: '🤒 Maladie', autres: '➕ Autres'
+        };
         const MAX_FILE_SIZE = 700 * 1024;
+
+        // Distance in km between two lat/lng points (Haversine formula)
+        const getDistanceKm = (lat1, lng1, lat2, lng2) => {
+            const toRad = (deg) => deg * Math.PI / 180;
+            const R = 6371;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+
+        // Build a clear summary of an animal's record: vaccine names, current weight,
+        // ongoing medications and the kinds of observations logged
+        const getAnimalDossier = (animal) => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const vaccinNames = (animal.vaccins || []).map(v => v.nom);
+            const lastWeight = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0] || null;
+            const currentMedications = (animal.medicaments || []).filter(m => todayStr >= m.dateDebut && todayStr <= m.dateFin);
+            const observationTypes = [...new Set((animal.observations || []).map(o => o.type))];
+            return { vaccinNames, lastWeight, currentMedications, observationTypes };
+        };
+
+        // Format an animal's record as plain text, ready to be sent by email to a vétérinaire
+        const buildDossierEmailBody = (animal) => {
+            const { vaccinNames, lastWeight, currentMedications, observationTypes } = getAnimalDossier(animal);
+            return [
+                `Dossier santé de ${animal.nom} (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece}${animal.race ? ', ' + animal.race : ''})`,
+                animal.sexe ? `Sexe : ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}` : null,
+                animal.dateNaissance ? `Date de naissance : ${animal.dateNaissance}` : null,
+                '',
+                `💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`,
+                `⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`,
+                `💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map(m => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence}x/jour)`).join(', ') : 'aucun'}`,
+                `📋 Observations enregistrées : ${observationTypes.length > 0 ? observationTypes.map(t => (TYPE_LABELS[t] || t).replace(/^[^\s]+\s/, '')).join(', ') : 'aucune'}`,
+                '',
+                'Envoyé depuis Carnet Santé PRO'
+            ].filter(line => line !== null).join('\n');
+        };
 
         // Main App Component
         function App() {
@@ -712,11 +754,16 @@
 
         function SanteCard({ animal, selected, onSelect, addAnimalItem, deleteAnimalItem }) {
             const [email, setEmail] = React.useState('');
+            const dossier = getAnimalDossier(animal);
 
+            // Record the share, then open the user's email client with the dossier pre-filled for the vétérinaire
             const handleShare = (e) => {
                 e.stopPropagation();
                 if (email && email.includes('@')) {
                     addAnimalItem(animal, 'partages', { email });
+                    const subject = `Dossier santé de ${animal.nom}`;
+                    const body = buildDossierEmailBody(animal);
+                    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                     setEmail('');
                 }
             };
@@ -724,11 +771,17 @@
             return (
                 <div onClick={onSelect} className="animate-fade-in" style={{ background: 'white', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #10b981', border: selected ? '2px solid #10b981' : '1px solid #e5e7eb', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
-                    <p style={{ color: '#6b7280', marginTop: '12px', fontSize: '14px' }}>💉 Vaccins: {(animal.vaccins || []).length} | 💊 Médicaments: {(animal.medicaments || []).length}</p>
-                    <p style={{ color: '#6b7280', fontSize: '14px' }}>⚖️ Poids: {(animal.poids || []).length > 0 ? '✅' : '❌'} | 📋 Notes: {(animal.observations || []).length}</p>
+
+                    <div style={{ marginTop: '12px', display: 'grid', gap: '6px', fontSize: '13px', color: '#374151' }}>
+                        <p><strong>💉 Vaccins :</strong> {dossier.vaccinNames.length > 0 ? dossier.vaccinNames.join(', ') : 'aucun'}</p>
+                        <p><strong>⚖️ Poids actuel :</strong> {dossier.lastWeight ? `${dossier.lastWeight.valeur} kg (${dossier.lastWeight.date})` : 'non renseigné'}</p>
+                        <p><strong>💊 Médicaments en cours :</strong> {dossier.currentMedications.length > 0 ? dossier.currentMedications.map(m => m.nom).join(', ') : 'aucun'}</p>
+                        <p><strong>📋 Observations :</strong> {dossier.observationTypes.length > 0 ? dossier.observationTypes.map(t => (TYPE_LABELS[t] || t)).join(', ') : 'aucune'}</p>
+                    </div>
 
                     <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-                        <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '8px' }}>📤 Partage Vétérinaire</h4>
+                        <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal</p>
                         {(animal.partages && animal.partages.length > 0) ? (
                             animal.partages.map(p => (
                                 <div key={p.id} style={{ fontSize: '11px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -741,7 +794,7 @@
                         )}
                         <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email vétérinaire" style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px' }} />
-                            <button onClick={handleShare} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Partager</button>
+                            <button onClick={handleShare} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>📧 Partager</button>
                         </div>
                     </div>
                 </div>
@@ -960,10 +1013,6 @@
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
-            const TYPE_LABELS = {
-                comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
-                blessure: '🩹 Blessure', maladie: '🤒 Maladie', autres: '➕ Autres'
-            };
 
             const [showForm, setShowForm] = React.useState(false);
             const [type, setType] = React.useState('comportement');
@@ -1304,14 +1353,56 @@
         }
 
         function VeterinairesTab({ animal, updateAnimalFields }) {
+            const [userPos, setUserPos] = React.useState(null);
+            const [geoStatus, setGeoStatus] = React.useState('idle'); // idle | loading | done | error
+            const [geoError, setGeoError] = React.useState('');
+
+            const locateMe = () => {
+                if (!navigator.geolocation) {
+                    setGeoStatus('error');
+                    setGeoError("La géolocalisation n'est pas disponible sur cet appareil.");
+                    return;
+                }
+                setGeoStatus('loading');
+                setGeoError('');
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                        setGeoStatus('done');
+                    },
+                    (err) => {
+                        setGeoStatus('error');
+                        setGeoError(err.code === err.PERMISSION_DENIED
+                            ? "Localisation refusée : autorisez l'accès à votre position pour voir les vétérinaires les plus proches."
+                            : "Impossible de récupérer votre position pour le moment.");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            };
+
+            const vets = userPos
+                ? VETERINAIRES
+                    .map(v => ({ ...v, distanceKm: getDistanceKm(userPos.lat, userPos.lng, v.lat, v.lng) }))
+                    .sort((a, b) => a.distanceKm - b.distanceKm)
+                : VETERINAIRES;
+
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🏥 Vétérinaires</h2>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
+                            {geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trier par proximité'}
+                        </button>
+                        {geoStatus === 'done' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>✅ Vétérinaires triés par proximité avec votre position actuelle</p>}
+                        {geoStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {geoError}</p>}
+                    </div>
+
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-                        {VETERINAIRES.map(vet => (
+                        {vets.map(vet => (
                             <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</h3>
-                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distance}</p>
+                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distanceKm != null ? `≈ ${vet.distanceKm.toFixed(1)} km de votre position` : vet.distance}</p>
                                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>
                                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>
                                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>
