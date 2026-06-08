@@ -3,135 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carnet Santé PRO</title>
+    <title>Carnet Santé PRO - Firebase Edition</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2220007213028900" crossorigin="anonymous"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #1f2937; }
+        #root { min-height: 100vh; }
+    </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDZ_dc_HfSmXL1pjeKwT7uD1xX2lbr48c0",
+            authDomain: "carnet-sante-pro.firebaseapp.com",
+            projectId: "carnet-sante-pro",
+            storageBucket: "carnet-sante-pro.firebasestorage.app",
+            messagingSenderId: "1059301417055",
+            appId: "1:1059301417055:web:8f5f81e0b075063ad4fbea"
+        };
 
+        const { initializeApp } = window.firebase;
+        const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } = window.firebase.auth;
+        const { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc, setDoc } = window.firebase.firestore;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Main App Component
         function App() {
-            const [user, setUser] = useState(null);
-            const [animals, setAnimals] = useState([]);
-            const [selectedAnimal, setSelectedAnimal] = useState(null);
-            const [activeTab, setActiveTab] = useState('accueil');
-            const [reminderDays, setReminderDays] = useState(3);
+            const [user, setUser] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+            const [activeTab, setActiveTab] = React.useState('accueil');
+            const [animals, setAnimals] = React.useState([]);
+            const [selectedAnimal, setSelectedAnimal] = React.useState(null);
+            const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3 });
 
-            // Load data from localStorage
-            useEffect(() => {
-                const savedUser = localStorage.getItem('carnetsante_user');
-                const savedAnimals = localStorage.getItem('carnetsante_animals');
-                const savedReminder = localStorage.getItem('carnetsante_reminder');
-                
-                if (savedUser) setUser(JSON.parse(savedUser));
-                if (savedAnimals) setAnimals(JSON.parse(savedAnimals));
-                if (savedReminder) setReminderDays(parseInt(savedReminder));
+            // Auth State
+            React.useEffect(() => {
+                onAuthStateChanged(auth, async (currentUser) => {
+                    setUser(currentUser);
+                    setLoading(false);
+                    if (currentUser) {
+                        loadAnimalsFromFirestore(currentUser.uid);
+                        loadSettings(currentUser.uid);
+                    }
+                });
             }, []);
 
-            // Save data to localStorage
-            const saveData = (newAnimals) => {
-                setAnimals(newAnimals);
-                localStorage.setItem('carnetsante_animals', JSON.stringify(newAnimals));
+            // Load Animals from Firestore
+            const loadAnimalsFromFirestore = async (uid) => {
+                try {
+                    const q = query(collection(db, 'animals'), where('userId', '==', uid));
+                    const querySnapshot = await getDocs(q);
+                    const animalsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setAnimals(animalsData);
+                    if (animalsData.length > 0) setSelectedAnimal(animalsData[0].id);
+                } catch (error) {
+                    console.error('Erreur loading animals:', error);
+                }
             };
 
-            // Login
-            const handleLogin = (email, password) => {
-                const userData = { email, password, loginDate: new Date().toISOString() };
-                setUser(userData);
-                localStorage.setItem('carnetsante_user', JSON.stringify(userData));
-            };
-
-            // Logout
-            const handleLogout = () => {
-                setUser(null);
-                setSelectedAnimal(null);
-                localStorage.removeItem('carnetsante_user');
-            };
-
-            // Add animal
-            const addAnimal = (name, species, race) => {
-                const newAnimal = {
-                    id: Date.now(),
-                    nom: name,
-                    espece: species,
-                    race: race,
-                    vaccins: [],
-                    medicaments: [],
-                    observations: [],
-                    createdAt: new Date().toISOString()
-                };
-                const newAnimals = [...animals, newAnimal];
-                saveData(newAnimals);
-                setSelectedAnimal(newAnimal.id);
-            };
-
-            // Delete animal
-            const deleteAnimal = (id) => {
-                const newAnimals = animals.filter(a => a.id !== id);
-                saveData(newAnimals);
-                if (selectedAnimal === id) setSelectedAnimal(null);
-            };
-
-            // Add vaccin
-            const addVaccin = (animalId, nom, date) => {
-                const newAnimals = animals.map(a => {
-                    if (a.id === animalId) {
-                        return { ...a, vaccins: [...a.vaccins, { id: Date.now(), nom, date }] };
+            // Load Settings
+            const loadSettings = async (uid) => {
+                try {
+                    const q = query(collection(db, 'settings'), where('userId', '==', uid));
+                    const querySnapshot = await getDocs(q);
+                    if (querySnapshot.docs.length > 0) {
+                        const settings = querySnapshot.docs[0].data();
+                        setReminderSettings(settings.reminders || { vaccin: 3, medicament: 3 });
                     }
-                    return a;
-                });
-                saveData(newAnimals);
+                } catch (error) {
+                    console.error('Erreur loading settings:', error);
+                }
             };
 
-            // Add medicament
-            const addMedicament = (animalId, nom, posologie, dateDebut) => {
-                const newAnimals = animals.map(a => {
-                    if (a.id === animalId) {
-                        return { ...a, medicaments: [...a.medicaments, { id: Date.now(), nom, posologie, dateDebut }] };
+            // Save Animal to Firestore
+            const saveAnimal = async (animalData) => {
+                try {
+                    if (animalData.id && animals.find(a => a.id === animalData.id)) {
+                        // Update existing
+                        await updateDoc(doc(db, 'animals', animalData.id), animalData);
+                    } else {
+                        // Create new
+                        const docRef = await addDoc(collection(db, 'animals'), { ...animalData, userId: user.uid, createdAt: new Date() });
+                        animalData.id = docRef.id;
                     }
-                    return a;
-                });
-                saveData(newAnimals);
+                    loadAnimalsFromFirestore(user.uid);
+                } catch (error) {
+                    console.error('Erreur saving animal:', error);
+                }
             };
 
-            // Get reminders
+            // Delete Animal
+            const deleteAnimalFromFirestore = async (animalId) => {
+                try {
+                    await deleteDoc(doc(db, 'animals', animalId));
+                    loadAnimalsFromFirestore(user.uid);
+                    setSelectedAnimal(null);
+                } catch (error) {
+                    console.error('Erreur deleting animal:', error);
+                }
+            };
+
+            // Check Reminders across all animals, sorted by urgency
             const getReminders = () => {
                 const reminders = [];
                 const today = new Date();
 
                 animals.forEach(animal => {
-                    animal.vaccins?.forEach(v => {
+                    (animal.vaccins || []).forEach(v => {
                         const vaccineDate = new Date(v.date);
                         const daysUntil = Math.ceil((vaccineDate - today) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= reminderDays && daysUntil > 0) {
-                            reminders.push({
-                                type: 'vaccin',
-                                animal: animal.nom,
-                                nom: v.nom,
-                                date: v.date,
-                                daysUntil,
-                                urgent: daysUntil <= 1
-                            });
+                        if (daysUntil <= reminderSettings.vaccin && daysUntil > 0) {
+                            reminders.push({ type: 'vaccin', animal: animal.nom, nom: v.nom, daysUntil, urgent: daysUntil <= 1 });
                         }
                     });
 
-                    animal.medicaments?.forEach(m => {
+                    (animal.medicaments || []).forEach(m => {
                         const medDate = new Date(m.dateDebut);
                         const daysUntil = Math.ceil((medDate - today) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= reminderDays && daysUntil > 0) {
-                            reminders.push({
-                                type: 'medicament',
-                                animal: animal.nom,
-                                nom: m.nom,
-                                date: m.dateDebut,
-                                daysUntil,
-                                urgent: daysUntil <= 1
-                            });
+                        if (daysUntil <= reminderSettings.medicament && daysUntil > 0) {
+                            reminders.push({ type: 'medicament', animal: animal.nom, nom: m.nom, daysUntil, urgent: daysUntil <= 1 });
                         }
                     });
                 });
@@ -139,165 +141,229 @@
                 return reminders.sort((a, b) => a.daysUntil - b.daysUntil);
             };
 
+            // Open a pre-filled email so the user can send themselves a reminder
+            const sendEmailReminder = (reminder) => {
+                const subject = `⚠️ Rappel: ${reminder.nom} expire dans ${reminder.daysUntil} jours`;
+                const body = `Bonjour,\n\nRappel: ${reminder.nom} pour ${reminder.animal} expire dans ${reminder.daysUntil} jours.\n\nVeuillez prendre les mesures nécessaires.\n\nCarnet Santé PRO`;
+                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            };
+
+            if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+
             if (!user) {
-                return <LoginScreen onLogin={handleLogin} />;
+                return <LoginScreen auth={auth} />;
             }
 
-            const currentAnimal = animals.find(a => a.id === selectedAnimal);
             const reminders = getReminders();
 
             return (
                 <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
-                    {/* Header */}
-                    <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>🐾 Carnet Santé PRO</h1>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <span style={{ fontSize: '14px' }}>{user.email}</span>
-                            <button onClick={handleLogout} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                                Déconnexion
-                            </button>
-                        </div>
-                    </div>
+                    <Header user={user} auth={auth} />
 
                     {/* Reminders Banner */}
                     {reminders.length > 0 && (
                         <div style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                            <h3 style={{ color: '#d97706', margin: '0 0 12px 0' }}>⚠️ À faire urgament ({reminders.length})</h3>
+                            <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgament ({reminders.length})</h3>
                             {reminders.map((r, i) => (
-                                <div key={i} style={{ padding: '12px', background: 'white', marginBottom: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
+                                <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
                                     <div>
-                                        <p style={{ margin: 0, fontWeight: '600' }}>{r.nom} ({r.animal})</p>
-                                        <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '13px' }}>{r.daysUntil} jours restants</p>
+                                        <span>{r.nom} ({r.animal}) - {r.daysUntil} jours restants</span>
+                                        {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
                                     </div>
-                                    {r.urgent && <span style={{ background: '#ef4444', color: 'white', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
+                                    <button onClick={() => sendEmailReminder(r)} style={{ padding: '6px 12px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                        📧 Rappel email
+                                    </button>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    {/* Tabs */}
-                    <div style={{ display: 'flex', gap: '8px', padding: '16px', background: 'white', borderBottom: '1px solid #e5e7eb', overflowX: 'auto' }}>
-                        {['accueil', 'sante', 'vaccins', 'medicaments', 'rappels', 'parametres'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                style={{
-                                    padding: '10px 16px',
-                                    border: activeTab === tab ? '3px solid #10b981' : 'none',
-                                    borderBottom: activeTab === tab ? '3px solid #10b981' : 'none',
-                                    background: 'transparent',
-                                    color: activeTab === tab ? '#10b981' : '#6b7280',
-                                    fontWeight: activeTab === tab ? '600' : '400',
-                                    cursor: 'pointer',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                {tab === 'accueil' && '🏠 Accueil'}
-                                {tab === 'sante' && '💪 Santé'}
-                                {tab === 'vaccins' && '💉 Vaccins'}
-                                {tab === 'medicaments' && '💊 Médicaments'}
-                                {tab === 'rappels' && '⚠️ Rappels'}
-                                {tab === 'parametres' && '⚙️ Paramètres'}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Content */}
-                    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                        {activeTab === 'accueil' && <HomeTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimal={addAnimal} deleteAnimal={deleteAnimal} />}
-                        {activeTab === 'sante' && currentAnimal && <SanteTab animal={currentAnimal} />}
-                        {activeTab === 'vaccins' && currentAnimal && <VaccinsTab animal={currentAnimal} addVaccin={addVaccin} />}
-                        {activeTab === 'medicaments' && currentAnimal && <MedicamentsTab animal={currentAnimal} addMedicament={addMedicament} />}
-                        {activeTab === 'rappels' && <RappelsTab reminders={reminders} />}
-                        {activeTab === 'parametres' && <ParametresTab reminderDays={reminderDays} setReminderDays={setReminderDays} />}
-                    </div>
+                    <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <Content
+                        activeTab={activeTab}
+                        animals={animals}
+                        selectedAnimal={selectedAnimal}
+                        setSelectedAnimal={setSelectedAnimal}
+                        saveAnimal={saveAnimal}
+                        deleteAnimal={deleteAnimalFromFirestore}
+                        reminderSettings={reminderSettings}
+                        setReminderSettings={setReminderSettings}
+                        reminders={reminders}
+                        sendEmailReminder={sendEmailReminder}
+                        user={user}
+                        db={db}
+                    />
                 </div>
             );
         }
 
-        function LoginScreen({ onLogin }) {
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
+        // Login Component
+        function LoginScreen({ auth }) {
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [isSignup, setIsSignup] = React.useState(false);
+            const [error, setError] = React.useState('');
 
-            const handleSubmit = (e) => {
+            const handleAuth = async (e) => {
                 e.preventDefault();
-                if (email && password) {
-                    onLogin(email, password);
+                try {
+                    if (isSignup) {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    }
+                } catch (err) {
+                    setError(err.message);
                 }
             };
 
             return (
                 <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
                     <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 20px 25px rgba(0,0,0,0.1)', maxWidth: '400px', width: '90%' }}>
-                        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#10b981', margin: '0 0 8px 0' }}>🐾 Carnet Santé PRO</h1>
+                        <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px', color: '#10b981' }}>🐾 Carnet Santé PRO</h1>
                         <p style={{ color: '#6b7280', marginBottom: '32px' }}>Suivi santé de vos animaux</p>
 
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleAuth}>
                             <input
                                 type="email"
                                 placeholder="Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '12px', fontSize: '16px', boxSizing: 'border-box' }}
+                                style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '12px', fontSize: '16px' }}
                             />
                             <input
                                 type="password"
                                 placeholder="Mot de passe"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '24px', fontSize: '16px', boxSizing: 'border-box' }}
+                                style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '16px', fontSize: '16px' }}
                             />
                             <button
                                 type="submit"
-                                style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '16px' }}
+                                style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}
                             >
-                                Se connecter
+                                {isSignup ? 'S\'inscrire' : 'Se connecter'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsSignup(!isSignup)}
+                                style={{ width: '100%', padding: '12px', background: 'transparent', color: '#10b981', border: '1px solid #10b981', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                            >
+                                {isSignup ? 'Déjà inscrit ?' : 'S\'inscrire'}
                             </button>
                         </form>
 
-                        <p style={{ textAlign: 'center', color: '#9ca3af', marginTop: '16px', fontSize: '14px' }}>
-                            💡 Utilise n'importe quel email/mot de passe
-                        </p>
+                        {error && <p style={{ color: '#ef4444', marginTop: '12px' }}>{error}</p>}
                     </div>
                 </div>
             );
         }
 
-        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, addAnimal, deleteAnimal }) {
-            const [name, setName] = useState('');
-            const [species, setSpecies] = useState('Chien');
-            const [race, setRace] = useState('');
+        // Header
+        function Header({ user, auth }) {
+            return (
+                <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h1 style={{ fontSize: '24px', fontWeight: '700' }}>🐾 Carnet Santé PRO</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span style={{ fontSize: '14px' }}>{user?.email}</span>
+                        <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                            Déconnexion
+                        </button>
+                    </div>
+                </div>
+            );
+        }
 
-            const handleAdd = () => {
-                if (name && species) {
-                    addAnimal(name, species, race);
-                    setName('');
-                    setRace('');
+        // Tabs
+        function Tabs({ activeTab, setActiveTab }) {
+            const tabs = [
+                { id: 'accueil', emoji: '🏠', label: 'Accueil' },
+                { id: 'sante', emoji: '💪', label: 'Santé' },
+                { id: 'vaccins', emoji: '💉', label: 'Vaccins' },
+                { id: 'medicaments', emoji: '💊', label: 'Médicaments' },
+                { id: 'rappels', emoji: '⚠️', label: 'Rappels' },
+                { id: 'parametres', emoji: '⚙️', label: 'Paramètres' }
+            ];
+
+            return (
+                <div style={{ display: 'flex', gap: '12px', padding: '16px', background: 'white', overflowX: 'auto', borderBottom: '1px solid #e5e7eb' }}>
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                padding: '12px 16px',
+                                border: 'none',
+                                borderBottom: activeTab === tab.id ? '3px solid #10b981' : 'none',
+                                background: 'transparent',
+                                color: activeTab === tab.id ? '#10b981' : '#6b7280',
+                                fontWeight: activeTab === tab.id ? '600' : '400',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {tab.emoji} {tab.label}
+                        </button>
+                    ))}
+                </div>
+            );
+        }
+
+        // Content Router
+        function Content(props) {
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal } = props;
+
+            if (activeTab === 'accueil') {
+                return <HomeTab {...props} />;
+            } else if (activeTab === 'sante') {
+                return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />;
+            } else if (activeTab === 'vaccins') {
+                return <VaccinsTab animal={animals.find(a => a.id === selectedAnimal)} saveAnimal={saveAnimal} />;
+            } else if (activeTab === 'medicaments') {
+                return <MedicamentsTab animal={animals.find(a => a.id === selectedAnimal)} saveAnimal={saveAnimal} />;
+            } else if (activeTab === 'rappels') {
+                return <RappelsTab {...props} />;
+            } else if (activeTab === 'parametres') {
+                return <ParametresTab {...props} />;
+            }
+        }
+
+        // Tabs Content
+        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal }) {
+            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', race: '' });
+
+            const handleAddAnimal = () => {
+                if (newAnimal.nom && newAnimal.espece) {
+                    saveAnimal({ ...newAnimal, vaccins: [], medicaments: [], observations: [] });
+                    setNewAnimal({ nom: '', espece: '', race: '' });
                 }
             };
 
             return (
-                <div>
+                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
 
+                    {/* Add Animal Form */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '16px' }}>Ajouter un animal</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '12px' }}>
-                            <input type="text" placeholder="Nom" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                            <select value={species} onChange={(e) => setSpecies(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
-                                <option>Chien</option>
-                                <option>Chat</option>
-                                <option>Lapin</option>
-                                <option>Hamster</option>
-                                <option>Autre</option>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un animal</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                            <input type="text" placeholder="Nom" value={newAnimal.nom} onChange={(e) => setNewAnimal({...newAnimal, nom: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <select value={newAnimal.espece} onChange={(e) => setNewAnimal({...newAnimal, espece: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                <option value="">Espèce</option>
+                                <option value="Chien">Chien</option>
+                                <option value="Chat">Chat</option>
+                                <option value="Lapin">Lapin</option>
+                                <option value="Hamster">Hamster</option>
+                                <option value="Autre">Autre</option>
                             </select>
-                            <input type="text" placeholder="Race" value={race} onChange={(e) => setRace(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <input type="text" placeholder="Race (optionnel)" value={newAnimal.race} onChange={(e) => setNewAnimal({...newAnimal, race: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                         </div>
-                        <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                        <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
                             ➕ Ajouter
                         </button>
                     </div>
 
+                    {/* Animals List */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
                         {animals.map(animal => (
                             <div
@@ -307,71 +373,78 @@
                                     background: 'white',
                                     padding: '16px',
                                     borderRadius: '8px',
-                                    cursor: 'pointer',
                                     border: selectedAnimal === animal.id ? '2px solid #10b981' : '1px solid #e5e7eb',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                    transition: 'all 0.2s'
+                                    cursor: 'pointer',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                                 }}
                             >
-                                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 8px 0' }}>{animal.nom}</h3>
-                                <p style={{ color: '#6b7280', margin: '4px 0' }}>{animal.espece}</p>
-                                {animal.race && <p style={{ color: '#6b7280', margin: '4px 0', fontSize: '14px' }}>Race: {animal.race}</p>}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }}
-                                    style={{ marginTop: '12px', padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
-                                >
+                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{animal.nom}</h3>
+                                <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '4px' }}>{animal.espece}</p>
+                                {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
+                                <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ marginTop: '12px', padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>
                                     🗑️ Supprimer
                                 </button>
                             </div>
                         ))}
                     </div>
-
-                    {animals.length === 0 && <p style={{ textAlign: 'center', color: '#9ca3af', marginTop: '40px' }}>Ajoute ton premier animal ! 🐾</p>}
                 </div>
             );
         }
 
-        function SanteTab({ animal }) {
+        function SanteTab({ animals, selectedAnimal }) {
+            const animal = animals.find(a => a.id === selectedAnimal);
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
             return (
-                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <h2 style={{ marginTop: 0 }}>💪 Santé de {animal.nom}</h2>
-                    <p>💉 Vaccins: {animal.vaccins?.length || 0}</p>
-                    <p>💊 Médicaments: {animal.medicaments?.length || 0}</p>
+                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💪 Santé de {animal.nom}</h2>
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <p style={{ color: '#6b7280', marginBottom: '12px' }}>💉 Vaccins: {animal.vaccins?.length || 0}</p>
+                        <p style={{ color: '#6b7280', marginBottom: '12px' }}>💊 Médicaments: {animal.medicaments?.length || 0}</p>
+                        <p style={{ color: '#6b7280' }}>📋 Observations: {animal.observations?.length || 0}</p>
+                    </div>
                 </div>
             );
         }
 
-        function VaccinsTab({ animal, addVaccin }) {
-            const [nom, setNom] = useState('');
-            const [date, setDate] = useState('');
+        function VaccinsTab({ animal, saveAnimal }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
-            const handleAdd = () => {
-                if (nom && date) {
-                    addVaccin(animal.id, nom, date);
-                    setNom('');
-                    setDate('');
+            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: '' });
+
+            const handleAddVaccin = () => {
+                if (newVaccin.nom && newVaccin.date) {
+                    const updated = { ...animal, vaccins: [...(animal.vaccins || []), newVaccin] };
+                    saveAnimal(updated);
+                    setNewVaccin({ nom: '', date: '' });
                 }
             };
 
             return (
-                <div>
-                    <h2>💉 Vaccins de {animal.nom}</h2>
+                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💉 Vaccins de {animal.nom}</h2>
 
+                    {/* Add Vaccin */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginTop: 0 }}>Ajouter un vaccin</h3>
-                        <input type="text" placeholder="Nom du vaccin" value={nom} onChange={(e) => setNom(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '12px', boxSizing: 'border-box' }} />
-                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '12px', boxSizing: 'border-box' }} />
-                        <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un vaccin</h3>
+                        <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                            <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({...newVaccin, nom: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({...newVaccin, date: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                        </div>
+                        <button onClick={handleAddVaccin} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
                             ➕ Ajouter
                         </button>
                     </div>
 
+                    {/* Vaccins List */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         {animal.vaccins && animal.vaccins.length > 0 ? (
                             animal.vaccins.map((v, i) => (
-                                <div key={i} style={{ padding: '12px', borderBottom: i < animal.vaccins.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                                    <p style={{ margin: 0, fontWeight: '600' }}>{v.nom}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>Date: {v.date}</p>
+                                <div key={i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{v.nom}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Date: {v.date}</p>
+                                    </div>
                                 </div>
                             ))
                         ) : (
@@ -382,41 +455,44 @@
             );
         }
 
-        function MedicamentsTab({ animal, addMedicament }) {
-            const [nom, setNom] = useState('');
-            const [posologie, setPosologie] = useState('');
-            const [dateDebut, setDateDebut] = useState('');
+        function MedicamentsTab({ animal, saveAnimal }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
-            const handleAdd = () => {
-                if (nom && posologie && dateDebut) {
-                    addMedicament(animal.id, nom, posologie, dateDebut);
-                    setNom('');
-                    setPosologie('');
-                    setDateDebut('');
+            const [newMed, setNewMed] = React.useState({ nom: '', posologie: '', dateDebut: '' });
+
+            const handleAddMed = () => {
+                if (newMed.nom && newMed.posologie && newMed.dateDebut) {
+                    const updated = { ...animal, medicaments: [...(animal.medicaments || []), newMed] };
+                    saveAnimal(updated);
+                    setNewMed({ nom: '', posologie: '', dateDebut: '' });
                 }
             };
 
             return (
-                <div>
-                    <h2>💊 Médicaments de {animal.nom}</h2>
+                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médicaments de {animal.nom}</h2>
 
+                    {/* Add Medicament */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginTop: 0 }}>Ajouter un médicament</h3>
-                        <input type="text" placeholder="Nom du médicament" value={nom} onChange={(e) => setNom(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '12px', boxSizing: 'border-box' }} />
-                        <input type="text" placeholder="Posologie" value={posologie} onChange={(e) => setPosologie(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '12px', boxSizing: 'border-box' }} />
-                        <input type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', marginBottom: '12px', boxSizing: 'border-box' }} />
-                        <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un médicament</h3>
+                        <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                            <input type="text" placeholder="Nom du médicament" value={newMed.nom} onChange={(e) => setNewMed({...newMed, nom: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <input type="text" placeholder="Posologie" value={newMed.posologie} onChange={(e) => setNewMed({...newMed, posologie: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({...newMed, dateDebut: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                        </div>
+                        <button onClick={handleAddMed} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
                             ➕ Ajouter
                         </button>
                     </div>
 
+                    {/* Medicaments List */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         {animal.medicaments && animal.medicaments.length > 0 ? (
                             animal.medicaments.map((m, i) => (
-                                <div key={i} style={{ padding: '12px', borderBottom: i < animal.medicaments.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                                    <p style={{ margin: 0, fontWeight: '600' }}>{m.nom}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>Posologie: {m.posologie}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>À partir du: {m.dateDebut}</p>
+                                <div key={i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
+                                    <p style={{ fontWeight: '600' }}>{m.nom}</p>
+                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Posologie: {m.posologie}</p>
+                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>À partir du: {m.dateDebut}</p>
                                 </div>
                             ))
                         ) : (
@@ -427,24 +503,32 @@
             );
         }
 
-        function RappelsTab({ reminders }) {
+        function RappelsTab({ reminders, sendEmailReminder }) {
             return (
-                <div>
-                    <h2>⚠️ Rappels</h2>
+                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚠️ Rappels</h2>
 
                     {reminders.length > 0 ? (
                         <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                            <h3 style={{ color: '#d97706', marginTop: 0 }}>À faire urgament ({reminders.length})</h3>
+                            <h3 style={{ color: '#d97706', marginBottom: '16px' }}>À faire urgament ({reminders.length})</h3>
                             {reminders.map((r, i) => (
-                                <div key={i} style={{ padding: '12px', background: 'white', marginBottom: '8px', borderRadius: '6px', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
-                                    <p style={{ margin: 0, fontWeight: '600' }}>{r.nom}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>Animal: {r.animal}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0 0 0' }}>⏰ {r.daysUntil} jours restants</p>
+                                <div key={i} style={{ padding: '12px', background: 'white', marginBottom: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>
+                                            {r.nom}
+                                            {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
+                                        </p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Animal: {r.animal}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>⏰ {r.daysUntil} jours restants</p>
+                                    </div>
+                                    <button onClick={() => sendEmailReminder(r)} style={{ padding: '8px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                        📧 Rappel email
+                                    </button>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center', color: '#6b7280', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center', color: '#6b7280' }}>
                             ✅ Aucun rappel pour le moment
                         </div>
                     )}
@@ -452,49 +536,68 @@
             );
         }
 
-        function ParametresTab({ reminderDays, setReminderDays }) {
-            const handleChange = (e) => {
-                const days = parseInt(e.target.value);
-                setReminderDays(days);
-                localStorage.setItem('carnetsante_reminder', days.toString());
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db }) {
+            const saveSettings = async () => {
+                try {
+                    const settingsRef = collection(db, 'settings');
+                    const q = query(settingsRef, where('userId', '==', user.uid));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.docs.length > 0) {
+                        await updateDoc(doc(db, 'settings', querySnapshot.docs[0].id), {
+                            reminders: reminderSettings
+                        });
+                    } else {
+                        await addDoc(settingsRef, {
+                            userId: user.uid,
+                            reminders: reminderSettings
+                        });
+                    }
+                    alert('Paramètres sauvegardés !');
+                } catch (error) {
+                    console.error('Erreur saving settings:', error);
+                }
             };
 
             return (
-                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', maxWidth: '600px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <h2 style={{ marginTop: 0 }}>⚙️ Paramètres</h2>
+                <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚙️ Paramètres</h2>
 
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>Délai de rappel (jours avant expiration)</label>
-                        <input
-                            type="number"
-                            min="1"
-                            max="30"
-                            value={reminderDays}
-                            onChange={handleChange}
-                            style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px', boxSizing: 'border-box' }}
-                        />
-                        <small style={{ color: '#6b7280' }}>Tu recevras un rappel X jours avant la date d'expiration</small>
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Délais de rappels (en jours)</h3>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Vaccins</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.vaccin}
+                                onChange={(e) => setReminderSettings({...reminderSettings, vaccin: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant expiration</small>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Médicaments</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.medicament}
+                                onChange={(e) => setReminderSettings({...reminderSettings, medicament: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant</small>
+                        </div>
+
+                        <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                            💾 Sauvegarder
+                        </button>
                     </div>
-
-                    <p style={{ color: '#9ca3af', fontSize: '14px' }}>💾 Les données sont sauvegardées localement sur cet appareil</p>
                 </div>
             );
         }
 
+        // Render App
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f3f4f6;
-            color: #1f2937;
-        }
-    </style>
 </body>
 </html>
