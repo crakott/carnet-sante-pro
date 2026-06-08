@@ -3,15 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carnet Santé PRO - Firebase Edition</title>
+    <meta name="description" content="Carnet Santé PRO - Gérez la santé de vos animaux facilement. Vaccins, médicaments, rappels en un seul endroit.">
+    <meta name="keywords" content="carnet santé animaux, vétérinaire, vaccins, chien, chat, lapin">
+    <meta name="theme-color" content="#10b981">
+    <title>🐾 Carnet Santé PRO - Firebase Edition</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2220007213028900" crossorigin="anonymous"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #1f2937; }
-        #root { min-height: 100vh; }
+        html, body { height: 100%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fafb; color: #1f2937; overflow-x: hidden; }
+        #root { width: 100%; min-height: 100vh; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #059669; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .animate-slide-in { animation: slideIn 0.3s ease-in-out; }
+
+        /* Pub (AdSense) */
+        .ad-banner {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 20px 0;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .ad-banner-top { margin-bottom: 20px; }
+        .ad-banner-bottom { margin-top: 20px; }
+        .ad-note { font-size: 11px; color: #999; text-align: center; margin-top: 5px; }
+
+        @media (max-width: 768px) {
+            .ad-banner { margin: 15px 0; }
+        }
     </style>
 </head>
 <body>
@@ -44,6 +81,8 @@
             const [animals, setAnimals] = React.useState([]);
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3 });
+            const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
+            const [showMenu, setShowMenu] = React.useState(false);
 
             // Auth State
             React.useEffect(() => {
@@ -55,6 +94,13 @@
                         loadSettings(currentUser.uid);
                     }
                 });
+            }, []);
+
+            // Responsive layout: switch between sidebar (desktop) and hamburger menu (mobile)
+            React.useEffect(() => {
+                const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
             }, []);
 
             // Load Animals from Firestore
@@ -154,42 +200,56 @@
             const reminders = getReminders();
 
             return (
-                <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
-                    <Header user={user} auth={auth} />
+                <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
+                    {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} user={user} auth={auth} />}
 
-                    {/* Reminders Banner */}
-                    {reminders.length > 0 && (
-                        <div style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                            <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgament ({reminders.length})</h3>
-                            {reminders.map((r, i) => (
-                                <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
-                                    <div>
-                                        <span>{r.nom} ({r.animal}) - {r.daysUntil} jours restants</span>
-                                        {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                        {!isDesktop && <MobileHeader showMenu={showMenu} setShowMenu={setShowMenu} />}
+                        {!isDesktop && showMenu && <MobileMenu activeTab={activeTab} setActiveTab={setActiveTab} setShowMenu={setShowMenu} auth={auth} />}
+
+                        {/* Reminders Banner */}
+                        {reminders.length > 0 && (
+                            <div className="animate-fade-in" style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
+                                <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgament ({reminders.length})</h3>
+                                {reminders.map((r, i) => (
+                                    <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
+                                        <div>
+                                            <span>{r.nom} ({r.animal}) - {r.daysUntil} jours restants</span>
+                                            {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
+                                        </div>
+                                        <button onClick={() => sendEmailReminder(r)} style={{ padding: '6px 12px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                            📧 Rappel email
+                                        </button>
                                     </div>
-                                    <button onClick={() => sendEmailReminder(r)} style={{ padding: '6px 12px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                                        📧 Rappel email
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                                ))}
+                            </div>
+                        )}
 
-                    <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <Content
-                        activeTab={activeTab}
-                        animals={animals}
-                        selectedAnimal={selectedAnimal}
-                        setSelectedAnimal={setSelectedAnimal}
-                        saveAnimal={saveAnimal}
-                        deleteAnimal={deleteAnimalFromFirestore}
-                        reminderSettings={reminderSettings}
-                        setReminderSettings={setReminderSettings}
-                        reminders={reminders}
-                        sendEmailReminder={sendEmailReminder}
-                        user={user}
-                        db={db}
-                    />
+                        {!isDesktop && (
+                            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px', width: '100%' }}>
+                                <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-top" />
+                            </div>
+                        )}
+
+                        <Content
+                            activeTab={activeTab}
+                            animals={animals}
+                            selectedAnimal={selectedAnimal}
+                            setSelectedAnimal={setSelectedAnimal}
+                            saveAnimal={saveAnimal}
+                            deleteAnimal={deleteAnimalFromFirestore}
+                            reminderSettings={reminderSettings}
+                            setReminderSettings={setReminderSettings}
+                            reminders={reminders}
+                            sendEmailReminder={sendEmailReminder}
+                            user={user}
+                            db={db}
+                        />
+
+                        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px 16px', width: '100%' }}>
+                            <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-bottom" />
+                        </div>
+                    </div>
                 </div>
             );
         }
@@ -225,10 +285,15 @@
             };
 
             return (
-                <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-                    <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 20px 25px rgba(0,0,0,0.1)', maxWidth: '400px', width: '90%' }}>
-                        <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px', color: '#10b981' }}>🐾 Carnet Santé PRO</h1>
-                        <p style={{ color: '#6b7280', marginBottom: '32px' }}>Suivi santé de vos animaux</p>
+                <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', padding: '20px' }}>
+                    <div className="animate-fade-in" style={{ background: 'white', borderRadius: '20px', padding: '40px', maxWidth: '400px', width: '100%', boxShadow: '0 20px 25px rgba(0,0,0,0.1)' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                            <div style={{ fontSize: '60px', marginBottom: '10px' }}>🐾</div>
+                            <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981', marginBottom: '5px' }}>Carnet Santé PRO</h1>
+                            <p style={{ color: '#6b7280', fontSize: '14px' }}>Suivi santé de vos animaux</p>
+                        </div>
+
+                        <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-top" />
 
                         <form onSubmit={handleAuth}>
                             <input
@@ -281,19 +346,95 @@
                         </button>
 
                         {error && <p style={{ color: '#ef4444', marginTop: '12px' }}>{error}</p>}
+
+                        <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-bottom" />
                     </div>
                 </div>
             );
         }
 
-        // Header
-        function Header({ user, auth }) {
+        // Reusable AdSense banner (real client ID; slot IDs are placeholders to replace with real ones from AdSense)
+        function AdBanner({ format = 'horizontal', slot = 'xxxxxxxxxx', className = '', style = {} }) {
+            React.useEffect(() => {
+                try {
+                    if (window.adsbygoogle) window.adsbygoogle.push({});
+                } catch (e) {}
+            }, []);
+
             return (
-                <div style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h1 style={{ fontSize: '24px', fontWeight: '700' }}>🐾 Carnet Santé PRO</h1>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <span style={{ fontSize: '14px' }}>{user?.email}</span>
-                        <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                <div className={`ad-banner ${className}`} style={style}>
+                    <ins
+                        className="adsbygoogle"
+                        style={{ display: 'block' }}
+                        data-ad-client="ca-pub-2220007213028900"
+                        data-ad-slot={slot}
+                        data-ad-format={format}
+                        data-full-width-responsive="true"
+                    ></ins>
+                    <div className="ad-note">Publicité</div>
+                </div>
+            );
+        }
+
+        const NAV_TABS = [
+            { id: 'accueil', label: '🏠 Accueil' },
+            { id: 'sante', label: '💪 Santé' },
+            { id: 'vaccins', label: '💉 Vaccins' },
+            { id: 'medicaments', label: '💊 Médicaments' },
+            { id: 'rappels', label: '⚠️ Rappels' },
+            { id: 'parametres', label: '⚙️ Paramètres' }
+        ];
+
+        function NavButton({ tab, active, onClick, style = {} }) {
+            return (
+                <button
+                    onClick={onClick}
+                    style={{
+                        width: '100%',
+                        padding: '12px',
+                        marginBottom: '8px',
+                        background: active ? '#d1fae5' : 'transparent',
+                        color: active ? '#10b981' : '#6b7280',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: active ? '600' : '400',
+                        fontSize: '14px',
+                        transition: 'all 0.2s',
+                        ...style
+                    }}
+                >
+                    {tab.label}
+                </button>
+            );
+        }
+
+        // Sidebar (desktop navigation)
+        function Sidebar({ activeTab, setActiveTab, user, auth }) {
+            return (
+                <div style={{ width: '250px', background: 'white', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                    <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+                        <div style={{ fontSize: '28px', marginBottom: '8px' }}>🐾</div>
+                        <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Carnet Santé</h2>
+                        <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', wordBreak: 'break-all' }}>{user?.email}</p>
+                    </div>
+
+                    <nav style={{ flex: 1, padding: '15px' }}>
+                        {NAV_TABS.map(tab => (
+                            <NavButton key={tab.id} tab={tab} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} />
+                        ))}
+                    </nav>
+
+                    <div style={{ padding: '15px' }}>
+                        <AdBanner format="vertical" slot="xxxxxxxxxx" style={{ marginBottom: 0 }} />
+                    </div>
+
+                    <div style={{ padding: '15px', borderTop: '1px solid #e5e7eb' }}>
+                        <button
+                            onClick={() => signOut(auth)}
+                            style={{ width: '100%', padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}
+                        >
                             Déconnexion
                         </button>
                     </div>
@@ -301,37 +442,34 @@
             );
         }
 
-        // Tabs
-        function Tabs({ activeTab, setActiveTab }) {
-            const tabs = [
-                { id: 'accueil', emoji: '🏠', label: 'Accueil' },
-                { id: 'sante', emoji: '💪', label: 'Santé' },
-                { id: 'vaccins', emoji: '💉', label: 'Vaccins' },
-                { id: 'medicaments', emoji: '💊', label: 'Médicaments' },
-                { id: 'rappels', emoji: '⚠️', label: 'Rappels' },
-                { id: 'parametres', emoji: '⚙️', label: 'Paramètres' }
-            ];
-
+        // Mobile header with hamburger toggle
+        function MobileHeader({ showMenu, setShowMenu }) {
             return (
-                <div style={{ display: 'flex', gap: '12px', padding: '16px', background: 'white', overflowX: 'auto', borderBottom: '1px solid #e5e7eb' }}>
-                    {tabs.map(tab => (
-                        <button
+                <div style={{ background: 'white', padding: '15px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>🐾 Carnet Santé</h1>
+                    <button onClick={() => setShowMenu(!showMenu)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>☰</button>
+                </div>
+            );
+        }
+
+        // Mobile slide-in navigation menu
+        function MobileMenu({ activeTab, setActiveTab, setShowMenu, auth }) {
+            return (
+                <div className="animate-slide-in" style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '10px' }}>
+                    {NAV_TABS.map(tab => (
+                        <NavButton
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            style={{
-                                padding: '12px 16px',
-                                border: 'none',
-                                borderBottom: activeTab === tab.id ? '3px solid #10b981' : 'none',
-                                background: 'transparent',
-                                color: activeTab === tab.id ? '#10b981' : '#6b7280',
-                                fontWeight: activeTab === tab.id ? '600' : '400',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {tab.emoji} {tab.label}
-                        </button>
+                            tab={tab}
+                            active={activeTab === tab.id}
+                            onClick={() => { setActiveTab(tab.id); setShowMenu(false); }}
+                        />
                     ))}
+                    <button
+                        onClick={() => signOut(auth)}
+                        style={{ width: '100%', padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', marginTop: '10px' }}
+                    >
+                        Déconnexion
+                    </button>
                 </div>
             );
         }
@@ -367,7 +505,7 @@
             };
 
             return (
-                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
 
                     {/* Add Animal Form */}
@@ -395,6 +533,7 @@
                         {animals.map(animal => (
                             <div
                                 key={animal.id}
+                                className="animate-fade-in"
                                 onClick={() => setSelectedAnimal(animal.id)}
                                 style={{
                                     background: 'white',
@@ -423,7 +562,7 @@
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             return (
-                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💪 Santé de {animal.nom}</h2>
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <p style={{ color: '#6b7280', marginBottom: '12px' }}>💉 Vaccins: {animal.vaccins?.length || 0}</p>
@@ -448,7 +587,7 @@
             };
 
             return (
-                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💉 Vaccins de {animal.nom}</h2>
 
                     {/* Add Vaccin */}
@@ -496,7 +635,7 @@
             };
 
             return (
-                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médicaments de {animal.nom}</h2>
 
                     {/* Add Medicament */}
@@ -532,7 +671,7 @@
 
         function RappelsTab({ reminders, sendEmailReminder }) {
             return (
-                <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚠️ Rappels</h2>
 
                     {reminders.length > 0 ? (
@@ -587,7 +726,7 @@
             };
 
             return (
-                <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚙️ Paramètres</h2>
 
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
