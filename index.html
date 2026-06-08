@@ -73,6 +73,33 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Reference data for animal profiles, vaccines, medications and vets
+        const ESPECES = ['Chien', 'Chat', 'Lapin', 'Hamster', 'Gerbille', 'Cheval', 'Oiseau', 'Tortue'];
+        const EMOJIS_ESPECE = {
+            'Chien': '🐕', 'Chat': '🐈', 'Lapin': '🐰', 'Hamster': '🐹',
+            'Cheval': '🐴', 'Oiseau': '🦜', 'Tortue': '🐢', 'Gerbille': '🐭'
+        };
+        const VACCINS_COURANTS = {
+            'Chien': ['Rage', 'DTP', 'Parvovirose', 'Leptospirose'],
+            'Chat': ['Rage', 'Typhus félin', 'Calicivirose', 'Rhinotrachéite', 'Coryza', 'Chlamydophilose', 'Leucose féline'],
+            'Cheval': ['Grippe équine', 'Tétanos', 'Rhinopneumonite'],
+            'Lapin': ['Myxomatose', 'VHD', 'VHD2'],
+            'Hamster': [], 'Gerbille': [], 'Tortue': [],
+            'Oiseau': ['Paramyxovirus', 'Newcastle'],
+        };
+        const MEDICAMENTS_COURANTS = [
+            'Amoxicilline', 'Doxycycline', 'Métronidazole', 'Fluconazole',
+            'Paracétamol', 'Ibuprofène', 'Carprofen', 'Meloxicam',
+            'Prednisone', 'Dexaméthasone', 'Loratadine', 'Cetirizine',
+            'Oméprazole', 'Famotidine', 'Lactulose', 'Probiotiques'
+        ];
+        const VETERINAIRES = [
+            { id: 1, nom: "Clinique Saint-Germain", distance: "2.3 km", telephone: "01 23 45 67 89", horaires: "Lun-Ven: 9h-19h", specialites: ["Chiens", "Chats"], rating: 4.8 },
+            { id: 2, nom: "Vétérinaire 24h/24", distance: "5.1 km", telephone: "01 98 76 54 32", horaires: "24h/24, 7j/7", specialites: ["Urgences"], rating: 4.6 },
+            { id: 3, nom: "Clinique Exotiques", distance: "3.8 km", telephone: "01 45 23 12 34", horaires: "Lun-Ven: 10h-18h", specialites: ["Reptiles", "Oiseaux"], rating: 4.9 },
+        ];
+        const MAX_FILE_SIZE = 700 * 1024;
+
         // Main App Component
         function App() {
             const [user, setUser] = React.useState(null);
@@ -83,6 +110,7 @@
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3 });
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [showMenu, setShowMenu] = React.useState(false);
+            const [budgetFilter, setBudgetFilter] = React.useState('tout');
 
             // Auth State
             React.useEffect(() => {
@@ -158,6 +186,39 @@
                 }
             };
 
+            // Append an item (vaccin, médicament, observation...) to an animal's array field and persist to Firestore
+            const addAnimalItem = (animal, type, item) => {
+                const updated = { ...animal, [type]: [...(animal[type] || []), { ...item, id: Date.now() }] };
+                saveAnimal(updated);
+            };
+
+            // Remove an item from an animal's array field by id and persist to Firestore
+            const deleteAnimalItem = (animal, type, itemId) => {
+                const updated = { ...animal, [type]: (animal[type] || []).filter(i => i.id !== itemId) };
+                saveAnimal(updated);
+            };
+
+            // Merge field updates (e.g. assigned vétérinaire) into an animal and persist to Firestore
+            const updateAnimalFields = (animal, updates) => {
+                saveAnimal({ ...animal, ...updates });
+            };
+
+            // Filter an animal's budget entries by the selected period
+            const getFilteredBudget = (budget) => {
+                const today = new Date();
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const monthAgo = new Date(today.getFullYear(), today.getMonth(), 1);
+                const yearAgo = new Date(today.getFullYear(), 0, 1);
+
+                return (budget || []).filter(b => {
+                    const bDate = new Date(b.date);
+                    if (budgetFilter === 'semaine') return bDate >= weekAgo;
+                    if (budgetFilter === 'mois') return bDate >= monthAgo;
+                    if (budgetFilter === 'annee') return bDate >= yearAgo;
+                    return true;
+                });
+            };
+
             // Check Reminders across all animals, sorted by urgency
             const getReminders = () => {
                 const reminders = [];
@@ -165,7 +226,7 @@
 
                 animals.forEach(animal => {
                     (animal.vaccins || []).forEach(v => {
-                        const vaccineDate = new Date(v.date);
+                        const vaccineDate = new Date(v.rappel || v.date);
                         const daysUntil = Math.ceil((vaccineDate - today) / (1000 * 60 * 60 * 24));
                         if (daysUntil <= reminderSettings.vaccin && daysUntil > 0) {
                             reminders.push({ type: 'vaccin', animal: animal.nom, nom: v.nom, daysUntil, urgent: daysUntil <= 1 });
@@ -233,11 +294,18 @@
 
                         <Content
                             activeTab={activeTab}
+                            setActiveTab={setActiveTab}
                             animals={animals}
                             selectedAnimal={selectedAnimal}
                             setSelectedAnimal={setSelectedAnimal}
                             saveAnimal={saveAnimal}
                             deleteAnimal={deleteAnimalFromFirestore}
+                            addAnimalItem={addAnimalItem}
+                            deleteAnimalItem={deleteAnimalItem}
+                            updateAnimalFields={updateAnimalFields}
+                            budgetFilter={budgetFilter}
+                            setBudgetFilter={setBudgetFilter}
+                            getFilteredBudget={getFilteredBudget}
                             reminderSettings={reminderSettings}
                             setReminderSettings={setReminderSettings}
                             reminders={reminders}
@@ -380,7 +448,12 @@
             { id: 'accueil', label: '🏠 Accueil' },
             { id: 'sante', label: '💪 Santé' },
             { id: 'vaccins', label: '💉 Vaccins' },
-            { id: 'medicaments', label: '💊 Médicaments' },
+            { id: 'aliment', label: '🍎 Alimentation' },
+            { id: 'medicaments', label: '💊 Médication' },
+            { id: 'notes', label: '📋 Observations' },
+            { id: 'poids', label: '⚖️ Poids' },
+            { id: 'budget', label: '💰 Budget' },
+            { id: 'veterinaires', label: '🏥 Vétérinaires' },
             { id: 'rappels', label: '⚠️ Rappels' },
             { id: 'parametres', label: '⚙️ Paramètres' }
         ];
@@ -476,16 +549,27 @@
 
         // Content Router
         function Content(props) {
-            const { activeTab, animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal } = props;
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalFields, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
+            const animal = animals.find(a => a.id === selectedAnimal);
 
             if (activeTab === 'accueil') {
                 return <HomeTab {...props} />;
             } else if (activeTab === 'sante') {
-                return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />;
+                return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'vaccins') {
-                return <VaccinsTab animal={animals.find(a => a.id === selectedAnimal)} saveAnimal={saveAnimal} />;
+                return <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'aliment') {
+                return <AlimentTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'medicaments') {
-                return <MedicamentsTab animal={animals.find(a => a.id === selectedAnimal)} saveAnimal={saveAnimal} />;
+                return <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'notes') {
+                return <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'poids') {
+                return <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'budget') {
+                return <BudgetTab animal={animal} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'veterinaires') {
+                return <VeterinairesTab animal={animal} updateAnimalFields={updateAnimalFields} />;
             } else if (activeTab === 'rappels') {
                 return <RappelsTab {...props} />;
             } else if (activeTab === 'parametres') {
@@ -494,13 +578,15 @@
         }
 
         // Tabs Content
-        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal }) {
-            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', race: '' });
+        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
+            const [showAddAnimal, setShowAddAnimal] = React.useState(false);
+            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
 
             const handleAddAnimal = () => {
                 if (newAnimal.nom && newAnimal.espece) {
-                    saveAnimal({ ...newAnimal, vaccins: [], medicaments: [], observations: [] });
-                    setNewAnimal({ nom: '', espece: '', race: '' });
+                    saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
+                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+                    setShowAddAnimal(false);
                 }
             };
 
@@ -508,81 +594,173 @@
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
 
-                    {/* Add Animal Form */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un animal</h3>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
-                            <input type="text" placeholder="Nom" value={newAnimal.nom} onChange={(e) => setNewAnimal({...newAnimal, nom: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                            <select value={newAnimal.espece} onChange={(e) => setNewAnimal({...newAnimal, espece: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
-                                <option value="">Espèce</option>
-                                <option value="Chien">Chien</option>
-                                <option value="Chat">Chat</option>
-                                <option value="Lapin">Lapin</option>
-                                <option value="Hamster">Hamster</option>
-                                <option value="Autre">Autre</option>
-                            </select>
-                            <input type="text" placeholder="Race (optionnel)" value={newAnimal.race} onChange={(e) => setNewAnimal({...newAnimal, race: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                        </div>
-                        <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                            ➕ Ajouter
-                        </button>
-                    </div>
-
                     {/* Animals List */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
-                        {animals.map(animal => (
-                            <div
-                                key={animal.id}
-                                className="animate-fade-in"
-                                onClick={() => setSelectedAnimal(animal.id)}
-                                style={{
-                                    background: 'white',
-                                    padding: '16px',
-                                    borderRadius: '8px',
-                                    border: selectedAnimal === animal.id ? '2px solid #10b981' : '1px solid #e5e7eb',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                }}
-                            >
-                                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{animal.nom}</h3>
-                                <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '4px' }}>{animal.espece}</p>
-                                {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
-                                <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ marginTop: '12px', padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>
-                                    🗑️ Supprimer
+                    {animals.length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                            {animals.map(animal => (
+                                <div
+                                    key={animal.id}
+                                    className="animate-fade-in"
+                                    onClick={() => { setSelectedAnimal(animal.id); setActiveTab('sante'); }}
+                                    style={{
+                                        background: 'white',
+                                        padding: '16px',
+                                        borderRadius: '8px',
+                                        border: selectedAnimal === animal.id ? '2px solid #10b981' : '1px solid #e5e7eb',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                        <div>
+                                            <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                                            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>{animal.espece}</p>
+                                            {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
+                                        </div>
+                                        <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
+                                            🗑️
+                                        </button>
+                                    </div>
+
+                                    {animal.sexe && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '12px', padding: '10px 0', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', marginBottom: '12px' }}>
+                                            <div><span style={{ color: '#6b7280' }}>Sexe:</span> <strong>{animal.sexe === 'male' ? '♂️ Mâle' : '♀️ Femelle'}</strong></div>
+                                            <div><span style={{ color: '#6b7280' }}>Stérilisé:</span> <strong>{animal.sterilise ? '✅ Oui' : '❌ Non'}</strong></div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                        <div style={{ background: '#f0fdf4', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💉 Vaccins</p>
+                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{(animal.vaccins || []).length}</p>
+                                        </div>
+                                        <div style={{ background: '#ecfdf5', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💊 Médicaments</p>
+                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{(animal.medicaments || []).length}</p>
+                                        </div>
+                                        <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💰 Budget</p>
+                                            <p style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>{(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Add Animal Form */}
+                    {showAddAnimal ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un animal</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder="Nom" value={newAnimal.nom} onChange={(e) => setNewAnimal({ ...newAnimal, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <select value={newAnimal.espece} onChange={(e) => setNewAnimal({ ...newAnimal, espece: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Espèce</option>
+                                    {ESPECES.map(e => <option key={e} value={e}>{EMOJIS_ESPECE[e]} {e}</option>)}
+                                </select>
+                                <input type="text" placeholder="Race (optionnel)" value={newAnimal.race} onChange={(e) => setNewAnimal({ ...newAnimal, race: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <select value={newAnimal.sexe} onChange={(e) => setNewAnimal({ ...newAnimal, sexe: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Sexe</option>
+                                    <option value="male">♂️ Mâle</option>
+                                    <option value="femelle">♀️ Femelle</option>
+                                </select>
+                                <input type="date" value={newAnimal.dateNaissance} onChange={(e) => setNewAnimal({ ...newAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input type="checkbox" id="sterilise" checked={newAnimal.sterilise} onChange={(e) => setNewAnimal({ ...newAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
+                                    <label htmlFor="sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                    ➕ Ajouter
+                                </button>
+                                <button onClick={() => setShowAddAnimal(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                    Annuler
                                 </button>
                             </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowAddAnimal(true)} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un animal
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        function SanteTab({ animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+            if (animals.length === 0) return <div style={{ padding: '20px' }}>Aucun animal enregistré</div>;
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💪 Tableau de Santé</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                        {animals.map(animal => (
+                            <SanteCard
+                                key={animal.id}
+                                animal={animal}
+                                selected={selectedAnimal === animal.id}
+                                onSelect={() => setSelectedAnimal(animal.id)}
+                                addAnimalItem={addAnimalItem}
+                                deleteAnimalItem={deleteAnimalItem}
+                            />
                         ))}
                     </div>
                 </div>
             );
         }
 
-        function SanteTab({ animals, selectedAnimal }) {
-            const animal = animals.find(a => a.id === selectedAnimal);
-            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+        function SanteCard({ animal, selected, onSelect, addAnimalItem, deleteAnimalItem }) {
+            const [email, setEmail] = React.useState('');
+
+            const handleShare = (e) => {
+                e.stopPropagation();
+                if (email && email.includes('@')) {
+                    addAnimalItem(animal, 'partages', { email });
+                    setEmail('');
+                }
+            };
 
             return (
-                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💪 Santé de {animal.nom}</h2>
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <p style={{ color: '#6b7280', marginBottom: '12px' }}>💉 Vaccins: {animal.vaccins?.length || 0}</p>
-                        <p style={{ color: '#6b7280', marginBottom: '12px' }}>💊 Médicaments: {animal.medicaments?.length || 0}</p>
-                        <p style={{ color: '#6b7280' }}>📋 Observations: {animal.observations?.length || 0}</p>
+                <div onClick={onSelect} className="animate-fade-in" style={{ background: 'white', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #10b981', border: selected ? '2px solid #10b981' : '1px solid #e5e7eb', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                    <p style={{ color: '#6b7280', marginTop: '12px', fontSize: '14px' }}>💉 Vaccins: {(animal.vaccins || []).length} | 💊 Médicaments: {(animal.medicaments || []).length}</p>
+                    <p style={{ color: '#6b7280', fontSize: '14px' }}>⚖️ Poids: {(animal.poids || []).length > 0 ? '✅' : '❌'} | 📋 Notes: {(animal.observations || []).length}</p>
+
+                    <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '8px' }}>📤 Partage Vétérinaire</h4>
+                        {(animal.partages && animal.partages.length > 0) ? (
+                            animal.partages.map(p => (
+                                <div key={p.id} style={{ fontSize: '11px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>✉️ {p.email}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteAnimalItem(animal, 'partages', p.id); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ fontSize: '11px', color: '#9ca3af' }}>Aucun partage</p>
+                        )}
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email vétérinaire" style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px' }} />
+                            <button onClick={handleShare} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Partager</button>
+                        </div>
                     </div>
                 </div>
             );
         }
 
-        function VaccinsTab({ animal, saveAnimal }) {
+        function VaccinsTab({ animal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
-            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: '' });
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: todayStr });
 
             const handleAddVaccin = () => {
                 if (newVaccin.nom && newVaccin.date) {
-                    const updated = { ...animal, vaccins: [...(animal.vaccins || []), newVaccin] };
-                    saveAnimal(updated);
-                    setNewVaccin({ nom: '', date: '' });
+                    const rappel = new Date(new Date(newVaccin.date).getTime() + 365 * 86400000).toISOString().split('T')[0];
+                    addAnimalItem(animal, 'vaccins', { nom: newVaccin.nom, date: newVaccin.date, rappel });
+                    setNewVaccin({ nom: '', date: todayStr });
+                    setShowForm(false);
                 }
             };
 
@@ -591,26 +769,40 @@
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💉 Vaccins de {animal.nom}</h2>
 
                     {/* Add Vaccin */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un vaccin</h3>
-                        <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                            <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({...newVaccin, nom: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                            <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({...newVaccin, date: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un vaccin</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewVaccin({ ...newVaccin, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Vaccins courants</option>
+                                    {(VACCINS_COURANTS[animal.espece] || []).map(v => <option key={v} value={v}>{v}</option>)}
+                                    <option value="autres">Autres</option>
+                                </select>
+                                <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({ ...newVaccin, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({ ...newVaccin, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '12px' }}>Le rappel sera calculé automatiquement 1 an après la date du vaccin.</p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAddVaccin} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
                         </div>
-                        <button onClick={handleAddVaccin} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                            ➕ Ajouter
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un vaccin
                         </button>
-                    </div>
+                    )}
 
                     {/* Vaccins List */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         {animal.vaccins && animal.vaccins.length > 0 ? (
                             animal.vaccins.map((v, i) => (
-                                <div key={i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div key={v.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <p style={{ fontWeight: '600' }}>{v.nom}</p>
-                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Date: {v.date}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {v.date}{v.rappel ? ` | Rappel: ${v.rappel}` : ''}</p>
                                     </div>
+                                    {v.id && <button onClick={() => deleteAnimalItem(animal, 'vaccins', v.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                 </div>
                             ))
                         ) : (
@@ -621,49 +813,518 @@
             );
         }
 
-        function MedicamentsTab({ animal, saveAnimal }) {
+        function MedicamentsTab({ animal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
-            const [newMed, setNewMed] = React.useState({ nom: '', posologie: '', dateDebut: '' });
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [newMed, setNewMed] = React.useState({ nom: '', dosage: '', unite: 'mg', frequence: '', duree: '', dateDebut: todayStr });
 
             const handleAddMed = () => {
-                if (newMed.nom && newMed.posologie && newMed.dateDebut) {
-                    const updated = { ...animal, medicaments: [...(animal.medicaments || []), newMed] };
-                    saveAnimal(updated);
-                    setNewMed({ nom: '', posologie: '', dateDebut: '' });
+                const { nom, dosage, unite, frequence, duree, dateDebut } = newMed;
+                if (nom && dosage && frequence && duree) {
+                    const dateFin = new Date(new Date(dateDebut).getTime() + parseInt(duree) * 86400000).toISOString().split('T')[0];
+                    addAnimalItem(animal, 'medicaments', { nom, dosage, unite, frequence: `${frequence}x/jour`, duree, dateDebut, dateFin });
+                    setNewMed({ nom: '', dosage: '', unite: 'mg', frequence: '', duree: '', dateDebut: todayStr });
+                    setShowForm(false);
                 }
             };
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médicaments de {animal.nom}</h2>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médication de {animal.nom}</h2>
 
                     {/* Add Medicament */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un médicament</h3>
-                        <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                            <input type="text" placeholder="Nom du médicament" value={newMed.nom} onChange={(e) => setNewMed({...newMed, nom: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                            <input type="text" placeholder="Posologie" value={newMed.posologie} onChange={(e) => setNewMed({...newMed, posologie: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                            <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({...newMed, dateDebut: e.target.value})} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #ec4899' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un traitement</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewMed({ ...newMed, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Médicaments courants</option>
+                                    {MEDICAMENTS_COURANTS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    <option value="autres">Autres</option>
+                                </select>
+                                <input type="text" placeholder="Nom du médicament" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                                    <input type="number" placeholder="Dosage" value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={newMed.unite} onChange={(e) => setNewMed({ ...newMed, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option>g</option><option>mg</option><option>ml</option><option>UI</option>
+                                    </select>
+                                </div>
+                                <input type="number" placeholder="Fréquence (x/jour)" min="0.5" step="0.5" value={newMed.frequence} onChange={(e) => setNewMed({ ...newMed, frequence: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="number" placeholder="Durée (jours)" value={newMed.duree} onChange={(e) => setNewMed({ ...newMed, duree: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({ ...newMed, dateDebut: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAddMed} style={{ padding: '10px 20px', background: '#ec4899', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
                         </div>
-                        <button onClick={handleAddMed} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                            ➕ Ajouter
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un traitement
                         </button>
-                    </div>
+                    )}
 
                     {/* Medicaments List */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         {animal.medicaments && animal.medicaments.length > 0 ? (
-                            animal.medicaments.map((m, i) => (
-                                <div key={i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
-                                    <p style={{ fontWeight: '600' }}>{m.nom}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Posologie: {m.posologie}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>À partir du: {m.dateDebut}</p>
+                            animal.medicaments.map((m, i) => {
+                                const isActive = m.dateFin ? (todayStr >= m.dateDebut && todayStr <= m.dateFin) : false;
+                                return (
+                                    <div key={m.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', borderLeft: `4px solid ${isActive ? '#ec4899' : '#9ca3af'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <p style={{ fontWeight: '600' }}>{m.nom}</p>
+                                            {m.dosage && <p style={{ color: '#6b7280', fontSize: '14px' }}>💊 {m.dosage} {m.unite} • {m.frequence}</p>}
+                                            <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {m.dateDebut}{m.dateFin ? ` → ${m.dateFin}` : ''}</p>
+                                            {m.dateFin && (
+                                                <span style={{ display: 'inline-block', fontSize: '11px', padding: '3px 8px', borderRadius: '4px', background: isActive ? '#fce7f3' : '#f3f4f6', color: isActive ? '#be185d' : '#6b7280', fontWeight: '600', marginTop: '4px' }}>
+                                                    {isActive ? '✅ En cours' : '⏱️ Fini'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {m.id && <button onClick={() => deleteAnimalItem(animal, 'medicaments', m.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p style={{ color: '#9ca3af' }}>Aucun traitement</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function AlimentTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const [showForm, setShowForm] = React.useState(false);
+            const [newAliment, setNewAliment] = React.useState({ nom: '', quantite: '', unite: 'g', horaire: '12:00' });
+
+            const handleAdd = () => {
+                if (newAliment.nom && newAliment.quantite) {
+                    addAnimalItem(animal, 'aliments', { nom: newAliment.nom, quantite: `${newAliment.quantite} ${newAliment.unite}`, horaire: newAliment.horaire });
+                    setNewAliment({ nom: '', quantite: '', unite: 'g', horaire: '12:00' });
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🍎 Alimentation de {animal.nom}</h2>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #f59e0b' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un aliment</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder="Nom de l'aliment" value={newAliment.nom} onChange={(e) => setNewAliment({ ...newAliment, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                                    <input type="number" placeholder="Quantité" value={newAliment.quantite} onChange={(e) => setNewAliment({ ...newAliment, quantite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={newAliment.unite} onChange={(e) => setNewAliment({ ...newAliment, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option>g</option><option>kg</option><option>ml</option><option>L</option>
+                                    </select>
+                                </div>
+                                <input type="time" value={newAliment.horaire} onChange={(e) => setNewAliment({ ...newAliment, horaire: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un aliment
+                        </button>
+                    )}
+
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        {animal.aliments && animal.aliments.length > 0 ? (
+                            animal.aliments.map((a, i) => (
+                                <div key={a.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #f59e0b' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{a.nom}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>{a.quantite} • {a.horaire}</p>
+                                    </div>
+                                    {a.id && <button onClick={() => deleteAnimalItem(animal, 'aliments', a.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af' }}>Aucun médicament</p>
+                            <p style={{ color: '#9ca3af' }}>Aucun aliment</p>
                         )}
+                    </div>
+                </div>
+            );
+        }
+
+        function NotesTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const TYPE_LABELS = {
+                comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
+                blessure: '🩹 Blessure', maladie: '🤒 Maladie', autres: '➕ Autres'
+            };
+
+            const [showForm, setShowForm] = React.useState(false);
+            const [type, setType] = React.useState('comportement');
+            const [description, setDescription] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+            const [photoBase64, setPhotoBase64] = React.useState('');
+            const [audioBase64, setAudioBase64] = React.useState('');
+            const [fileError, setFileError] = React.useState('');
+
+            const readFile = (file, setBase64) => {
+                setFileError('');
+                if (!file) return;
+                if (file.size > MAX_FILE_SIZE) {
+                    setFileError('Le fichier est trop volumineux (max ~700 Ko). Choisissez un fichier plus léger.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => setBase64(event.target.result);
+                reader.readAsDataURL(file);
+            };
+
+            const resetForm = () => {
+                setType('comportement');
+                setDescription('');
+                setDate(todayStr);
+                setPhotoBase64('');
+                setAudioBase64('');
+                setFileError('');
+                setShowForm(false);
+            };
+
+            const handleAdd = () => {
+                if (description || photoBase64 || audioBase64) {
+                    addAnimalItem(animal, 'observations', { type, description, date, photo: photoBase64, audio: audioBase64 });
+                    resetForm();
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📋 Observations de {animal.nom}</h2>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une observation</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    {Object.entries(TYPE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                </select>
+                                <textarea placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '100px', fontFamily: 'inherit', fontSize: '14px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📸 Ajouter une photo</label>
+                                    <input type="file" accept="image/*" onChange={(e) => readFile(e.target.files[0], setPhotoBase64)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Photo sélectionnée</p>}
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>🎙️ Ajouter un audio</label>
+                                    <input type="file" accept="audio/*" onChange={(e) => readFile(e.target.files[0], setAudioBase64)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {audioBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Audio sélectionné</p>}
+                                </div>
+
+                                {fileError && <p style={{ color: '#ef4444', fontSize: '13px' }}>{fileError}</p>}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#0891b2', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={resetForm} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une observation
+                        </button>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {animal.observations && animal.observations.length > 0 ? (
+                            [...animal.observations].reverse().map((o, i) => (
+                                <div key={o.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #0891b2' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <p style={{ fontWeight: '600' }}>{TYPE_LABELS[o.type] || o.type}</p>
+                                            <p style={{ fontSize: '12px', color: '#6b7280' }}>{o.date}</p>
+                                        </div>
+                                        {o.id && <button onClick={() => deleteAnimalItem(animal, 'observations', o.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </div>
+                                    {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
+                                    {o.photo && (
+                                        <div style={{ marginTop: '12px' }}>
+                                            <img src={o.photo} alt="Observation" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', maxHeight: '300px' }} />
+                                        </div>
+                                    )}
+                                    {o.audio && (
+                                        <div style={{ marginTop: '12px' }}>
+                                            <p style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>🎙️ Enregistrement audio :</p>
+                                            <audio controls style={{ width: '100%' }}>
+                                                <source src={o.audio} />
+                                                Votre navigateur ne supporte pas la lecture audio.
+                                            </audio>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune observation</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function PoidsChart({ poids }) {
+            const sorted = [...poids].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const values = sorted.map(p => p.valeur);
+            const minVal = Math.min(...values);
+            const maxVal = Math.max(...values);
+            const range = maxVal - minVal || 1;
+            const W = 350, H = 220;
+            const padLeft = 45, padRight = 25, padTop = 15, padBottom = 50;
+            const chartW = W - padLeft - padRight;
+            const chartH = H - padTop - padBottom;
+            const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+            const points = sorted.map(p => {
+                const date = new Date(p.date);
+                const monthIdx = date.getMonth();
+                const x = padLeft + (monthIdx / 11) * chartW;
+                const y = H - padBottom - ((p.valeur - minVal) / range * chartH);
+                return { x, y };
+            });
+
+            return (
+                <div style={{ overflowX: 'auto' }}>
+                    <svg width={W} height={H} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', display: 'block' }}>
+                        <defs>
+                            <linearGradient id="poidsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <line x1={padLeft} y1={H - padBottom} x2={W - padRight} y2={H - padBottom} stroke="#d1d5db" strokeWidth="2" />
+                        <line x1={padLeft} y1={padTop} x2={padLeft} y2={H - padBottom} stroke="#d1d5db" strokeWidth="2" />
+                        <text x="15" y={padTop + 12} fontSize="11" fill="#6b7280" fontWeight="600">Poids</text>
+                        <text x={W / 2} y={H - 8} fontSize="11" fill="#6b7280" fontWeight="600" textAnchor="middle">Mois</text>
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const val = minVal + (maxVal - minVal) * ratio;
+                            const y = H - padBottom - ratio * chartH;
+                            return (
+                                <g key={i}>
+                                    <line x1={padLeft - 5} y1={y} x2={padLeft} y2={y} stroke="#d1d5db" strokeWidth="1" />
+                                    <text x={padLeft - 8} y={y + 4} fontSize="10" fill="#6b7280" textAnchor="end">{val.toFixed(1)}</text>
+                                </g>
+                            );
+                        })}
+                        {monthNames.map((month, i) => {
+                            const x = padLeft + (i / 11) * chartW;
+                            return <text key={i} x={x} y={H - padBottom + 25} fontSize="10" fill="#6b7280" textAnchor="middle" fontWeight="600">{month}</text>;
+                        })}
+                        <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#poidsGrad)" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="white" strokeWidth="2" />)}
+                    </svg>
+                </div>
+            );
+        }
+
+        function PoidsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [valeur, setValeur] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+
+            const poids = animal.poids || [];
+            const sortedDesc = [...poids].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const handleAdd = () => {
+                const val = parseFloat(valeur);
+                if (val) {
+                    addAnimalItem(animal, 'poids', { valeur: val, date });
+                    setValeur('');
+                    setDate(todayStr);
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚖️ Suivi du poids de {animal.nom}</h2>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une mesure</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="number" step="0.1" placeholder="Poids (kg)" value={valeur} onChange={(e) => setValeur(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une mesure
+                        </button>
+                    )}
+
+                    {poids.length >= 2 && (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <h4 style={{ marginBottom: '16px', fontSize: '14px', fontWeight: '700' }}>📈 Courbe d'évolution</h4>
+                            <PoidsChart poids={poids} />
+                        </div>
+                    )}
+
+                    {poids.length > 0 && (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                            <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '6px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Min</p>
+                                <p style={{ color: '#10b981', fontWeight: '700' }}>{Math.min(...poids.map(p => p.valeur)).toFixed(1)} kg</p>
+                            </div>
+                            <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '6px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Moy</p>
+                                <p style={{ color: '#10b981', fontWeight: '700' }}>{(poids.reduce((s, p) => s + p.valeur, 0) / poids.length).toFixed(1)} kg</p>
+                            </div>
+                            <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '6px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Max</p>
+                                <p style={{ color: '#10b981', fontWeight: '700' }}>{Math.max(...poids.map(p => p.valeur)).toFixed(1)} kg</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {sortedDesc.length > 0 ? (
+                            sortedDesc.map((p, i) => (
+                                <div key={p.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h4 style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{p.valeur} kg</h4>
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{p.date}</p>
+                                    </div>
+                                    {p.id && <button onClick={() => deleteAnimalItem(animal, 'poids', p.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune mesure enregistrée</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function BudgetTab({ animal, budgetFilter, setBudgetFilter, getFilteredBudget, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const CATEGORIES = ['Vétérinaire', 'Alimentation', 'Médicaments', 'Toilettage', 'Jouets', 'Accessoires', 'Autres'];
+            const CATEGORY_EMOJIS = { 'Vétérinaire': '🏥', 'Alimentation': '🍎', 'Médicaments': '💊', 'Toilettage': '🛁', 'Jouets': '🎾', 'Accessoires': '🛠️', 'Autres': '➕' };
+
+            const [showForm, setShowForm] = React.useState(false);
+            const [type, setType] = React.useState('Vétérinaire');
+            const [montant, setMontant] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+
+            const budget = animal.budget || [];
+            const filtered = getFilteredBudget(budget);
+            const total = filtered.reduce((s, b) => s + b.montant, 0);
+
+            const handleAdd = () => {
+                const m = parseFloat(montant);
+                if (type && m) {
+                    addAnimalItem(animal, 'budget', { type, montant: m, date });
+                    setMontant('');
+                    setDate(todayStr);
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💰 Budget de {animal.nom}</h2>
+
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                        {['tout', 'semaine', 'mois', 'annee'].map(filter => (
+                            <button key={filter} onClick={() => setBudgetFilter(filter)} style={{ padding: '8px 12px', background: budgetFilter === filter ? '#10b981' : '#e5e7eb', color: budgetFilter === filter ? 'white' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                                {filter === 'tout' ? 'Tout' : filter === 'semaine' ? 'Cette semaine' : filter === 'mois' ? 'Ce mois' : 'Cette année'}
+                            </button>
+                        ))}
+                    </div>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #f59e0b' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une dépense</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_EMOJIS[c]} {c}</option>)}
+                                </select>
+                                <input type="number" step="0.01" placeholder="Montant (€)" value={montant} onChange={(e) => setMontant(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une dépense
+                        </button>
+                    )}
+
+                    {filtered.length > 0 && (
+                        <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', textAlign: 'center', marginBottom: '20px' }}>
+                            <p style={{ color: '#92400e', fontSize: '13px' }}>Total pour {animal.nom}</p>
+                            <h3 style={{ fontSize: '36px', fontWeight: '700', color: '#b45309' }}>{total.toFixed(2)}€</h3>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {filtered.length === 0 ? (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune dépense</p>
+                        ) : (
+                            [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date)).map((b, i) => (
+                                <div key={b.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{CATEGORY_EMOJIS[b.type] || ''} {b.type}</p>
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{b.date}</p>
+                                        <p style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b', marginTop: '4px' }}>{b.montant.toFixed(2)}€</p>
+                                    </div>
+                                    {b.id && <button onClick={() => deleteAnimalItem(animal, 'budget', b.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function VeterinairesTab({ animal, updateAnimalFields }) {
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🏥 Vétérinaires</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                        {VETERINAIRES.map(vet => (
+                            <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</h3>
+                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distance}</p>
+                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>
+                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>
+                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>
+                                {animal && (
+                                    <button
+                                        onClick={() => updateAnimalFields(animal, { veterinaire: { id: vet.id, nom: vet.nom } })}
+                                        style={{ marginTop: '12px', width: '100%', padding: '10px 20px', background: animal.veterinaire?.id === vet.id ? '#059669' : '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                        {animal.veterinaire?.id === vet.id ? '✅ Assigné' : '📌 Assigner'}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
