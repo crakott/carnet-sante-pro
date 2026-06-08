@@ -114,6 +114,44 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         };
 
+        // Recherche les cliniques vétérinaires réelles autour d'une position via OpenStreetMap (Overpass API)
+        const OVERPASS_ENDPOINTS = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+        ];
+        const fetchNearbyVets = async (lat, lng) => {
+            const query = `[out:json][timeout:25];(node["amenity"="veterinary"](around:25000,${lat},${lng});way["amenity"="veterinary"](around:25000,${lat},${lng}););out center 30;`;
+            let lastError = null;
+            for (const endpoint of OVERPASS_ENDPOINTS) {
+                try {
+                    const res = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    return (data.elements || [])
+                        .map(el => {
+                            const tags = el.tags || {};
+                            const vLat = el.lat ?? el.center?.lat;
+                            const vLng = el.lon ?? el.center?.lon;
+                            if (vLat == null || vLng == null) return null;
+                            const adresse = [tags['addr:housenumber'], tags['addr:street'], tags['addr:postcode'], tags['addr:city']].filter(Boolean).join(' ');
+                            return {
+                                id: `osm-${el.type}-${el.id}`,
+                                nom: tags.name || tags.brand || 'Vétérinaire',
+                                telephone: tags.phone || tags['contact:phone'] || null,
+                                horaires: tags.opening_hours || null,
+                                adresse: adresse || null,
+                                lat: vLat,
+                                lng: vLng,
+                            };
+                        })
+                        .filter(Boolean);
+                } catch (err) {
+                    lastError = err;
+                }
+            }
+            throw lastError || new Error('Service de recherche indisponible');
+        };
+
         // Build a clear summary of an animal's record: vaccine names, current weight,
         // ongoing medications and the kinds of observations logged
         const getAnimalDossier = (animal) => {
@@ -1454,6 +1492,9 @@
             const [userPos, setUserPos] = React.useState(null);
             const [geoStatus, setGeoStatus] = React.useState('idle'); // idle | loading | done | error
             const [geoError, setGeoError] = React.useState('');
+            const [nearbyVets, setNearbyVets] = React.useState(null);
+            const [vetsStatus, setVetsStatus] = React.useState('idle'); // idle | loading | done | error
+            const [vetsError, setVetsError] = React.useState('');
 
             const locateMe = () => {
                 if (!navigator.geolocation) {
@@ -1463,10 +1504,28 @@
                 }
                 setGeoStatus('loading');
                 setGeoError('');
+                setNearbyVets(null);
+                setVetsStatus('idle');
+                setVetsError('');
                 navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                    async (pos) => {
+                        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setUserPos(coords);
                         setGeoStatus('done');
+                        setVetsStatus('loading');
+                        try {
+                            const found = await fetchNearbyVets(coords.lat, coords.lng);
+                            setNearbyVets(
+                                found
+                                    .map(v => ({ ...v, distanceKm: getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) }))
+                                    .sort((a, b) => a.distanceKm - b.distanceKm)
+                            );
+                            setVetsStatus('done');
+                        } catch (err) {
+                            console.error('Erreur recherche vétérinaires à proximité:', err);
+                            setVetsStatus('error');
+                            setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment (service de cartographie indisponible). Voici une sélection d'exemple en attendant.");
+                        }
                     },
                     (err) => {
                         setGeoStatus('error');
@@ -1478,11 +1537,14 @@
                 );
             };
 
-            const vets = userPos
-                ? VETERINAIRES
-                    .map(v => ({ ...v, distanceKm: getDistanceKm(userPos.lat, userPos.lng, v.lat, v.lng) }))
-                    .sort((a, b) => a.distanceKm - b.distanceKm)
-                : VETERINAIRES;
+            const usingRealVets = nearbyVets !== null && nearbyVets.length > 0;
+            const vets = usingRealVets
+                ? nearbyVets
+                : (userPos
+                    ? VETERINAIRES
+                        .map(v => ({ ...v, distanceKm: getDistanceKm(userPos.lat, userPos.lng, v.lat, v.lng) }))
+                        .sort((a, b) => a.distanceKm - b.distanceKm)
+                    : VETERINAIRES);
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -1490,10 +1552,13 @@
 
                     <div style={{ marginBottom: '20px' }}>
                         <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
-                            {geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trier par proximité'}
+                            {geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trouver les vétérinaires autour de moi'}
                         </button>
-                        {geoStatus === 'done' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>✅ Vétérinaires triés par proximité avec votre position actuelle</p>}
                         {geoStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {geoError}</p>}
+                        {geoStatus === 'done' && vetsStatus === 'loading' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#2563eb' }}>🔎 Recherche des vétérinaires autour de votre position…</p>}
+                        {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité</p>}
+                        {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire référencé sur OpenStreetMap dans un rayon de 25 km autour de votre position. Voici une sélection d'exemple en attendant.</p>}
+                        {geoStatus === 'done' && vetsStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ {vetsError}</p>}
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
@@ -1501,9 +1566,10 @@
                             <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</h3>
                                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distanceKm != null ? `≈ ${vet.distanceKm.toFixed(1)} km de votre position` : vet.distance}</p>
-                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>
-                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>
-                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>
+                                {vet.adresse && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🏠 {vet.adresse}</p>}
+                                {vet.telephone && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>}
+                                {vet.horaires && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>}
+                                {(vet.rating || vet.specialites) && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>}
                                 {animal && (
                                     <button
                                         onClick={() => updateAnimalFields(animal, { veterinaire: { id: vet.id, nom: vet.nom } })}
