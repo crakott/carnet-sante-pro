@@ -703,6 +703,11 @@
                         {error && <p style={{ color: '#ef4444', marginTop: '12px' }}>{error}</p>}
 
                         <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-bottom" />
+
+                        <p style={{ textAlign: 'center', fontSize: '12px', color: '#9ca3af', marginTop: '16px' }}>
+                            En utilisant cette application, vous acceptez notre{' '}
+                            <a href="/privacy.html" target="_blank" rel="noopener" style={{ color: '#10b981' }}>politique de confidentialité</a>.
+                        </p>
                     </div>
                 </div>
             );
@@ -797,6 +802,9 @@
                         >
                             Déconnexion
                         </button>
+                        <p style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#9ca3af' }}>
+                            <a href="/privacy.html" target="_blank" rel="noopener" style={{ color: '#9ca3af' }}>Politique de confidentialité</a>
+                        </p>
                     </div>
                 </div>
             );
