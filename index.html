@@ -1269,15 +1269,36 @@
             const [audioBase64, setAudioBase64] = React.useState('');
             const [fileError, setFileError] = React.useState('');
 
-            const readFile = (file, setBase64) => {
+            const readPhotoFile = (file) => {
+                setFileError('');
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const MAX_PX = 1600;
+                        const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        setPhotoBase64(canvas.toDataURL('image/jpeg', 0.82));
+                    };
+                    img.onerror = () => setFileError('Impossible de lire cette image.');
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const readAudioFile = (file) => {
                 setFileError('');
                 if (!file) return;
-                if (file.size > MAX_FILE_SIZE) {
-                    setFileError('Le fichier est trop volumineux (max ~700 Ko). Choisissez un fichier plus léger.');
+                if (file.size > 5 * 1024 * 1024) {
+                    setFileError('Enregistrement trop volumineux (max 5 Mo).');
                     return;
                 }
                 const reader = new FileReader();
-                reader.onload = (event) => setBase64(event.target.result);
+                reader.onload = (e) => setAudioBase64(e.target.result);
                 reader.readAsDataURL(file);
             };
 
@@ -1314,13 +1335,13 @@
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📸 Ajouter une photo</label>
-                                    <input type="file" accept="image/*" onChange={(e) => readFile(e.target.files[0], setPhotoBase64)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
-                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Photo sélectionnée</p>}
+                                    <input type="file" accept="image/*" onChange={(e) => readPhotoFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Photo sélectionnée (compressée automatiquement)</p>}
                                 </div>
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>🎙️ Ajouter un audio</label>
-                                    <input type="file" accept="audio/*" onChange={(e) => readFile(e.target.files[0], setAudioBase64)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    <input type="file" accept="audio/*" onChange={(e) => readAudioFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
                                     {audioBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Audio sélectionné</p>}
                                 </div>
 
