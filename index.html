@@ -289,7 +289,7 @@
             const [activeTab, setActiveTab] = React.useState('accueil');
             const [animals, setAnimals] = React.useState([]);
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
-            const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3 });
+            const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [showMenu, setShowMenu] = React.useState(false);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
@@ -333,7 +333,8 @@
                     const querySnapshot = await getDocs(q);
                     if (querySnapshot.docs.length > 0) {
                         const settings = querySnapshot.docs[0].data();
-                        setReminderSettings(settings.reminders || { vaccin: 3, medicament: 3 });
+                        const s = settings.reminders || {};
+                        setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
                     }
                 } catch (error) {
                     console.error('Erreur loading settings:', error);
@@ -420,6 +421,22 @@
                         const daysUntil = Math.ceil((medDate - today) / (1000 * 60 * 60 * 24));
                         if (daysUntil <= reminderSettings.medicament && daysUntil > 0) {
                             reminders.push({ type: 'medicament', animal: animal.nom, nom: m.nom, daysUntil, urgent: daysUntil <= 1 });
+                        }
+                    });
+
+                    (animal.antiparasitaires || []).forEach(t => {
+                        const d = new Date(t.prochainTraitement);
+                        const daysUntil = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= (reminderSettings.antiparasitaire ?? 14) && daysUntil > 0) {
+                            reminders.push({ type: 'antiparasitaire', animal: animal.nom, nom: t.nom || 'Antiparasitaire', daysUntil, urgent: daysUntil <= 1 });
+                        }
+                    });
+
+                    (animal.vermifuges || []).forEach(t => {
+                        const d = new Date(t.prochainTraitement);
+                        const daysUntil = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= (reminderSettings.vermifuge ?? 14) && daysUntil > 0) {
+                            reminders.push({ type: 'vermifuge', animal: animal.nom, nom: t.nom || 'Vermifuge', daysUntil, urgent: daysUntil <= 1 });
                         }
                     });
                 });
@@ -942,6 +959,67 @@
             );
         }
 
+        function TraitementSection({ title, emoji, color, items, itemKey, onAdd, onDelete }) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [nom, setNom] = React.useState('');
+            const [dernierTraitement, setDernierTraitement] = React.useState(todayStr);
+            const [intervalMois, setIntervalMois] = React.useState(3);
+
+            const calcProchain = (date, mois) => {
+                const d = new Date(date);
+                d.setMonth(d.getMonth() + parseInt(mois || 1));
+                return d.toISOString().split('T')[0];
+            };
+
+            const handleAdd = () => {
+                if (dernierTraitement) {
+                    onAdd({ nom: nom || title, dernierTraitement, intervalMois: parseInt(intervalMois), prochainTraitement: calcProchain(dernierTraitement, intervalMois) });
+                    setNom(''); setDernierTraitement(todayStr); setIntervalMois(3); setShowForm(false);
+                }
+            };
+
+            return (
+                <div style={{ marginTop: '32px' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color }}>{emoji} {title}</h2>
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${color}` }}>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder={`Nom du produit (ex. Frontline, Milbemax…)`} value={nom} onChange={e => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Date du dernier traitement</label>
+                                <input type="date" value={dernierTraitement} onChange={e => setDernierTraitement(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Fréquence (tous les X mois)</label>
+                                <input type="number" min="1" max="24" value={intervalMois} onChange={e => setIntervalMois(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <p style={{ color: '#9ca3af', fontSize: '12px' }}>Prochain traitement calculé automatiquement : {calcProchain(dernierTraitement, intervalMois)}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '16px', padding: '10px 20px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un traitement
+                        </button>
+                    )}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        {items && items.length > 0 ? items.map((t, i) => (
+                            <div key={t.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <p style={{ fontWeight: '600' }}>{t.nom}</p>
+                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Dernier : {t.dernierTraitement} · Prochain : <strong style={{ color }}>{t.prochainTraitement}</strong></p>
+                                    <p style={{ color: '#9ca3af', fontSize: '12px' }}>Tous les {t.intervalMois} mois</p>
+                                </div>
+                                {t.id && <button onClick={() => onDelete(t.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                            </div>
+                        )) : (
+                            <p style={{ color: '#9ca3af' }}>Aucun traitement enregistré</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         function VaccinsTab({ animal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
@@ -1003,6 +1081,24 @@
                             <p style={{ color: '#9ca3af' }}>Aucun vaccin</p>
                         )}
                     </div>
+
+                    <TraitementSection
+                        title="Antiparasitaires"
+                        emoji="🦟"
+                        color="#7c3aed"
+                        items={animal.antiparasitaires}
+                        onAdd={item => addAnimalItem(animal, 'antiparasitaires', item)}
+                        onDelete={id => deleteAnimalItem(animal, 'antiparasitaires', id)}
+                    />
+
+                    <TraitementSection
+                        title="Vermifuges"
+                        emoji="🪱"
+                        color="#b45309"
+                        items={animal.vermifuges}
+                        onAdd={item => addAnimalItem(animal, 'vermifuges', item)}
+                        onDelete={id => deleteAnimalItem(animal, 'vermifuges', id)}
+                    />
                 </div>
             );
         }
@@ -1718,6 +1814,28 @@
                                 style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
                             />
                             <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant</small>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>🦟 Rappel Antiparasitaires</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.antiparasitaire ?? 14}
+                                onChange={(e) => setReminderSettings({...reminderSettings, antiparasitaire: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant le prochain traitement</small>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>🪱 Rappel Vermifuges</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.vermifuge ?? 14}
+                                onChange={(e) => setReminderSettings({...reminderSettings, vermifuge: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant le prochain traitement</small>
                         </div>
 
                         <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
