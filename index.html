@@ -67,8 +67,16 @@
 
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+        // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        };
 
         // Firebase Config
         const firebaseConfig = {
@@ -192,7 +200,7 @@
             return [
                 `Dossier santé de ${animal.nom} (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece}${animal.race ? ', ' + animal.race : ''})`,
                 animal.sexe ? `Sexe : ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}` : null,
-                animal.dateNaissance ? `Date de naissance : ${animal.dateNaissance}` : null,
+                animal.dateNaissance ? `Date de naissance : ${formatDate(animal.dateNaissance)}` : null,
                 '',
                 `💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`,
                 `⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`,
@@ -290,7 +298,7 @@
                     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
                     <h1>🐾 Dossier santé de ${escapeHtml(animal.nom)}</h1>
                     <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
-                    ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(animal.dateNaissance)}</p>` : ''}
+                    ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
                     <h2>💉 Vaccins</h2>
                     <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
                     <h2>⚖️ Poids actuel</h2>
@@ -491,7 +499,7 @@
                         {/* Reminders Banner */}
                         {reminders.length > 0 && (
                             <div className="animate-fade-in" style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                                <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgament ({reminders.length})</h3>
+                                <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgemment ({reminders.length})</h3>
                                 {reminders.map((r, i) => (
                                     <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
                                         <div>
@@ -548,6 +556,18 @@
             const [password, setPassword] = React.useState('');
             const [isSignup, setIsSignup] = React.useState(false);
             const [error, setError] = React.useState('');
+            const [resetMsg, setResetMsg] = React.useState('');
+
+            const handlePasswordReset = async () => {
+                if (!email) { setError('Entrez votre adresse email pour réinitialiser le mot de passe.'); return; }
+                setError(''); setResetMsg('');
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    setResetMsg('Email de réinitialisation envoyé ! Vérifiez votre boîte mail.');
+                } catch (err) {
+                    setError(err.message);
+                }
+            };
 
             const handleAuth = async (e) => {
                 e.preventDefault();
@@ -611,7 +631,17 @@
                             >
                                 {isSignup ? 'Déjà inscrit ?' : 'S\'inscrire'}
                             </button>
+                            {!isSignup && (
+                                <button
+                                    type="button"
+                                    onClick={handlePasswordReset}
+                                    style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '13px', cursor: 'pointer', marginTop: '8px', textDecoration: 'underline', width: '100%' }}
+                                >
+                                    Mot de passe oublié ?
+                                </button>
+                            )}
                         </form>
+                        {resetMsg && <p style={{ color: '#10b981', marginTop: '8px', fontSize: '14px' }}>{resetMsg}</p>}
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
                             <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
@@ -801,12 +831,20 @@
         function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
             const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+            const [editingAnimal, setEditingAnimal] = React.useState(null);
 
             const handleAddAnimal = () => {
                 if (newAnimal.nom && newAnimal.espece) {
                     saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
                     setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
                     setShowAddAnimal(false);
+                }
+            };
+
+            const handleEditAnimal = () => {
+                if (editingAnimal && editingAnimal.nom && editingAnimal.espece) {
+                    saveAnimal(editingAnimal);
+                    setEditingAnimal(null);
                 }
             };
 
@@ -837,9 +875,14 @@
                                             <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>{animal.espece}</p>
                                             {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
                                         </div>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
-                                            🗑️
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
+                                                ✏️
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
+                                                🗑️
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {animal.sexe && (
@@ -865,6 +908,41 @@
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Edit Animal Modal */}
+                    {editingAnimal && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+                            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px rgba(0,0,0,0.2)' }}>
+                                <h3 style={{ marginBottom: '16px', fontWeight: '600', fontSize: '18px' }}>✏️ Modifier {editingAnimal.nom}</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                                    <input type="text" placeholder="Nom" value={editingAnimal.nom} onChange={(e) => setEditingAnimal({ ...editingAnimal, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={editingAnimal.espece} onChange={(e) => setEditingAnimal({ ...editingAnimal, espece: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option value="">Espèce</option>
+                                        {ESPECES.map(e => <option key={e} value={e}>{EMOJIS_ESPECE[e]} {e}</option>)}
+                                    </select>
+                                    <input type="text" placeholder="Race (optionnel)" value={editingAnimal.race || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, race: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={editingAnimal.sexe || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, sexe: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option value="">Sexe</option>
+                                        <option value="male">♂️ Mâle</option>
+                                        <option value="femelle">♀️ Femelle</option>
+                                    </select>
+                                    <input type="date" value={editingAnimal.dateNaissance || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input type="checkbox" id="edit-sterilise" checked={editingAnimal.sterilise || false} onChange={(e) => setEditingAnimal({ ...editingAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
+                                        <label htmlFor="edit-sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={handleEditAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                        ✅ Enregistrer
+                                    </button>
+                                    <button onClick={() => setEditingAnimal(null)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                        Annuler
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -1011,7 +1089,7 @@
                                 <input type="date" value={dernierTraitement} onChange={e => setDernierTraitement(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Fréquence (tous les X mois)</label>
                                 <input type="number" min="1" max="24" value={intervalMois} onChange={e => setIntervalMois(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <p style={{ color: '#9ca3af', fontSize: '12px' }}>Prochain traitement calculé automatiquement : {calcProchain(dernierTraitement, intervalMois)}</p>
+                                <p style={{ color: '#9ca3af', fontSize: '12px' }}>Prochain traitement calculé automatiquement : {formatDate(calcProchain(dernierTraitement, intervalMois))}</p>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAdd} style={{ padding: '10px 20px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
@@ -1028,7 +1106,7 @@
                             <div key={t.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <p style={{ fontWeight: '600' }}>{t.nom}</p>
-                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Dernier : {t.dernierTraitement} · Prochain : <strong style={{ color }}>{t.prochainTraitement}</strong></p>
+                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Dernier : {formatDate(t.dernierTraitement)} · Prochain : <strong style={{ color }}>{formatDate(t.prochainTraitement)}</strong></p>
                                     <p style={{ color: '#9ca3af', fontSize: '12px' }}>Tous les {t.intervalMois} mois</p>
                                 </div>
                                 {t.id && <button onClick={() => onDelete(t.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
@@ -1093,7 +1171,7 @@
                                 <div key={v.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <p style={{ fontWeight: '600' }}>{v.nom}</p>
-                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {v.date}{v.rappel ? ` | Rappel: ${v.rappel}` : ''}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {formatDate(v.date)}{v.rappel ? ` | Rappel: ${formatDate(v.rappel)}` : ''}</p>
                                     </div>
                                     {v.id && <button onClick={() => deleteAnimalItem(animal, 'vaccins', v.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                 </div>
@@ -1187,7 +1265,7 @@
                                         <div>
                                             <p style={{ fontWeight: '600' }}>{m.nom}</p>
                                             {m.dosage && <p style={{ color: '#6b7280', fontSize: '14px' }}>💊 {m.dosage} {m.unite} • {m.frequence}</p>}
-                                            <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {m.dateDebut}{m.dateFin ? ` → ${m.dateFin}` : ''}</p>
+                                            <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {formatDate(m.dateDebut)}{m.dateFin ? ` → ${formatDate(m.dateFin)}` : ''}</p>
                                             {m.dateFin && (
                                                 <span style={{ display: 'inline-block', fontSize: '11px', padding: '3px 8px', borderRadius: '4px', background: isActive ? '#fce7f3' : '#f3f4f6', color: isActive ? '#be185d' : '#6b7280', fontWeight: '600', marginTop: '4px' }}>
                                                     {isActive ? '✅ En cours' : '⏱️ Fini'}
@@ -1376,7 +1454,7 @@
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>
                                             <p style={{ fontWeight: '600' }}>{TYPE_LABELS[o.type] || o.type}</p>
-                                            <p style={{ fontSize: '12px', color: '#6b7280' }}>{o.date}</p>
+                                            <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(o.date)}</p>
                                         </div>
                                         {o.id && <button onClick={() => deleteAnimalItem(animal, 'observations', o.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                     </div>
@@ -1556,7 +1634,7 @@
                                 <div key={p.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <h4 style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{p.valeur} kg</h4>
-                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{p.date}</p>
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(p.date)}</p>
                                     </div>
                                     {p.id && <button onClick={() => deleteAnimalItem(animal, 'poids', p.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                 </div>
@@ -1675,7 +1753,7 @@
                                 <div key={b.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <p style={{ fontWeight: '600' }}>{CATEGORY_EMOJIS[b.type] || ''} {b.type}{budgetAnimalFilter === 'tous' && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#10b981', background: '#f0fdf4', padding: '2px 8px', borderRadius: '4px' }}>{b.animalEmoji} {b.animalNom}</span>}</p>
-                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{b.date}</p>
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(b.date)}</p>
                                         <p style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b', marginTop: '4px' }}>{b.montant.toFixed(2)}€</p>
                                     </div>
                                     {b.id && <button onClick={() => deleteAnimalItem(animals.find(a => a.id === b.animalId) || animal, 'budget', b.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
@@ -1791,7 +1869,7 @@
 
                     {reminders.length > 0 ? (
                         <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                            <h3 style={{ color: '#d97706', marginBottom: '16px' }}>À faire urgament ({reminders.length})</h3>
+                            <h3 style={{ color: '#d97706', marginBottom: '16px' }}>À faire urgemment ({reminders.length})</h3>
                             {reminders.map((r, i) => (
                                 <div key={i} style={{ padding: '12px', background: 'white', marginBottom: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
                                     <div>
