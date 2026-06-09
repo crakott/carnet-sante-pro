@@ -212,25 +212,30 @@
 
         // Share a photo or audio via the native OS share sheet (iOS/Android),
         // or fall back to downloading the file if Web Share API isn't available.
-        const shareOrDownloadMedia = async (dataUrl, baseName, shareTitle) => {
+        const shareOrDownloadMedia = async (dataUrl, baseName, shareTitle, shareText) => {
             const file = dataUrlToFile(dataUrl, baseName);
             if (!file) return;
             try {
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: shareTitle });
+                    await navigator.share({ files: [file], title: shareTitle, text: shareText || '' });
                     return;
                 }
             } catch (err) {
                 if (err.name === 'AbortError') return;
                 console.error('Erreur partage fichier:', err);
             }
-            // Fallback: trigger download so the user can attach manually
+            // Fallback: download the file, then open a pre-filled email with the observation text
             const url = URL.createObjectURL(file);
             const a = document.createElement('a');
             a.href = url; a.download = file.name;
             document.body.appendChild(a); a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            if (shareText) {
+                const subject = encodeURIComponent(shareTitle);
+                const body = encodeURIComponent(shareText + '\n\n(Fichier joint téléchargé séparément — pensez à l\'attacher à cet e-mail.)');
+                window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+            }
         };
 
         const canShareFiles = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function';
@@ -1339,32 +1344,44 @@
                                         {o.id && <button onClick={() => deleteAnimalItem(animal, 'observations', o.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
                                     </div>
                                     {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
-                                    {o.photo && (
-                                        <div style={{ marginTop: '12px' }}>
-                                            <img src={o.photo} alt="Observation" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', maxHeight: '300px' }} />
-                                            <button
-                                                onClick={() => shareOrDownloadMedia(o.photo, `photo-${animal.nom}-${o.date}`, `Photo observation — ${animal.nom} (${o.date})`)}
-                                                style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
-                                            >
-                                                {canShareFiles ? '📤 Envoyer cette photo (e-mail, messagerie…)' : '⬇️ Télécharger cette photo pour l\'envoyer'}
+                                    {(o.photo || o.audio) && (() => {
+                                        const obsText = [
+                                            `Animal : ${animal.nom}${animal.espece ? ` (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece})` : ''}`,
+                                            `Date : ${o.date}`,
+                                            `Type : ${(TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '')}`,
+                                            o.description ? `Observation : ${o.description}` : null,
+                                            '',
+                                            'Envoyé depuis Carnet Santé PRO'
+                                        ].filter(l => l !== null).join('\n');
+                                        return (<>
+                                        {o.photo && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <img src={o.photo} alt="Observation" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', maxHeight: '300px' }} />
+                                                <button
+                                                    onClick={() => shareOrDownloadMedia(o.photo, `photo-${animal.nom}-${o.date}`, `Photo — ${animal.nom} (${o.date})`, obsText)}
+                                                    style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
+                                                >
+                                                    {canShareFiles ? '📤 Envoyer cette photo avec le texte (e-mail, messagerie…)' : '⬇️ Télécharger cette photo + ouvrir e-mail'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        {o.audio && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <p style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>🎙️ Enregistrement audio :</p>
+                                                <audio controls style={{ width: '100%' }}>
+                                                    <source src={o.audio} />
+                                                    Votre navigateur ne supporte pas la lecture audio.
+                                                </audio>
+                                                <button
+                                                    onClick={() => shareOrDownloadMedia(o.audio, `audio-${animal.nom}-${o.date}`, `Audio — ${animal.nom} (${o.date})`, obsText)}
+                                                    style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
+                                                >
+                                                    {canShareFiles ? '📤 Envoyer cet audio avec le texte (e-mail, messagerie…)' : '⬇️ Télécharger cet audio + ouvrir e-mail'}
                                             </button>
-                                        </div>
-                                    )}
-                                    {o.audio && (
-                                        <div style={{ marginTop: '12px' }}>
-                                            <p style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>🎙️ Enregistrement audio :</p>
-                                            <audio controls style={{ width: '100%' }}>
-                                                <source src={o.audio} />
-                                                Votre navigateur ne supporte pas la lecture audio.
-                                            </audio>
-                                            <button
-                                                onClick={() => shareOrDownloadMedia(o.audio, `audio-${animal.nom}-${o.date}`, `Enregistrement audio — ${animal.nom} (${o.date})`)}
-                                                style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
-                                            >
-                                                {canShareFiles ? '📤 Envoyer cet audio (e-mail, messagerie…)' : '⬇️ Télécharger cet audio pour l\'envoyer'}
-                                            </button>
-                                        </div>
-                                    )}
+                                            </div>
+                                        )}
+                                        </>);
+                                    })()}
                                 </div>
                             ))
                         ) : (
