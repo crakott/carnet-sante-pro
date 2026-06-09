@@ -215,16 +215,22 @@
         const shareOrDownloadMedia = async (dataUrl, baseName, shareTitle, shareText) => {
             const file = dataUrlToFile(dataUrl, baseName);
             if (!file) return;
+            // Build a companion .txt file so the observation text is reliably present
+            // even when the email app ignores the Web Share API 'text' field
+            const txtFile = shareText
+                ? new File([shareText], `${baseName}-observation.txt`, { type: 'text/plain' })
+                : null;
+            const filesToShare = txtFile ? [file, txtFile] : [file];
             try {
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: shareTitle, text: shareText || '' });
+                if (navigator.canShare && navigator.canShare({ files: filesToShare })) {
+                    await navigator.share({ files: filesToShare, title: shareTitle, text: shareText || '' });
                     return;
                 }
             } catch (err) {
                 if (err.name === 'AbortError') return;
                 console.error('Erreur partage fichier:', err);
             }
-            // Fallback: download the file, then open a pre-filled email with the observation text
+            // Fallback desktop: download the media file then open a pre-filled mailto
             const url = URL.createObjectURL(file);
             const a = document.createElement('a');
             a.href = url; a.download = file.name;
@@ -232,9 +238,8 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             if (shareText) {
-                const subject = encodeURIComponent(shareTitle);
-                const body = encodeURIComponent(shareText + '\n\n(Fichier joint téléchargé séparément — pensez à l\'attacher à cet e-mail.)');
-                window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+                const note = '\n\n(Pièce jointe téléchargée séparément — pensez à l\'attacher à cet e-mail.)';
+                window.location.href = `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText + note)}`;
             }
         };
 
