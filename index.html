@@ -427,7 +427,7 @@
                     });
 
                     (animal.medicaments || []).forEach(m => {
-                        const medDate = new Date(m.dateDebut);
+                        const medDate = new Date(m.dateFin);
                         const daysUntil = Math.ceil((medDate - today) / (1000 * 60 * 60 * 24));
                         if (daysUntil <= reminderSettings.medicament && daysUntil > 0) {
                             reminders.push({ type: 'medicament', animal: animal.nom, nom: m.nom, daysUntil, urgent: daysUntil <= 1 });
