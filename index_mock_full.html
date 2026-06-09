@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Carnet Santé PRO - Gérez la santé de vos animaux facilement. Vaccins, médicaments, rappels en un seul endroit.">
+    <meta name="keywords" content="carnet santé animaux, vétérinaire, vaccins, chien, chat, lapin">
+    <meta name="theme-color" content="#10b981">
+    <title>🐾 Carnet Santé PRO - Firebase Edition</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2220007213028900" crossorigin="anonymous"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fafb; color: #1f2937; overflow-x: hidden; }
+        #root { width: 100%; min-height: 100vh; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #059669; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        .animate-slide-in { animation: slideIn 0.3s ease-in-out; }
+
+        /* Pub (AdSense) */
+        .ad-banner {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 20px 0;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .ad-banner-top { margin-bottom: 20px; }
+        .ad-banner-bottom { margin-top: 20px; }
+        .ad-note { font-size: 11px; color: #999; text-align: center; margin-top: 5px; }
+
+        @media (max-width: 768px) {
+            .ad-banner { margin: 15px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module" data-presets="react">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDZ_dc_HfSmXL1pjeKwT7uD1xX2lbr48c0",
+            authDomain: "carnet-sante-pro.firebaseapp.com",
+            projectId: "carnet-sante-pro",
+            storageBucket: "carnet-sante-pro.firebasestorage.app",
+            messagingSenderId: "1059301417055",
+            appId: "1:1059301417055:web:8f5f81e0b075063ad4fbea"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Reference data for animal profiles, vaccines, medications and vets
+        const ESPECES = ['Chien', 'Chat', 'Lapin', 'Hamster', 'Gerbille', 'Cheval', 'Oiseau', 'Tortue'];
+        const EMOJIS_ESPECE = {
+            'Chien': '🐕', 'Chat': '🐈', 'Lapin': '🐰', 'Hamster': '🐹',
+            'Cheval': '🐴', 'Oiseau': '🦜', 'Tortue': '🐢', 'Gerbille': '🐭'
+        };
+        const VACCINS_COURANTS = {
+            'Chien': ['Rage', 'DTP', 'Parvovirose', 'Leptospirose'],
+            'Chat': ['Rage', 'Typhus félin', 'Calicivirose', 'Rhinotrachéite', 'Coryza', 'Chlamydophilose', 'Leucose féline'],
+            'Cheval': ['Grippe équine', 'Tétanos', 'Rhinopneumonite'],
+            'Lapin': ['Myxomatose', 'VHD', 'VHD2'],
+            'Hamster': [], 'Gerbille': [], 'Tortue': [],
+            'Oiseau': ['Paramyxovirus', 'Newcastle'],
+        };
+        const MEDICAMENTS_COURANTS = [
+            'Amoxicilline', 'Doxycycline', 'Métronidazole', 'Fluconazole',
+            'Paracétamol', 'Ibuprofène', 'Carprofen', 'Meloxicam',
+            'Prednisone', 'Dexaméthasone', 'Loratadine', 'Cetirizine',
+            'Oméprazole', 'Famotidine', 'Lactulose', 'Probiotiques'
+        ];
+        const VETERINAIRES = [
+            { id: 1, nom: "Clinique Saint-Germain", distance: "2.3 km", lat: 48.8539, lng: 2.3340, telephone: "01 23 45 67 89", horaires: "Lun-Ven: 9h-19h", specialites: ["Chiens", "Chats"], rating: 4.8 },
+            { id: 2, nom: "Vétérinaire 24h/24", distance: "5.1 km", lat: 48.8907, lng: 2.3617, telephone: "01 98 76 54 32", horaires: "24h/24, 7j/7", specialites: ["Urgences"], rating: 4.6 },
+            { id: 3, nom: "Clinique Exotiques", distance: "3.8 km", lat: 48.8330, lng: 2.3708, telephone: "01 45 23 12 34", horaires: "Lun-Ven: 10h-18h", specialites: ["Reptiles", "Oiseaux"], rating: 4.9 },
+        ];
+        const TYPE_LABELS = {
+            comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
+            blessure: '🩹 Blessure', maladie: '🤒 Maladie', autres: '➕ Autres'
+        };
+        const MAX_FILE_SIZE = 700 * 1024;
+
+        // Distance in km between two lat/lng points (Haversine formula)
+        const getDistanceKm = (lat1, lng1, lat2, lng2) => {
+            const toRad = (deg) => deg * Math.PI / 180;
+            const R = 6371;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+
+        // Recherche les cliniques vétérinaires réelles autour d'une position via OpenStreetMap (Overpass API)
+        const OVERPASS_ENDPOINTS = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+        ];
+        const fetchNearbyVets = async (lat, lng) => {
+            const query = `[out:json][timeout:25];(node["amenity"="veterinary"](around:25000,${lat},${lng});way["amenity"="veterinary"](around:25000,${lat},${lng}););out center 30;`;
+            let lastError = null;
+            for (const endpoint of OVERPASS_ENDPOINTS) {
+                try {
+                    const res = await fetch(endpoint, { method: 'POST', body: 'data=' + encodeURIComponent(query) });
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    return (data.elements || [])
+                        .map(el => {
+                            const tags = el.tags || {};
+                            const vLat = el.lat ?? el.center?.lat;
+                            const vLng = el.lon ?? el.center?.lon;
+                            if (vLat == null || vLng == null) return null;
+                            const adresse = [tags['addr:housenumber'], tags['addr:street'], tags['addr:postcode'], tags['addr:city']].filter(Boolean).join(' ');
+                            return {
+                                id: `osm-${el.type}-${el.id}`,
+                                nom: tags.name || tags.brand || 'Vétérinaire',
+                                telephone: tags.phone || tags['contact:phone'] || null,
+                                horaires: tags.opening_hours || null,
+                                adresse: adresse || null,
+                                lat: vLat,
+                                lng: vLng,
+                            };
+                        })
+                        .filter(Boolean);
+                } catch (err) {
+                    lastError = err;
+                }
+            }
+            throw lastError || new Error('Service de recherche indisponible');
+        };
+
+        // Build a clear summary of an animal's record: vaccine names, current weight,
+        // ongoing medications and the kinds of observations logged
+        const getAnimalDossier = (animal) => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const vaccinNames = (animal.vaccins || []).map(v => v.nom);
+            const lastWeight = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0] || null;
+            const currentMedications = (animal.medicaments || []).filter(m => todayStr >= m.dateDebut && todayStr <= m.dateFin);
+            const observationTypes = [...new Set((animal.observations || []).map(o => o.type))];
+            return { vaccinNames, lastWeight, currentMedications, observationTypes };
+        };
+
+        // Format an animal's record as plain text, ready to be sent by email to a vétérinaire.
+        // Includes the full written content of every observation (mailto: links can't carry photo/audio attachments,
+        // so those are pointed to the printable dossier report instead).
+        const buildDossierEmailBody = (animal) => {
+            const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
+            const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const obsLines = observations.length > 0
+                ? observations.map(o => {
+                    const label = (TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '');
+                    const attachments = [o.photo ? '📷 photo' : null, o.audio ? '🎙️ audio' : null].filter(Boolean).join(' + ');
+                    return `  • [${o.date}] ${label}${o.description ? ' — ' + o.description : ''}${attachments ? ` (${attachments}, voir le dossier complet)` : ''}`;
+                })
+                : ['  • aucune observation enregistrée'];
+            const hasMedia = observations.some(o => o.photo || o.audio);
+
+            return [
+                `Dossier santé de ${animal.nom} (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece}${animal.race ? ', ' + animal.race : ''})`,
+                animal.sexe ? `Sexe : ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}` : null,
+                animal.dateNaissance ? `Date de naissance : ${animal.dateNaissance}` : null,
+                '',
+                `💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`,
+                `⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`,
+                `💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map(m => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence})`).join(', ') : 'aucun'}`,
+                '',
+                '📋 Observations :',
+                ...obsLines,
+                hasMedia ? "\nℹ️ Certaines observations contiennent des photos ou enregistrements audio : ouvrez le dossier complet (bouton « 🖨️ Dossier complet ») pour les consulter ou les joindre à cet e-mail." : null,
+                '',
+                'Envoyé depuis Carnet Santé PRO'
+            ].filter(line => line !== null).join('\n');
+        };
+
+        // Escape text before injecting it into the printable HTML report (the report is built via document.write)
+        const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // Convert a base64 data-URL to a File object suitable for the Web Share API
+        const dataUrlToFile = (dataUrl, baseName) => {
+            const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
+            if (!match) return null;
+            const mime = match[1];
+            const binary = atob(match[2]);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const ext = mime.split('/')[1].replace('jpeg', 'jpg').split('+')[0];
+            return new File([bytes], `${baseName}.${ext}`, { type: mime });
+        };
+
+        // Share a photo or audio via the native OS share sheet (iOS/Android),
+        // or fall back to downloading the file if Web Share API isn't available.
+        const shareOrDownloadMedia = async (dataUrl, baseName, shareTitle, shareText) => {
+            const file = dataUrlToFile(dataUrl, baseName);
+            if (!file) return;
+            // Build a companion .txt file so the observation text is reliably present
+            // even when the email app ignores the Web Share API 'text' field
+            const txtFile = shareText
+                ? new File([shareText], `${baseName}-observation.txt`, { type: 'text/plain' })
+                : null;
+            const filesToShare = txtFile ? [file, txtFile] : [file];
+            try {
+                if (navigator.canShare && navigator.canShare({ files: filesToShare })) {
+                    await navigator.share({ files: filesToShare, title: shareTitle, text: shareText || '' });
+                    return;
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                console.error('Erreur partage fichier:', err);
+            }
+            // Fallback desktop: download the media file then open a pre-filled mailto
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url; a.download = file.name;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            if (shareText) {
+                const note = '\n\n(Pièce jointe téléchargée séparément — pensez à l\'attacher à cet e-mail.)';
+                window.location.href = `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareText + note)}`;
+            }
+        };
+
+        const canShareFiles = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function';
+
+        // Open a printable, standalone report with the full written record AND embedded photos/audio,
+        // so the owner can save it as PDF or print it to hand/send to the vétérinaire (mailto: can't carry attachments)
+        const openDossierReport = (animal) => {
+            const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
+            const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const win = window.open('', '_blank');
+            if (!win) return;
+
+            const obsHtml = observations.length > 0
+                ? observations.map(o => `
+                    <div class="obs">
+                        <p class="obs-head"><strong>${escapeHtml(TYPE_LABELS[o.type] || o.type)}</strong> — ${escapeHtml(o.date)}</p>
+                        ${o.description ? `<p>${escapeHtml(o.description)}</p>` : ''}
+                        ${o.photo ? `<img src="${escapeHtml(o.photo)}" alt="Photo observation" />` : ''}
+                        ${o.audio ? `<audio controls src="${escapeHtml(o.audio)}"></audio>` : ''}
+                    </div>`).join('')
+                : '<p>Aucune observation enregistrée</p>';
+
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dossier santé - ${escapeHtml(animal.nom)}</title>
+                <style>
+                    body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 800px; margin: 0 auto; }
+                    h1 { color: #10b981; margin-bottom: 4px; }
+                    h2 { margin-top: 28px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; font-size: 18px; }
+                    .obs { margin-bottom: 14px; padding: 12px; background: #f9fafb; border-radius: 8px; }
+                    .obs-head { margin: 0 0 6px; }
+                    img { max-width: 320px; display: block; margin-top: 8px; border-radius: 6px; }
+                    audio { margin-top: 8px; display: block; }
+                    .print-btn { padding: 10px 18px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 20px; }
+                    @media print { .print-btn { display: none; } }
+                </style></head>
+                <body>
+                    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+                    <h1>🐾 Dossier santé de ${escapeHtml(animal.nom)}</h1>
+                    <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
+                    ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(animal.dateNaissance)}</p>` : ''}
+                    <h2>💉 Vaccins</h2>
+                    <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
+                    <h2>⚖️ Poids actuel</h2>
+                    <p>${lastWeight ? `${escapeHtml(lastWeight.valeur)} kg (mesuré le ${escapeHtml(lastWeight.date)})` : 'Non renseigné'}</p>
+                    <h2>💊 Médicaments en cours</h2>
+                    <p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
+                    <h2>📋 Observations</h2>
+                    ${obsHtml}
+                </body></html>`);
+            win.document.close();
+        };
+
+        // Main App Component
+        function App() {
+            const [user, setUser] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
+            const [activeTab, setActiveTab] = React.useState('accueil');
+            const [animals, setAnimals] = React.useState([]);
+            const [selectedAnimal, setSelectedAnimal] = React.useState(null);
+            const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
+            const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
+            const [showMenu, setShowMenu] = React.useState(false);
+            const [budgetFilter, setBudgetFilter] = React.useState('tout');
+
+            // Auth State
+            React.useEffect(() => {
+                setUser({ uid: 'mockuid', email: 'test@example.com' });
+                setLoading(false);
+            }, []);
+
+            // Responsive layout: switch between sidebar (desktop) and hamburger menu (mobile)
+            React.useEffect(() => {
+                const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            // Load Animals from Firestore
+            const loadAnimalsFromFirestore = async (uid) => {
+                try {
+                    const q = query(collection(db, 'animals'), where('userId', '==', uid));
+                    const querySnapshot = await getDocs(q);
+                    const animalsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setAnimals(animalsData);
+                    if (animalsData.length > 0) setSelectedAnimal(animalsData[0].id);
+                } catch (error) {
+                    console.error('Erreur loading animals:', error);
+                }
+            };
+
+            // Load Settings
+            const loadSettings = async (uid) => {
+                try {
+                    const q = query(collection(db, 'settings'), where('userId', '==', uid));
+                    const querySnapshot = await getDocs(q);
+                    if (querySnapshot.docs.length > 0) {
+                        const settings = querySnapshot.docs[0].data();
+                        const s = settings.reminders || {};
+                        setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
+                    }
+                } catch (error) {
+                    console.error('Erreur loading settings:', error);
+                }
+            };
+
+            // Save Animal to Firestore
+            const saveAnimal = async (animalData) => {
+                if (animalData.id && animals.find(a => a.id === animalData.id)) {
+                    setAnimals(prev => prev.map(a => a.id === animalData.id ? { ...a, ...animalData } : a));
+                } else {
+                    const newAnimal = { ...animalData, id: 'mock_' + Date.now(), userId: 'mockuid' };
+                    setAnimals(prev => [...prev, newAnimal]);
+                }
+            };
+
+            // Delete Animal
+            const deleteAnimalFromFirestore = async (animalId) => {
+                setAnimals(prev => prev.filter(a => a.id !== animalId));
+                setSelectedAnimal(null);
+            };
+
+            // Append an item (vaccin, médicament, observation...) to an animal's array field and persist to Firestore
+            const addAnimalItem = (animal, type, item) => {
+                const updated = { ...animal, [type]: [...(animal[type] || []), { ...item, id: Date.now() }] };
+                saveAnimal(updated);
+            };
+
+            // Remove an item from an animal's array field by id and persist to Firestore
+            const deleteAnimalItem = (animal, type, itemId) => {
+                const updated = { ...animal, [type]: (animal[type] || []).filter(i => i.id !== itemId) };
+                saveAnimal(updated);
+            };
+
+            // Merge field updates (e.g. assigned vétérinaire) into an animal and persist to Firestore
+            const updateAnimalFields = (animal, updates) => {
+                saveAnimal({ ...animal, ...updates });
+            };
+
+            // Filter an animal's budget entries by the selected period
+            const getFilteredBudget = (budget) => {
+                const today = new Date();
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const monthAgo = new Date(today.getFullYear(), today.getMonth(), 1);
+                const yearAgo = new Date(today.getFullYear(), 0, 1);
+
+                return (budget || []).filter(b => {
+                    const bDate = new Date(b.date);
+                    if (budgetFilter === 'semaine') return bDate >= weekAgo;
+                    if (budgetFilter === 'mois') return bDate >= monthAgo;
+                    if (budgetFilter === 'annee') return bDate >= yearAgo;
+                    return true;
+                });
+            };
+
+            // Check Reminders across all animals, sorted by urgency
+            const getReminders = () => {
+                const reminders = [];
+                const today = new Date();
+
+                animals.forEach(animal => {
+                    (animal.vaccins || []).forEach(v => {
+                        const vaccineDate = new Date(v.rappel || v.date);
+                        const daysUntil = Math.ceil((vaccineDate - today) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= reminderSettings.vaccin && daysUntil > 0) {
+                            reminders.push({ type: 'vaccin', animal: animal.nom, nom: v.nom, daysUntil, urgent: daysUntil <= 1 });
+                        }
+                    });
+
+                    (animal.medicaments || []).forEach(m => {
+                        const medDate = new Date(m.dateFin);
+                        const daysUntil = Math.ceil((medDate - today) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= reminderSettings.medicament && daysUntil > 0) {
+                            reminders.push({ type: 'medicament', animal: animal.nom, nom: m.nom, daysUntil, urgent: daysUntil <= 1 });
+                        }
+                    });
+
+                    (animal.antiparasitaires || []).forEach(t => {
+                        const d = new Date(t.prochainTraitement);
+                        const daysUntil = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= (reminderSettings.antiparasitaire ?? 14) && daysUntil > 0) {
+                            reminders.push({ type: 'antiparasitaire', animal: animal.nom, nom: t.nom || 'Antiparasitaire', daysUntil, urgent: daysUntil <= 1 });
+                        }
+                    });
+
+                    (animal.vermifuges || []).forEach(t => {
+                        const d = new Date(t.prochainTraitement);
+                        const daysUntil = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= (reminderSettings.vermifuge ?? 14) && daysUntil > 0) {
+                            reminders.push({ type: 'vermifuge', animal: animal.nom, nom: t.nom || 'Vermifuge', daysUntil, urgent: daysUntil <= 1 });
+                        }
+                    });
+                });
+
+                return reminders.sort((a, b) => a.daysUntil - b.daysUntil);
+            };
+
+            // Open a pre-filled email so the user can send themselves a reminder
+            const sendEmailReminder = (reminder) => {
+                const subject = `⚠️ Rappel: ${reminder.nom} expire dans ${reminder.daysUntil} jours`;
+                const body = `Bonjour,\n\nRappel: ${reminder.nom} pour ${reminder.animal} expire dans ${reminder.daysUntil} jours.\n\nVeuillez prendre les mesures nécessaires.\n\nCarnet Santé PRO`;
+                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            };
+
+            if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+
+            if (!user) {
+                return <LoginScreen auth={auth} />;
+            }
+
+            const reminders = getReminders();
+
+            return (
+                <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
+                    {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} user={user} auth={auth} />}
+
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                        {!isDesktop && <MobileHeader showMenu={showMenu} setShowMenu={setShowMenu} />}
+                        {!isDesktop && showMenu && <MobileMenu activeTab={activeTab} setActiveTab={setActiveTab} setShowMenu={setShowMenu} auth={auth} />}
+
+                        {/* Reminders Banner */}
+                        {reminders.length > 0 && (
+                            <div className="animate-fade-in" style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
+                                <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgament ({reminders.length})</h3>
+                                {reminders.map((r, i) => (
+                                    <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
+                                        <div>
+                                            <span>{r.nom} ({r.animal}) - {r.daysUntil} jours restants</span>
+                                            {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
+                                        </div>
+                                        <button onClick={() => sendEmailReminder(r)} style={{ padding: '6px 12px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+                                            📧 Rappel email
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {!isDesktop && (
+                            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px', width: '100%' }}>
+                                <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-top" />
+                            </div>
+                        )}
+
+                        <Content
+                            activeTab={activeTab}
+                            setActiveTab={setActiveTab}
+                            animals={animals}
+                            selectedAnimal={selectedAnimal}
+                            setSelectedAnimal={setSelectedAnimal}
+                            saveAnimal={saveAnimal}
+                            deleteAnimal={deleteAnimalFromFirestore}
+                            addAnimalItem={addAnimalItem}
+                            deleteAnimalItem={deleteAnimalItem}
+                            updateAnimalFields={updateAnimalFields}
+                            budgetFilter={budgetFilter}
+                            setBudgetFilter={setBudgetFilter}
+                            getFilteredBudget={getFilteredBudget}
+                            reminderSettings={reminderSettings}
+                            setReminderSettings={setReminderSettings}
+                            reminders={reminders}
+                            sendEmailReminder={sendEmailReminder}
+                            user={user}
+                            db={db}
+                        />
+
+                        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px 16px', width: '100%' }}>
+                            <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-bottom" />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Login Component
+        function LoginScreen({ auth }) {
+            const [email, setEmail] = React.useState('');
+            const [password, setPassword] = React.useState('');
+            const [isSignup, setIsSignup] = React.useState(false);
+            const [error, setError] = React.useState('');
+
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setError('');
+                try {
+                    if (isSignup) {
+                        await createUserWithEmailAndPassword(auth, email, password);
+                    } else {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    }
+                } catch (err) {
+                    setError(err.message);
+                }
+            };
+
+            const handleGoogleAuth = async () => {
+                setError('');
+                try {
+                    await signInWithPopup(auth, new GoogleAuthProvider());
+                } catch (err) {
+                    setError(err.message);
+                }
+            };
+
+            return (
+                <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', padding: '20px' }}>
+                    <div className="animate-fade-in" style={{ background: 'white', borderRadius: '20px', padding: '40px', maxWidth: '400px', width: '100%', boxShadow: '0 20px 25px rgba(0,0,0,0.1)' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                            <div style={{ fontSize: '60px', marginBottom: '10px' }}>🐾</div>
+                            <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981', marginBottom: '5px' }}>Carnet Santé PRO</h1>
+                            <p style={{ color: '#6b7280', fontSize: '14px' }}>Suivi santé de vos animaux</p>
+                        </div>
+
+                        <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-top" />
+
+                        <form onSubmit={handleAuth}>
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '12px', fontSize: '16px' }}
+                            />
+                            <input
+                                type="password"
+                                placeholder="Mot de passe"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '16px', fontSize: '16px' }}
+                            />
+                            <button
+                                type="submit"
+                                style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', marginBottom: '12px' }}
+                            >
+                                {isSignup ? 'S\'inscrire' : 'Se connecter'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsSignup(!isSignup)}
+                                style={{ width: '100%', padding: '12px', background: 'transparent', color: '#10b981', border: '1px solid #10b981', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                            >
+                                {isSignup ? 'Déjà inscrit ?' : 'S\'inscrire'}
+                            </button>
+                        </form>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0' }}>
+                            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                            <span style={{ color: '#9ca3af', fontSize: '14px' }}>ou</span>
+                            <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={handleGoogleAuth}
+                            style={{ width: '100%', padding: '12px', background: 'white', color: '#1f2937', border: '1px solid #d1d5db', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 18 18">
+                                <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.08-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+                                <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33C2.44 15.98 5.48 18 9 18z"/>
+                                <path fill="#FBBC05" d="M3.97 10.72c-.18-.54-.28-1.12-.28-1.72s.1-1.18.28-1.72V4.95H.96A8.996 8.996 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>
+                                <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+                            </svg>
+                            Continuer avec Google
+                        </button>
+
+                        {error && <p style={{ color: '#ef4444', marginTop: '12px' }}>{error}</p>}
+
+                        <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-bottom" />
+                    </div>
+                </div>
+            );
+        }
+
+        // Reusable AdSense banner (real client ID; slot IDs are placeholders to replace with real ones from AdSense)
+        function AdBanner({ format = 'horizontal', slot = 'xxxxxxxxxx', className = '', style = {} }) {
+            React.useEffect(() => {
+                try {
+                    if (window.adsbygoogle) window.adsbygoogle.push({});
+                } catch (e) {}
+            }, []);
+
+            return (
+                <div className={`ad-banner ${className}`} style={style}>
+                    <ins
+                        className="adsbygoogle"
+                        style={{ display: 'block' }}
+                        data-ad-client="ca-pub-2220007213028900"
+                        data-ad-slot={slot}
+                        data-ad-format={format}
+                        data-full-width-responsive="true"
+                    ></ins>
+                    <div className="ad-note">Publicité</div>
+                </div>
+            );
+        }
+
+        const NAV_TABS = [
+            { id: 'accueil', label: '🏠 Accueil' },
+            { id: 'sante', label: '💪 Santé' },
+            { id: 'vaccins', label: '💉 Vaccins' },
+            { id: 'aliment', label: '🍎 Alimentation' },
+            { id: 'medicaments', label: '💊 Médication' },
+            { id: 'notes', label: '📋 Observations' },
+            { id: 'poids', label: '⚖️ Poids' },
+            { id: 'budget', label: '💰 Budget' },
+            { id: 'veterinaires', label: '🏥 Vétérinaires' },
+            { id: 'rappels', label: '⚠️ Rappels' },
+            { id: 'parametres', label: '⚙️ Paramètres' }
+        ];
+
+        function NavButton({ tab, active, onClick, style = {} }) {
+            return (
+                <button
+                    onClick={onClick}
+                    style={{
+                        width: '100%',
+                        padding: '12px',
+                        marginBottom: '8px',
+                        background: active ? '#d1fae5' : 'transparent',
+                        color: active ? '#10b981' : '#6b7280',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: active ? '600' : '400',
+                        fontSize: '14px',
+                        transition: 'all 0.2s',
+                        ...style
+                    }}
+                >
+                    {tab.label}
+                </button>
+            );
+        }
+
+        // Sidebar (desktop navigation)
+        function Sidebar({ activeTab, setActiveTab, user, auth }) {
+            return (
+                <div style={{ width: '250px', background: 'white', borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                    <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
+                        <div style={{ fontSize: '28px', marginBottom: '8px' }}>🐾</div>
+                        <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Carnet Santé</h2>
+                        <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', wordBreak: 'break-all' }}>{user?.email}</p>
+                    </div>
+
+                    <nav style={{ flex: 1, padding: '15px' }}>
+                        {NAV_TABS.map(tab => (
+                            <NavButton key={tab.id} tab={tab} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} />
+                        ))}
+                    </nav>
+
+                    <div style={{ padding: '15px' }}>
+                        <AdBanner format="vertical" slot="xxxxxxxxxx" style={{ marginBottom: 0 }} />
+                    </div>
+
+                    <div style={{ padding: '15px', borderTop: '1px solid #e5e7eb' }}>
+                        <button
+                            onClick={() => signOut(auth)}
+                            style={{ width: '100%', padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}
+                        >
+                            Déconnexion
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Mobile header with hamburger toggle
+        function MobileHeader({ showMenu, setShowMenu }) {
+            return (
+                <div style={{ background: 'white', padding: '15px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>🐾 Carnet Santé</h1>
+                    <button onClick={() => setShowMenu(!showMenu)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>☰</button>
+                </div>
+            );
+        }
+
+        // Mobile slide-in navigation menu
+        function MobileMenu({ activeTab, setActiveTab, setShowMenu, auth }) {
+            return (
+                <div className="animate-slide-in" style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '10px' }}>
+                    {NAV_TABS.map(tab => (
+                        <NavButton
+                            key={tab.id}
+                            tab={tab}
+                            active={activeTab === tab.id}
+                            onClick={() => { setActiveTab(tab.id); setShowMenu(false); }}
+                        />
+                    ))}
+                    <button
+                        onClick={() => signOut(auth)}
+                        style={{ width: '100%', padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', marginTop: '10px' }}
+                    >
+                        Déconnexion
+                    </button>
+                </div>
+            );
+        }
+
+        // Content Router
+        function Content(props) {
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalFields, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
+            const animal = animals.find(a => a.id === selectedAnimal);
+
+            if (activeTab === 'accueil') {
+                return <HomeTab {...props} />;
+            } else if (activeTab === 'sante') {
+                return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'vaccins') {
+                return <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'aliment') {
+                return <AlimentTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'medicaments') {
+                return <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'notes') {
+                return <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'poids') {
+                return <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'budget') {
+                return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+            } else if (activeTab === 'veterinaires') {
+                return <VeterinairesTab animal={animal} updateAnimalFields={updateAnimalFields} />;
+            } else if (activeTab === 'rappels') {
+                return <RappelsTab {...props} />;
+            } else if (activeTab === 'parametres') {
+                return <ParametresTab {...props} />;
+            }
+        }
+
+        // Tabs Content
+        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
+            const [showAddAnimal, setShowAddAnimal] = React.useState(false);
+            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+
+            const handleAddAnimal = () => {
+                if (newAnimal.nom && newAnimal.espece) {
+                    saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
+                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+                    setShowAddAnimal(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
+
+                    {/* Animals List */}
+                    {animals.length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                            {animals.map(animal => (
+                                <div
+                                    key={animal.id}
+                                    className="animate-fade-in"
+                                    onClick={() => { setSelectedAnimal(animal.id); setActiveTab('sante'); }}
+                                    style={{
+                                        background: 'white',
+                                        padding: '16px',
+                                        borderRadius: '8px',
+                                        border: selectedAnimal === animal.id ? '2px solid #10b981' : '1px solid #e5e7eb',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                        <div>
+                                            <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                                            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>{animal.espece}</p>
+                                            {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
+                                        </div>
+                                        <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
+                                            🗑️
+                                        </button>
+                                    </div>
+
+                                    {animal.sexe && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '12px', padding: '10px 0', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', marginBottom: '12px' }}>
+                                            <div><span style={{ color: '#6b7280' }}>Sexe:</span> <strong>{animal.sexe === 'male' ? '♂️ Mâle' : '♀️ Femelle'}</strong></div>
+                                            <div><span style={{ color: '#6b7280' }}>Stérilisé:</span> <strong>{animal.sterilise ? '✅ Oui' : '❌ Non'}</strong></div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                        <div style={{ background: '#f0fdf4', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💉 Vaccins</p>
+                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{(animal.vaccins || []).length}</p>
+                                        </div>
+                                        <div style={{ background: '#ecfdf5', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💊 Médicaments</p>
+                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{(animal.medicaments || []).length}</p>
+                                        </div>
+                                        <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💰 Budget</p>
+                                            <p style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>{(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Add Animal Form */}
+                    {showAddAnimal ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un animal</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder="Nom" value={newAnimal.nom} onChange={(e) => setNewAnimal({ ...newAnimal, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <select value={newAnimal.espece} onChange={(e) => setNewAnimal({ ...newAnimal, espece: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Espèce</option>
+                                    {ESPECES.map(e => <option key={e} value={e}>{EMOJIS_ESPECE[e]} {e}</option>)}
+                                </select>
+                                <input type="text" placeholder="Race (optionnel)" value={newAnimal.race} onChange={(e) => setNewAnimal({ ...newAnimal, race: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <select value={newAnimal.sexe} onChange={(e) => setNewAnimal({ ...newAnimal, sexe: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Sexe</option>
+                                    <option value="male">♂️ Mâle</option>
+                                    <option value="femelle">♀️ Femelle</option>
+                                </select>
+                                <input type="date" value={newAnimal.dateNaissance} onChange={(e) => setNewAnimal({ ...newAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <input type="checkbox" id="sterilise" checked={newAnimal.sterilise} onChange={(e) => setNewAnimal({ ...newAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
+                                    <label htmlFor="sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                    ➕ Ajouter
+                                </button>
+                                <button onClick={() => setShowAddAnimal(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                    Annuler
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowAddAnimal(true)} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un animal
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        function SanteTab({ animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+            if (animals.length === 0) return <div style={{ padding: '20px' }}>Aucun animal enregistré</div>;
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💪 Tableau de Santé</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                        {animals.map(animal => (
+                            <SanteCard
+                                key={animal.id}
+                                animal={animal}
+                                selected={selectedAnimal === animal.id}
+                                onSelect={() => setSelectedAnimal(animal.id)}
+                                addAnimalItem={addAnimalItem}
+                                deleteAnimalItem={deleteAnimalItem}
+                            />
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function SanteCard({ animal, selected, onSelect, addAnimalItem, deleteAnimalItem }) {
+            const [email, setEmail] = React.useState('');
+            const dossier = getAnimalDossier(animal);
+
+            // Record the share, then open the user's email client with the dossier pre-filled for the vétérinaire
+            const handleShare = (e) => {
+                e.stopPropagation();
+                if (email && email.includes('@')) {
+                    addAnimalItem(animal, 'partages', { email });
+                    const subject = `Dossier santé de ${animal.nom}`;
+                    const body = buildDossierEmailBody(animal);
+                    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    setEmail('');
+                }
+            };
+
+            return (
+                <div onClick={onSelect} className="animate-fade-in" style={{ background: 'white', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #10b981', border: selected ? '2px solid #10b981' : '1px solid #e5e7eb', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+
+                    <div style={{ marginTop: '12px', display: 'grid', gap: '6px', fontSize: '13px', color: '#374151' }}>
+                        <p><strong>💉 Vaccins :</strong> {dossier.vaccinNames.length > 0 ? dossier.vaccinNames.join(', ') : 'aucun'}</p>
+                        <p><strong>⚖️ Poids actuel :</strong> {dossier.lastWeight ? `${dossier.lastWeight.valeur} kg (${dossier.lastWeight.date})` : 'non renseigné'}</p>
+                        <p><strong>💊 Médicaments en cours :</strong> {dossier.currentMedications.length > 0 ? dossier.currentMedications.map(m => m.nom).join(', ') : 'aucun'}</p>
+                        <p><strong>📋 Observations :</strong> {dossier.observationTypes.length > 0 ? dossier.observationTypes.map(t => (TYPE_LABELS[t] || t)).join(', ') : 'aucune'}</p>
+                    </div>
+
+                    <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</p>
+                        <button onClick={(e) => { e.stopPropagation(); openDossierReport(animal); }} style={{ width: '100%', marginBottom: '8px', padding: '6px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos et audio)</button>
+                        {(animal.partages && animal.partages.length > 0) ? (
+                            animal.partages.map(p => (
+                                <div key={p.id} style={{ fontSize: '11px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>✉️ {p.email}</span>
+                                    <button onClick={(e) => { e.stopPropagation(); deleteAnimalItem(animal, 'partages', p.id); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ fontSize: '11px', color: '#9ca3af' }}>Aucun partage</p>
+                        )}
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email vétérinaire" style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px' }} />
+                            <button onClick={handleShare} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>📧 Partager</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function TraitementSection({ title, emoji, color, items, itemKey, onAdd, onDelete }) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [nom, setNom] = React.useState('');
+            const [dernierTraitement, setDernierTraitement] = React.useState(todayStr);
+            const [intervalMois, setIntervalMois] = React.useState(3);
+
+            const calcProchain = (date, mois) => {
+                const d = new Date(date);
+                d.setMonth(d.getMonth() + parseInt(mois || 1));
+                return d.toISOString().split('T')[0];
+            };
+
+            const handleAdd = () => {
+                if (dernierTraitement) {
+                    onAdd({ nom: nom || title, dernierTraitement, intervalMois: parseInt(intervalMois), prochainTraitement: calcProchain(dernierTraitement, intervalMois) });
+                    setNom(''); setDernierTraitement(todayStr); setIntervalMois(3); setShowForm(false);
+                }
+            };
+
+            return (
+                <div style={{ marginTop: '32px' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color }}>{emoji} {title}</h2>
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${color}` }}>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder={`Nom du produit (ex. Frontline, Milbemax…)`} value={nom} onChange={e => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Date du dernier traitement</label>
+                                <input type="date" value={dernierTraitement} onChange={e => setDernierTraitement(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Fréquence (tous les X mois)</label>
+                                <input type="number" min="1" max="24" value={intervalMois} onChange={e => setIntervalMois(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <p style={{ color: '#9ca3af', fontSize: '12px' }}>Prochain traitement calculé automatiquement : {calcProchain(dernierTraitement, intervalMois)}</p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '16px', padding: '10px 20px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un traitement
+                        </button>
+                    )}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        {items && items.length > 0 ? items.map((t, i) => (
+                            <div key={t.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <p style={{ fontWeight: '600' }}>{t.nom}</p>
+                                    <p style={{ color: '#6b7280', fontSize: '14px' }}>Dernier : {t.dernierTraitement} · Prochain : <strong style={{ color }}>{t.prochainTraitement}</strong></p>
+                                    <p style={{ color: '#9ca3af', fontSize: '12px' }}>Tous les {t.intervalMois} mois</p>
+                                </div>
+                                {t.id && <button onClick={() => onDelete(t.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                            </div>
+                        )) : (
+                            <p style={{ color: '#9ca3af' }}>Aucun traitement enregistré</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function VaccinsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: todayStr });
+
+            const handleAddVaccin = () => {
+                if (newVaccin.nom && newVaccin.date) {
+                    const rappel = new Date(new Date(newVaccin.date).getTime() + 365 * 86400000).toISOString().split('T')[0];
+                    addAnimalItem(animal, 'vaccins', { nom: newVaccin.nom, date: newVaccin.date, rappel });
+                    setNewVaccin({ nom: '', date: todayStr });
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💉 Vaccins de {animal.nom}</h2>
+
+                    {/* Add Vaccin */}
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un vaccin</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewVaccin({ ...newVaccin, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Vaccins courants</option>
+                                    {(VACCINS_COURANTS[animal.espece] || []).map(v => <option key={v} value={v}>{v}</option>)}
+                                    <option value="autres">Autres</option>
+                                </select>
+                                <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({ ...newVaccin, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({ ...newVaccin, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '12px' }}>Le rappel sera calculé automatiquement 1 an après la date du vaccin.</p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAddVaccin} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un vaccin
+                        </button>
+                    )}
+
+                    {/* Vaccins List */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        {animal.vaccins && animal.vaccins.length > 0 ? (
+                            animal.vaccins.map((v, i) => (
+                                <div key={v.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{v.nom}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {v.date}{v.rappel ? ` | Rappel: ${v.rappel}` : ''}</p>
+                                    </div>
+                                    {v.id && <button onClick={() => deleteAnimalItem(animal, 'vaccins', v.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af' }}>Aucun vaccin</p>
+                        )}
+                    </div>
+
+                    <TraitementSection
+                        title="Antiparasitaires"
+                        emoji="🦟"
+                        color="#7c3aed"
+                        items={animal.antiparasitaires}
+                        onAdd={item => addAnimalItem(animal, 'antiparasitaires', item)}
+                        onDelete={id => deleteAnimalItem(animal, 'antiparasitaires', id)}
+                    />
+
+                    <TraitementSection
+                        title="Vermifuges"
+                        emoji="🪱"
+                        color="#b45309"
+                        items={animal.vermifuges}
+                        onAdd={item => addAnimalItem(animal, 'vermifuges', item)}
+                        onDelete={id => deleteAnimalItem(animal, 'vermifuges', id)}
+                    />
+                </div>
+            );
+        }
+
+        function MedicamentsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [newMed, setNewMed] = React.useState({ nom: '', dosage: '', unite: 'mg', frequence: '', duree: '', dateDebut: todayStr });
+
+            const handleAddMed = () => {
+                const { nom, dosage, unite, frequence, duree, dateDebut } = newMed;
+                if (nom && dosage && frequence && duree) {
+                    const dateFin = new Date(new Date(dateDebut).getTime() + parseInt(duree) * 86400000).toISOString().split('T')[0];
+                    addAnimalItem(animal, 'medicaments', { nom, dosage, unite, frequence: `${frequence}x/jour`, duree, dateDebut, dateFin });
+                    setNewMed({ nom: '', dosage: '', unite: 'mg', frequence: '', duree: '', dateDebut: todayStr });
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médication de {animal.nom}</h2>
+
+                    {/* Add Medicament */}
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #ec4899' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un traitement</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewMed({ ...newMed, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="">Médicaments courants</option>
+                                    {MEDICAMENTS_COURANTS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    <option value="autres">Autres</option>
+                                </select>
+                                <input type="text" placeholder="Nom du médicament" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                                    <input type="number" placeholder="Dosage" value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={newMed.unite} onChange={(e) => setNewMed({ ...newMed, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option>g</option><option>mg</option><option>ml</option><option>UI</option>
+                                    </select>
+                                </div>
+                                <input type="number" placeholder="Fréquence (x/jour)" min="0.5" step="0.5" value={newMed.frequence} onChange={(e) => setNewMed({ ...newMed, frequence: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="number" placeholder="Durée (jours)" value={newMed.duree} onChange={(e) => setNewMed({ ...newMed, duree: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({ ...newMed, dateDebut: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAddMed} style={{ padding: '10px 20px', background: '#ec4899', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un traitement
+                        </button>
+                    )}
+
+                    {/* Medicaments List */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        {animal.medicaments && animal.medicaments.length > 0 ? (
+                            animal.medicaments.map((m, i) => {
+                                const isActive = m.dateFin ? (todayStr >= m.dateDebut && todayStr <= m.dateFin) : false;
+                                return (
+                                    <div key={m.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', borderLeft: `4px solid ${isActive ? '#ec4899' : '#9ca3af'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <p style={{ fontWeight: '600' }}>{m.nom}</p>
+                                            {m.dosage && <p style={{ color: '#6b7280', fontSize: '14px' }}>💊 {m.dosage} {m.unite} • {m.frequence}</p>}
+                                            <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {m.dateDebut}{m.dateFin ? ` → ${m.dateFin}` : ''}</p>
+                                            {m.dateFin && (
+                                                <span style={{ display: 'inline-block', fontSize: '11px', padding: '3px 8px', borderRadius: '4px', background: isActive ? '#fce7f3' : '#f3f4f6', color: isActive ? '#be185d' : '#6b7280', fontWeight: '600', marginTop: '4px' }}>
+                                                    {isActive ? '✅ En cours' : '⏱️ Fini'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {m.id && <button onClick={() => deleteAnimalItem(animal, 'medicaments', m.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p style={{ color: '#9ca3af' }}>Aucun traitement</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function AlimentTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const [showForm, setShowForm] = React.useState(false);
+            const [newAliment, setNewAliment] = React.useState({ nom: '', quantite: '', unite: 'g', horaire: '12:00' });
+
+            const handleAdd = () => {
+                if (newAliment.nom && newAliment.quantite) {
+                    addAnimalItem(animal, 'aliments', { nom: newAliment.nom, quantite: `${newAliment.quantite} ${newAliment.unite}`, horaire: newAliment.horaire });
+                    setNewAliment({ nom: '', quantite: '', unite: 'g', horaire: '12:00' });
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🍎 Alimentation de {animal.nom}</h2>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #f59e0b' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un aliment</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder="Nom de l'aliment" value={newAliment.nom} onChange={(e) => setNewAliment({ ...newAliment, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                                    <input type="number" placeholder="Quantité" value={newAliment.quantite} onChange={(e) => setNewAliment({ ...newAliment, quantite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={newAliment.unite} onChange={(e) => setNewAliment({ ...newAliment, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option>g</option><option>kg</option><option>ml</option><option>L</option>
+                                    </select>
+                                </div>
+                                <input type="time" value={newAliment.horaire} onChange={(e) => setNewAliment({ ...newAliment, horaire: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un aliment
+                        </button>
+                    )}
+
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        {animal.aliments && animal.aliments.length > 0 ? (
+                            animal.aliments.map((a, i) => (
+                                <div key={a.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #f59e0b' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{a.nom}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>{a.quantite} • {a.horaire}</p>
+                                    </div>
+                                    {a.id && <button onClick={() => deleteAnimalItem(animal, 'aliments', a.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af' }}>Aucun aliment</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function NotesTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const [showForm, setShowForm] = React.useState(false);
+            const [type, setType] = React.useState('comportement');
+            const [description, setDescription] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+            const [photoBase64, setPhotoBase64] = React.useState('');
+            const [audioBase64, setAudioBase64] = React.useState('');
+            const [fileError, setFileError] = React.useState('');
+
+            const readPhotoFile = (file) => {
+                setFileError('');
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const MAX_PX = 1600;
+                        const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        setPhotoBase64(canvas.toDataURL('image/jpeg', 0.82));
+                    };
+                    img.onerror = () => setFileError('Impossible de lire cette image.');
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const readAudioFile = (file) => {
+                setFileError('');
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                    setFileError('Enregistrement trop volumineux (max 5 Mo).');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => setAudioBase64(e.target.result);
+                reader.readAsDataURL(file);
+            };
+
+            const resetForm = () => {
+                setType('comportement');
+                setDescription('');
+                setDate(todayStr);
+                setPhotoBase64('');
+                setAudioBase64('');
+                setFileError('');
+                setShowForm(false);
+            };
+
+            const handleAdd = () => {
+                if (description || photoBase64 || audioBase64) {
+                    addAnimalItem(animal, 'observations', { type, description, date, photo: photoBase64, audio: audioBase64 });
+                    resetForm();
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📋 Observations de {animal.nom}</h2>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une observation</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    {Object.entries(TYPE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                </select>
+                                <textarea placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '100px', fontFamily: 'inherit', fontSize: '14px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📸 Ajouter une photo</label>
+                                    <input type="file" accept="image/*" onChange={(e) => readPhotoFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Photo sélectionnée (compressée automatiquement)</p>}
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>🎙️ Ajouter un audio</label>
+                                    <input type="file" accept="audio/*" onChange={(e) => readAudioFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {audioBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Audio sélectionné</p>}
+                                </div>
+
+                                {fileError && <p style={{ color: '#ef4444', fontSize: '13px' }}>{fileError}</p>}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#0891b2', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={resetForm} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une observation
+                        </button>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {animal.observations && animal.observations.length > 0 ? (
+                            [...animal.observations].reverse().map((o, i) => (
+                                <div key={o.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #0891b2' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <p style={{ fontWeight: '600' }}>{TYPE_LABELS[o.type] || o.type}</p>
+                                            <p style={{ fontSize: '12px', color: '#6b7280' }}>{o.date}</p>
+                                        </div>
+                                        {o.id && <button onClick={() => deleteAnimalItem(animal, 'observations', o.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </div>
+                                    {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
+                                    {(o.photo || o.audio) && (() => {
+                                        const obsText = [
+                                            `Animal : ${animal.nom}${animal.espece ? ` (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece})` : ''}`,
+                                            `Date : ${o.date}`,
+                                            `Type : ${(TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '')}`,
+                                            o.description ? `Observation : ${o.description}` : null,
+                                            '',
+                                            'Envoyé depuis Carnet Santé PRO'
+                                        ].filter(l => l !== null).join('\n');
+                                        return (<>
+                                        {o.photo && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <img src={o.photo} alt="Observation" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', maxHeight: '300px' }} />
+                                                <button
+                                                    onClick={() => shareOrDownloadMedia(o.photo, `photo-${animal.nom}-${o.date}`, `Photo — ${animal.nom} (${o.date})`, obsText)}
+                                                    style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
+                                                >
+                                                    {canShareFiles ? '📤 Envoyer cette photo avec le texte (e-mail, messagerie…)' : '⬇️ Télécharger cette photo + ouvrir e-mail'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        {o.audio && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <p style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>🎙️ Enregistrement audio :</p>
+                                                <audio controls style={{ width: '100%' }}>
+                                                    <source src={o.audio} />
+                                                    Votre navigateur ne supporte pas la lecture audio.
+                                                </audio>
+                                                <button
+                                                    onClick={() => shareOrDownloadMedia(o.audio, `audio-${animal.nom}-${o.date}`, `Audio — ${animal.nom} (${o.date})`, obsText)}
+                                                    style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
+                                                >
+                                                    {canShareFiles ? '📤 Envoyer cet audio avec le texte (e-mail, messagerie…)' : '⬇️ Télécharger cet audio + ouvrir e-mail'}
+                                            </button>
+                                            </div>
+                                        )}
+                                        </>);
+                                    })()}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune observation</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function PoidsChart({ poids }) {
+            const sorted = [...poids].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const values = sorted.map(p => p.valeur);
+            const minVal = Math.min(...values);
+            const maxVal = Math.max(...values);
+            const range = maxVal - minVal || 1;
+            const W = 350, H = 220;
+            const padLeft = 45, padRight = 25, padTop = 15, padBottom = 50;
+            const chartW = W - padLeft - padRight;
+            const chartH = H - padTop - padBottom;
+            const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+            const points = sorted.map(p => {
+                const date = new Date(p.date);
+                const monthIdx = date.getMonth();
+                const x = padLeft + (monthIdx / 11) * chartW;
+                const y = H - padBottom - ((p.valeur - minVal) / range * chartH);
+                return { x, y };
+            });
+
+            return (
+                <div style={{ overflowX: 'auto' }}>
+                    <svg width={W} height={H} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', display: 'block' }}>
+                        <defs>
+                            <linearGradient id="poidsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+                                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <line x1={padLeft} y1={H - padBottom} x2={W - padRight} y2={H - padBottom} stroke="#d1d5db" strokeWidth="2" />
+                        <line x1={padLeft} y1={padTop} x2={padLeft} y2={H - padBottom} stroke="#d1d5db" strokeWidth="2" />
+                        <text x="15" y={padTop + 12} fontSize="11" fill="#6b7280" fontWeight="600">Poids</text>
+                        <text x={W / 2} y={H - 8} fontSize="11" fill="#6b7280" fontWeight="600" textAnchor="middle">Mois</text>
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                            const val = minVal + (maxVal - minVal) * ratio;
+                            const y = H - padBottom - ratio * chartH;
+                            return (
+                                <g key={i}>
+                                    <line x1={padLeft - 5} y1={y} x2={padLeft} y2={y} stroke="#d1d5db" strokeWidth="1" />
+                                    <text x={padLeft - 8} y={y + 4} fontSize="10" fill="#6b7280" textAnchor="end">{val.toFixed(1)}</text>
+                                </g>
+                            );
+                        })}
+                        {monthNames.map((month, i) => {
+                            const x = padLeft + (i / 11) * chartW;
+                            return <text key={i} x={x} y={H - padBottom + 25} fontSize="10" fill="#6b7280" textAnchor="middle" fontWeight="600">{month}</text>;
+                        })}
+                        <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#poidsGrad)" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="white" strokeWidth="2" />)}
+                    </svg>
+                </div>
+            );
+        }
+
+        function PoidsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [valeur, setValeur] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+
+            const poids = animal.poids || [];
+            const sortedDesc = [...poids].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const handleAdd = () => {
+                const val = parseFloat(valeur);
+                if (val) {
+                    addAnimalItem(animal, 'poids', { valeur: val, date });
+                    setValeur('');
+                    setDate(todayStr);
+                    setShowForm(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚖️ Suivi du poids de {animal.nom}</h2>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une mesure</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="number" step="0.1" placeholder="Poids (kg)" value={valeur} onChange={(e) => setValeur(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une mesure
+                        </button>
+                    )}
+
+                    {poids.length >= 2 && (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <h4 style={{ marginBottom: '16px', fontSize: '14px', fontWeight: '700' }}>📈 Courbe d'évolution</h4>
+                            <PoidsChart poids={poids} />
+                        </div>
+                    )}
+
+                    {poids.length > 0 && (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                            <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '6px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Min</p>
+                                <p style={{ color: '#10b981', fontWeight: '700' }}>{Math.min(...poids.map(p => p.valeur)).toFixed(1)} kg</p>
+                            </div>
+                            <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '6px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Moy</p>
+                                <p style={{ color: '#10b981', fontWeight: '700' }}>{(poids.reduce((s, p) => s + p.valeur, 0) / poids.length).toFixed(1)} kg</p>
+                            </div>
+                            <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '6px', textAlign: 'center' }}>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Max</p>
+                                <p style={{ color: '#10b981', fontWeight: '700' }}>{Math.max(...poids.map(p => p.valeur)).toFixed(1)} kg</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {sortedDesc.length > 0 ? (
+                            sortedDesc.map((p, i) => (
+                                <div key={p.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <h4 style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{p.valeur} kg</h4>
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{p.date}</p>
+                                    </div>
+                                    {p.id && <button onClick={() => deleteAnimalItem(animal, 'poids', p.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune mesure enregistrée</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function BudgetTab({ animal, animals, budgetFilter, setBudgetFilter, getFilteredBudget, addAnimalItem, deleteAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const CATEGORIES = ['Vétérinaire', 'Alimentation', 'Médicaments', 'Toilettage', 'Jouets', 'Accessoires', 'Autres'];
+            const CATEGORY_EMOJIS = { 'Vétérinaire': '🏥', 'Alimentation': '🍎', 'Médicaments': '💊', 'Toilettage': '🛁', 'Jouets': '🎾', 'Accessoires': '🛠️', 'Autres': '➕' };
+
+            const [showForm, setShowForm] = React.useState(false);
+            const [type, setType] = React.useState('Vétérinaire');
+            const [montant, setMontant] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+            const [budgetAnimalFilter, setBudgetAnimalFilter] = React.useState('tous');
+
+            const handleAdd = () => {
+                const m = parseFloat(montant);
+                if (type && m) {
+                    addAnimalItem(animal, 'budget', { type, montant: m, date });
+                    setMontant('');
+                    setDate(todayStr);
+                    setShowForm(false);
+                }
+            };
+
+            // Tag every expense with its animal so they can be combined and sorted by animal
+            const taggedEntries = (a) => getFilteredBudget(a.budget || []).map(b => ({ ...b, animalId: a.id, animalNom: a.nom, animalEmoji: EMOJIS_ESPECE[a.espece] || '🐾' }));
+            const allEntries = animals.flatMap(taggedEntries);
+            const entries = budgetAnimalFilter === 'tous' ? allEntries : allEntries.filter(b => b.animalId === budgetAnimalFilter);
+            const total = entries.reduce((s, b) => s + b.montant, 0);
+            const perAnimalTotals = animals
+                .map(a => ({ id: a.id, nom: a.nom, emoji: EMOJIS_ESPECE[a.espece] || '🐾', total: taggedEntries(a).reduce((s, b) => s + b.montant, 0) }))
+                .filter(t => t.total > 0)
+                .sort((a, b) => b.total - a.total);
+
+            const filteredAnimal = animals.find(a => a.id === budgetAnimalFilter);
+            const titleSuffix = budgetAnimalFilter === 'tous' ? 'de tous mes animaux' : `de ${filteredAnimal ? filteredAnimal.nom : animal.nom}`;
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💰 Budget {titleSuffix}</h2>
+
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280' }}>Trier par animal :</span>
+                        <select value={budgetAnimalFilter} onChange={(e) => setBudgetAnimalFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                            <option value="tous">🐾 Tous les animaux</option>
+                            {animals.map(a => <option key={a.id} value={a.id}>{EMOJIS_ESPECE[a.espece] || '🐾'} {a.nom}</option>)}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                        {['tout', 'semaine', 'mois', 'annee'].map(filter => (
+                            <button key={filter} onClick={() => setBudgetFilter(filter)} style={{ padding: '8px 12px', background: budgetFilter === filter ? '#10b981' : '#e5e7eb', color: budgetFilter === filter ? 'white' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                                {filter === 'tout' ? 'Tout' : filter === 'semaine' ? 'Cette semaine' : filter === 'mois' ? 'Ce mois' : 'Cette année'}
+                            </button>
+                        ))}
+                    </div>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #f59e0b' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une dépense</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_EMOJIS[c]} {c}</option>)}
+                                </select>
+                                <input type="number" step="0.01" placeholder="Montant (€)" value={montant} onChange={(e) => setMontant(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une dépense
+                        </button>
+                    )}
+
+                    {entries.length > 0 && (
+                        <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', textAlign: 'center', marginBottom: '20px' }}>
+                            <p style={{ color: '#92400e', fontSize: '13px' }}>Total {titleSuffix}</p>
+                            <h3 style={{ fontSize: '36px', fontWeight: '700', color: '#b45309' }}>{total.toFixed(2)}€</h3>
+                        </div>
+                    )}
+
+                    {budgetAnimalFilter === 'tous' && perAnimalTotals.length > 1 && (
+                        <div style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                            <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '10px' }}>Répartition par animal</h4>
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                                {perAnimalTotals.map(t => (
+                                    <div key={t.id} onClick={() => setBudgetAnimalFilter(t.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px', cursor: 'pointer' }}>
+                                        <span style={{ fontSize: '13px' }}>{t.emoji} {t.nom}</span>
+                                        <strong style={{ fontSize: '14px', color: '#f59e0b' }}>{t.total.toFixed(2)}€</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {entries.length === 0 ? (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune dépense</p>
+                        ) : (
+                            [...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((b, i) => (
+                                <div key={b.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>{CATEGORY_EMOJIS[b.type] || ''} {b.type}{budgetAnimalFilter === 'tous' && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#10b981', background: '#f0fdf4', padding: '2px 8px', borderRadius: '4px' }}>{b.animalEmoji} {b.animalNom}</span>}</p>
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{b.date}</p>
+                                        <p style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b', marginTop: '4px' }}>{b.montant.toFixed(2)}€</p>
+                                    </div>
+                                    {b.id && <button onClick={() => deleteAnimalItem(animals.find(a => a.id === b.animalId) || animal, 'budget', b.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function VeterinairesTab({ animal, updateAnimalFields }) {
+            const [userPos, setUserPos] = React.useState(null);
+            const [geoStatus, setGeoStatus] = React.useState('idle'); // idle | loading | done | error
+            const [geoError, setGeoError] = React.useState('');
+            const [nearbyVets, setNearbyVets] = React.useState(null);
+            const [vetsStatus, setVetsStatus] = React.useState('idle'); // idle | loading | done | error
+            const [vetsError, setVetsError] = React.useState('');
+
+            const locateMe = () => {
+                if (!navigator.geolocation) {
+                    setGeoStatus('error');
+                    setGeoError("La géolocalisation n'est pas disponible sur cet appareil.");
+                    return;
+                }
+                setGeoStatus('loading');
+                setGeoError('');
+                setNearbyVets(null);
+                setVetsStatus('idle');
+                setVetsError('');
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        setUserPos(coords);
+                        setGeoStatus('done');
+                        setVetsStatus('loading');
+                        try {
+                            const found = await fetchNearbyVets(coords.lat, coords.lng);
+                            setNearbyVets(
+                                found
+                                    .map(v => ({ ...v, distanceKm: getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) }))
+                                    .sort((a, b) => a.distanceKm - b.distanceKm)
+                            );
+                            setVetsStatus('done');
+                        } catch (err) {
+                            console.error('Erreur recherche vétérinaires à proximité:', err);
+                            setVetsStatus('error');
+                            setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment (service de cartographie indisponible). Voici une sélection d'exemple en attendant.");
+                        }
+                    },
+                    (err) => {
+                        setGeoStatus('error');
+                        setGeoError(err.code === err.PERMISSION_DENIED
+                            ? "Localisation refusée : activez la géolocalisation de votre appareil (paramètres de localisation/GPS du téléphone) et autorisez ce site à accéder à votre position, puis réessayez."
+                            : "Impossible de récupérer votre position pour le moment. Vérifiez que la géolocalisation est activée sur votre appareil.");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            };
+
+            const usingRealVets = nearbyVets !== null && nearbyVets.length > 0;
+            const vets = usingRealVets
+                ? nearbyVets
+                : (userPos
+                    ? VETERINAIRES
+                        .map(v => ({ ...v, distanceKm: getDistanceKm(userPos.lat, userPos.lng, v.lat, v.lng) }))
+                        .sort((a, b) => a.distanceKm - b.distanceKm)
+                    : VETERINAIRES);
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🏥 Vétérinaires</h2>
+
+                    <div style={{ marginBottom: '20px' }}>
+                        <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
+                            {geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trouver les vétérinaires autour de moi'}
+                        </button>
+                        {geoStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {geoError}</p>}
+                        {geoStatus === 'done' && vetsStatus === 'loading' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#2563eb' }}>🔎 Recherche des vétérinaires autour de votre position…</p>}
+                        {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité</p>}
+                        {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire référencé sur OpenStreetMap dans un rayon de 25 km autour de votre position. Voici une sélection d'exemple en attendant.</p>}
+                        {geoStatus === 'done' && vetsStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ {vetsError}</p>}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                        {vets.map(vet => (
+                            <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</h3>
+                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distanceKm != null ? `≈ ${vet.distanceKm.toFixed(1)} km de votre position` : vet.distance}</p>
+                                {vet.adresse && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🏠 {vet.adresse}</p>}
+                                {vet.telephone && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>}
+                                {vet.horaires && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>}
+                                {(vet.rating || vet.specialites) && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>}
+                                {animal && (
+                                    <button
+                                        onClick={() => updateAnimalFields(animal, { veterinaire: { id: vet.id, nom: vet.nom } })}
+                                        style={{ marginTop: '12px', width: '100%', padding: '10px 20px', background: animal.veterinaire?.id === vet.id ? '#059669' : '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                        {animal.veterinaire?.id === vet.id ? '✅ Assigné' : '📌 Assigner'}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function RappelsTab({ reminders, sendEmailReminder }) {
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚠️ Rappels</h2>
+
+                    {reminders.length > 0 ? (
+                        <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
+                            <h3 style={{ color: '#d97706', marginBottom: '16px' }}>À faire urgament ({reminders.length})</h3>
+                            {reminders.map((r, i) => (
+                                <div key={i} style={{ padding: '12px', background: 'white', marginBottom: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600' }}>
+                                            {r.nom}
+                                            {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
+                                        </p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Animal: {r.animal}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>⏰ {r.daysUntil} jours restants</p>
+                                    </div>
+                                    <button onClick={() => sendEmailReminder(r)} style={{ padding: '8px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                        📧 Rappel email
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center', color: '#6b7280' }}>
+                            ✅ Aucun rappel pour le moment
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db }) {
+            const saveSettings = async () => {
+                try {
+                    const settingsRef = collection(db, 'settings');
+                    const q = query(settingsRef, where('userId', '==', user.uid));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.docs.length > 0) {
+                        await updateDoc(doc(db, 'settings', querySnapshot.docs[0].id), {
+                            reminders: reminderSettings
+                        });
+                    } else {
+                        await addDoc(settingsRef, {
+                            userId: user.uid,
+                            reminders: reminderSettings
+                        });
+                    }
+                    alert('Paramètres sauvegardés !');
+                } catch (error) {
+                    console.error('Erreur saving settings:', error);
+                    alert("Échec de la sauvegarde des paramètres : les règles de sécurité Firestore du projet n'autorisent pas l'écriture dans la collection « settings » pour cet utilisateur. Mettez à jour les règles Firestore (Console Firebase) pour autoriser allow read, write sur /settings/{id} si request.auth.uid == resource.data.userId (et la création si request.auth.uid == request.resource.data.userId).");
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚙️ Paramètres</h2>
+
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Délais de rappels (en jours)</h3>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Vaccins</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.vaccin}
+                                onChange={(e) => setReminderSettings({...reminderSettings, vaccin: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant expiration</small>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Médicaments</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.medicament}
+                                onChange={(e) => setReminderSettings({...reminderSettings, medicament: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant</small>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>🦟 Rappel Antiparasitaires</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.antiparasitaire ?? 14}
+                                onChange={(e) => setReminderSettings({...reminderSettings, antiparasitaire: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant le prochain traitement</small>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>🪱 Rappel Vermifuges</label>
+                            <input
+                                type="number"
+                                value={reminderSettings.vermifuge ?? 14}
+                                onChange={(e) => setReminderSettings({...reminderSettings, vermifuge: parseInt(e.target.value)})}
+                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
+                            />
+                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant le prochain traitement</small>
+                        </div>
+
+                        <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                            💾 Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render App
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
