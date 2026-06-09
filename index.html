@@ -9,11 +9,18 @@
     })(window,document,'script','dataLayer','GTM-MVNX7BHT');</script>
     <!-- End Google Tag Manager -->
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Carnet Santé PRO - Gérez la santé de vos animaux facilement. Vaccins, médicaments, rappels en un seul endroit.">
     <meta name="keywords" content="carnet santé animaux, vétérinaire, vaccins, chien, chat, lapin">
     <meta name="theme-color" content="#10b981">
-    <title>🐾 Carnet Santé PRO - Firebase Edition</title>
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Carnet Santé">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>🐾 Carnet Santé PRO</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -311,6 +318,31 @@
             win.document.close();
         };
 
+        // ── Service Worker registration ──────────────────────────────────
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+
+        // Request notification permission and schedule local reminders via SW
+        const scheduleReminders = async (reminders) => {
+            if (!('Notification' in window) || !navigator.serviceWorker) return;
+            if (Notification.permission === 'default') await Notification.requestPermission();
+            if (Notification.permission !== 'granted') return;
+            const reg = await navigator.serviceWorker.ready;
+            reminders.forEach(r => {
+                const label = r.type === 'vaccin' ? '💉' : r.type === 'medicament' ? '💊' : r.type === 'antiparasitaire' ? '🦟' : '🪱';
+                const delayMs = Math.max(0, (r.daysUntil - 1)) * 86400 * 1000;
+                reg.active?.postMessage({
+                    type: 'SCHEDULE_NOTIFICATION',
+                    title: `${label} Rappel — ${r.animal}`,
+                    body: `${r.nom} : ${r.daysUntil} jour${r.daysUntil > 1 ? 's' : ''} restant${r.daysUntil > 1 ? 's' : ''}`,
+                    delay: delayMs,
+                });
+            });
+        };
+
         // Main App Component
         function App() {
             const [user, setUser] = React.useState(null);
@@ -487,6 +519,11 @@
             }
 
             const reminders = getReminders();
+
+            // Schedule local push notifications whenever reminders change
+            React.useEffect(() => {
+                if (reminders.length > 0) scheduleReminders(reminders);
+            }, [animals, reminderSettings]);
 
             return (
                 <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
