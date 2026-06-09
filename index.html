@@ -198,6 +198,43 @@
         // Escape text before injecting it into the printable HTML report (the report is built via document.write)
         const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+        // Convert a base64 data-URL to a File object suitable for the Web Share API
+        const dataUrlToFile = (dataUrl, baseName) => {
+            const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
+            if (!match) return null;
+            const mime = match[1];
+            const binary = atob(match[2]);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const ext = mime.split('/')[1].replace('jpeg', 'jpg').split('+')[0];
+            return new File([bytes], `${baseName}.${ext}`, { type: mime });
+        };
+
+        // Share a photo or audio via the native OS share sheet (iOS/Android),
+        // or fall back to downloading the file if Web Share API isn't available.
+        const shareOrDownloadMedia = async (dataUrl, baseName, shareTitle) => {
+            const file = dataUrlToFile(dataUrl, baseName);
+            if (!file) return;
+            try {
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: shareTitle });
+                    return;
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                console.error('Erreur partage fichier:', err);
+            }
+            // Fallback: trigger download so the user can attach manually
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url; a.download = file.name;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        const canShareFiles = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function';
+
         // Open a printable, standalone report with the full written record AND embedded photos/audio,
         // so the owner can save it as PDF or print it to hand/send to the vétérinaire (mailto: can't carry attachments)
         const openDossierReport = (animal) => {
@@ -1209,6 +1246,12 @@
                                     {o.photo && (
                                         <div style={{ marginTop: '12px' }}>
                                             <img src={o.photo} alt="Observation" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', maxHeight: '300px' }} />
+                                            <button
+                                                onClick={() => shareOrDownloadMedia(o.photo, `photo-${animal.nom}-${o.date}`, `Photo observation — ${animal.nom} (${o.date})`)}
+                                                style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
+                                            >
+                                                {canShareFiles ? '📤 Envoyer cette photo (e-mail, messagerie…)' : '⬇️ Télécharger cette photo pour l\'envoyer'}
+                                            </button>
                                         </div>
                                     )}
                                     {o.audio && (
@@ -1218,6 +1261,12 @@
                                                 <source src={o.audio} />
                                                 Votre navigateur ne supporte pas la lecture audio.
                                             </audio>
+                                            <button
+                                                onClick={() => shareOrDownloadMedia(o.audio, `audio-${animal.nom}-${o.date}`, `Enregistrement audio — ${animal.nom} (${o.date})`)}
+                                                style={{ marginTop: '8px', padding: '6px 14px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', width: '100%' }}
+                                            >
+                                                {canShareFiles ? '📤 Envoyer cet audio (e-mail, messagerie…)' : '⬇️ Télécharger cet audio pour l\'envoyer'}
+                                            </button>
                                         </div>
                                     )}
                                 </div>
