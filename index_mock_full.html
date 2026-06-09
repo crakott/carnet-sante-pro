@@ -772,12 +772,20 @@
         function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
             const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+            const [editingAnimal, setEditingAnimal] = React.useState(null);
 
             const handleAddAnimal = () => {
                 if (newAnimal.nom && newAnimal.espece) {
                     saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
                     setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
                     setShowAddAnimal(false);
+                }
+            };
+
+            const handleEditAnimal = () => {
+                if (editingAnimal && editingAnimal.nom && editingAnimal.espece) {
+                    saveAnimal(editingAnimal);
+                    setEditingAnimal(null);
                 }
             };
 
@@ -808,9 +816,14 @@
                                             <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>{animal.espece}</p>
                                             {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
                                         </div>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
-                                            🗑️
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
+                                                ✏️
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
+                                                🗑️
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {animal.sexe && (
@@ -836,6 +849,40 @@
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Edit Animal Modal */}
+                    {editingAnimal && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+                            <div style={{ background: 'white', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '500px', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+                                <h3 style={{ marginBottom: '16px', fontWeight: '600', fontSize: '18px' }}>✏️ Modifier {editingAnimal.nom}</h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                                    <input type="text" placeholder="Nom" value={editingAnimal.nom} onChange={(e) => setEditingAnimal({ ...editingAnimal, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={editingAnimal.espece} onChange={(e) => setEditingAnimal({ ...editingAnimal, espece: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        {ESPECES.map(e => <option key={e} value={e}>{EMOJIS_ESPECE[e]} {e}</option>)}
+                                    </select>
+                                    <input type="text" placeholder="Race (optionnel)" value={editingAnimal.race || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, race: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <select value={editingAnimal.sexe || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, sexe: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                        <option value="">Sexe</option>
+                                        <option value="male">♂️ Mâle</option>
+                                        <option value="femelle">♀️ Femelle</option>
+                                    </select>
+                                    <input type="date" value={editingAnimal.dateNaissance || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <input type="checkbox" id="edit-sterilise" checked={editingAnimal.sterilise || false} onChange={(e) => setEditingAnimal({ ...editingAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
+                                        <label htmlFor="edit-sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={handleEditAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                        ✅ Enregistrer
+                                    </button>
+                                    <button onClick={() => setEditingAnimal(null)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                        Annuler
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -1547,6 +1594,20 @@
             const CATEGORIES = ['Vétérinaire', 'Alimentation', 'Médicaments', 'Toilettage', 'Jouets', 'Accessoires', 'Autres'];
             const CATEGORY_EMOJIS = { 'Vétérinaire': '🏥', 'Alimentation': '🍎', 'Médicaments': '💊', 'Toilettage': '🛁', 'Jouets': '🎾', 'Accessoires': '🛠️', 'Autres': '➕' };
 
+            const exportCSV = (entries, titleSuffix) => {
+                const rows = [
+                    ['Date', 'Animal', 'Catégorie', 'Montant (€)'],
+                    ...entries.map(b => [b.date, b.animalNom, b.type, b.montant.toFixed(2)])
+                ];
+                const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url;
+                a.download = `budget-${titleSuffix.replace(/[^a-z0-9]/gi, '-')}-${todayStr}.csv`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
             const [showForm, setShowForm] = React.useState(false);
             const [type, setType] = React.useState('Vétérinaire');
             const [montant, setMontant] = React.useState('');
@@ -1635,6 +1696,14 @@
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {entries.length > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                            <button onClick={() => exportCSV(entries, titleSuffix)} style={{ padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                                📊 Exporter CSV
+                            </button>
                         </div>
                     )}
 
@@ -1788,7 +1857,51 @@
             );
         }
 
-        function ParametresTab({ reminderSettings, setReminderSettings, user, db }) {
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal }) {
+            const [importing, setImporting] = React.useState(false);
+            const [importMsg, setImportMsg] = React.useState('');
+
+            const exportJSON = (withPhotos) => {
+                const clean = animals.map(({ id, userId, createdAt, ...rest }) => {
+                    if (!withPhotos) {
+                        const obs = (rest.observations || []).map(({ photo, audio, ...o }) => o);
+                        return { ...rest, observations: obs };
+                    }
+                    return rest;
+                });
+                const payload = { exportDate: new Date().toISOString(), version: '1.0', animals: clean };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `carnet-sante-export-${new Date().toISOString().split('T')[0]}${withPhotos ? '' : '-sans-photos'}.json`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImport = (file) => {
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    setImportMsg(''); setImporting(true);
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!Array.isArray(data.animals)) throw new Error('Format de fichier invalide.');
+                        const n = data.animals.length;
+                        if (!window.confirm(`Importer ${n} animal${n > 1 ? 'x' : ''} ? Ils seront ajoutés à votre compte existant.`)) { setImporting(false); return; }
+                        for (const animal of data.animals) {
+                            const { id, userId, ...rest } = animal;
+                            await saveAnimal({ ...rest });
+                        }
+                        setImportMsg(`✅ ${n} animal${n > 1 ? 'x' : ''} importé${n > 1 ? 's' : ''} avec succès !`);
+                    } catch (err) {
+                        setImportMsg('❌ Erreur : ' + err.message);
+                    }
+                    setImporting(false);
+                };
+                reader.readAsText(file);
+            };
+
             const saveSettings = async () => {
                 try {
                     const settingsRef = collection(db, 'settings');
@@ -1866,6 +1979,36 @@
                         <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                             💾 Sauvegarder
                         </button>
+                    </div>
+
+                    {/* Export / Import */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>📦 Sauvegarde & restauration</h3>
+                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Exportez vos données pour les sauvegarder ou les transférer. Le fichier JSON peut ensuite être réimporté.</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                            <button
+                                onClick={() => exportJSON(true)}
+                                disabled={animals.length === 0}
+                                style={{ padding: '11px 16px', background: '#0891b2', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: animals.length ? 'pointer' : 'not-allowed', opacity: animals.length ? 1 : 0.5, textAlign: 'left' }}
+                            >
+                                ⬇️ Exporter tout ({animals.length} animal{animals.length > 1 ? 'x' : ''}) — avec photos & audios
+                            </button>
+                            <button
+                                onClick={() => exportJSON(false)}
+                                disabled={animals.length === 0}
+                                style={{ padding: '11px 16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: animals.length ? 'pointer' : 'not-allowed', opacity: animals.length ? 1 : 0.5, textAlign: 'left' }}
+                            >
+                                ⬇️ Exporter sans photos (fichier léger)
+                            </button>
+                        </div>
+                        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+                            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px' }}>Restaurer depuis un fichier d'export :</p>
+                            <label style={{ display: 'block', padding: '11px 16px', background: '#f3f4f6', border: '2px dashed #d1d5db', borderRadius: '6px', cursor: 'pointer', textAlign: 'center', fontWeight: '600', color: '#374151', fontSize: '14px' }}>
+                                {importing ? '⏳ Importation en cours…' : '📂 Choisir un fichier .json à importer'}
+                                <input type="file" accept=".json" style={{ display: 'none' }} onChange={(e) => handleImport(e.target.files[0])} disabled={importing} />
+                            </label>
+                            {importMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: importMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{importMsg}</p>}
+                        </div>
                     </div>
                 </div>
             );
