@@ -5,7 +5,7 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 ## ⚠️ À FAIRE — Rappels importants
 
 - [ ] **Slots AdSense** : remplacer les 5 occurrences de `xxxxxxxxxx` dans `index.html` par les vrais IDs de slot depuis le tableau de bord AdSense
-- [ ] **Politique de confidentialité** (`privacy.html`) : remplir les 3 champs `[À COMPLÉTER]` — nom/société, email de contact, adresse postale du responsable de traitement
+- [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
 - [ ] **Règles Firestore** : copier le contenu de `firestore.rules` dans Firebase Console > Firestore Database > Règles, puis publier (nécessaire pour activer l'espace vétérinaire et le contrôle d'abonnement)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
 
