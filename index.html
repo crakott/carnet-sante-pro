@@ -1012,15 +1012,15 @@
             } else if (activeTab === 'sante') {
                 return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'vaccins') {
-                return <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <VaccinsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'aliment') {
                 return <AlimentTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'medicaments') {
-                return <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <MedicamentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'notes') {
-                return <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'poids') {
-                return <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'budget') {
                 return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
@@ -1335,7 +1335,33 @@
             );
         }
 
-        function VaccinsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+        function AnimalSwitcher({ animals, selectedAnimal, setSelectedAnimal }) {
+            if (!animals || animals.length < 2) return null;
+            return (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+                    {animals.map(a => (
+                        <button
+                            key={a.id}
+                            onClick={() => setSelectedAnimal(a.id)}
+                            style={{
+                                padding: '8px 16px',
+                                borderRadius: '20px',
+                                border: a.id === selectedAnimal ? '2px solid #10b981' : '1px solid #e5e7eb',
+                                background: a.id === selectedAnimal ? '#ecfdf5' : 'white',
+                                color: a.id === selectedAnimal ? '#10b981' : '#374151',
+                                fontWeight: a.id === selectedAnimal ? '700' : '500',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                            }}
+                        >
+                            {EMOJIS_ESPECE[a.espece] || '🐾'} {a.nom}
+                        </button>
+                    ))}
+                </div>
+            );
+        }
+
+        function VaccinsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1354,6 +1380,7 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💉 Vaccins de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
                     {/* Add Vaccin */}
                     {showForm ? (
@@ -1418,7 +1445,7 @@
             );
         }
 
-        function MedicamentsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+        function MedicamentsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1438,6 +1465,7 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médication de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
                     {/* Add Medicament */}
                     {showForm ? (
@@ -1561,7 +1589,7 @@
             );
         }
 
-        function NotesTab({ animal, addAnimalItem, deleteAnimalItem }) {
+        function NotesTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1627,6 +1655,7 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📋 Observations de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2' }}>
@@ -1777,7 +1806,7 @@
             );
         }
 
-        function PoidsTab({ animal, addAnimalItem, deleteAnimalItem }) {
+        function PoidsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1801,6 +1830,7 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚖️ Suivi du poids de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
