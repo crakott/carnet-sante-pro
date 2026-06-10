@@ -112,6 +112,26 @@
             return { days, label, color };
         };
 
+        // Read an image file, downscale it to maxPx and return a JPEG data-URL via callback
+        const readImageAsResizedDataUrl = (file, maxPx, quality, onResult, onError) => {
+            if (!file || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    onResult(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = () => onError && onError();
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        };
+
         // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDZ_dc_HfSmXL1pjeKwT7uD1xX2lbr48c0",
@@ -1064,13 +1084,21 @@
         // Tabs Content
         function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
-            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '' });
+            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
             const [editingAnimal, setEditingAnimal] = React.useState(null);
+            const [photoError, setPhotoError] = React.useState('');
+
+            const handlePhotoChange = (file, setter) => {
+                setPhotoError('');
+                readImageAsResizedDataUrl(file, 400, 0.85,
+                    (photo) => setter(prev => ({ ...prev, photo })),
+                    () => setPhotoError('Impossible de lire cette image.'));
+            };
 
             const handleAddAnimal = () => {
                 if (newAnimal.nom && newAnimal.espece) {
                     saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
-                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '' });
+                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
                     setShowAddAnimal(false);
                 }
             };
@@ -1105,7 +1133,7 @@
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                                         <div>
-                                            <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                                            <h3 style={{ fontSize: '18px', fontWeight: '700' }}><AnimalAvatar animal={animal} /> {animal.nom}</h3>
                                             <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>{animal.espece}</p>
                                             {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
                                         </div>
@@ -1177,6 +1205,15 @@
                                         <label htmlFor="edit-sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
                                     </div>
                                     <input type="text" placeholder="Identifiant vétérinaire (puce électronique, optionnel)" value={editingAnimal.identifiant || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, identifiant: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', gridColumn: '1 / -1' }} />
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Photo (optionnel)</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <AnimalAvatar animal={editingAnimal} size={48} />
+                                            <input type="file" accept="image/*" onChange={(e) => handlePhotoChange(e.target.files[0], setEditingAnimal)} style={{ flex: 1 }} />
+                                            {editingAnimal.photo && <button type="button" onClick={() => setEditingAnimal({ ...editingAnimal, photo: '' })} style={{ padding: '6px 10px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✕ Retirer</button>}
+                                        </div>
+                                        {photoError && <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>{photoError}</p>}
+                                    </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={handleEditAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
@@ -1212,6 +1249,15 @@
                                     <label htmlFor="sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
                                 </div>
                                 <input type="text" placeholder="Identifiant vétérinaire (puce électronique, optionnel)" value={newAnimal.identifiant} onChange={(e) => setNewAnimal({ ...newAnimal, identifiant: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', gridColumn: '1 / -1' }} />
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Photo (optionnel)</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <AnimalAvatar animal={newAnimal} size={48} />
+                                        <input type="file" accept="image/*" onChange={(e) => handlePhotoChange(e.target.files[0], setNewAnimal)} style={{ flex: 1 }} />
+                                        {newAnimal.photo && <button type="button" onClick={() => setNewAnimal({ ...newAnimal, photo: '' })} style={{ padding: '6px 10px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>✕ Retirer</button>}
+                                    </div>
+                                    {photoError && <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>{photoError}</p>}
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
@@ -1271,7 +1317,7 @@
 
             return (
                 <div onClick={onSelect} className="animate-fade-in" style={{ background: 'white', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #10b981', border: selected ? '2px solid #10b981' : '1px solid #e5e7eb', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}><AnimalAvatar animal={animal} /> {animal.nom}</h3>
 
                     <div style={{ marginTop: '12px', display: 'grid', gap: '6px', fontSize: '13px', color: '#374151' }}>
                         <p><strong>💉 Vaccins :</strong> {dossier.vaccinNames.length > 0 ? dossier.vaccinNames.join(', ') : 'aucun'}</p>
@@ -1364,6 +1410,14 @@
             );
         }
 
+        // Show the animal's photo if available, otherwise fall back to its species emoji
+        function AnimalAvatar({ animal, size = 28 }) {
+            if (animal.photo) {
+                return <img src={animal.photo} alt={animal.nom} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle' }} />;
+            }
+            return <span style={{ fontSize: size, verticalAlign: 'middle' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'}</span>;
+        }
+
         function AnimalSwitcher({ animals, selectedAnimal, setSelectedAnimal }) {
             if (!animals || animals.length < 2) return null;
             return (
@@ -1383,7 +1437,7 @@
                                 fontSize: '14px'
                             }}
                         >
-                            {EMOJIS_ESPECE[a.espece] || '🐾'} {a.nom}
+                            <AnimalAvatar animal={a} size={18} /> {a.nom}
                         </button>
                     ))}
                 </div>
@@ -2298,7 +2352,7 @@
                             const echeances = buildEcheances(animal);
                             return (
                                 <div key={animal.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                                    <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h4>
+                                    <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}><AnimalAvatar animal={animal} /> {animal.nom}</h4>
                                     {echeances.length > 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {echeances.map((e, i) => (
@@ -2636,7 +2690,7 @@
                         {animal && (
                             <div>
                                 <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}><AnimalAvatar animal={animal} /> {animal.nom}</h3>
                                     <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
                                         {animal.espece}{animal.race ? ` • ${animal.race}` : ''}{animal.sexe ? ` • ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}` : ''}
                                     </p>
