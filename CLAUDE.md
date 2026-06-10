@@ -15,7 +15,9 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 - Firebase v10.7.0 (Auth + Firestore + Functions)
 - Cloud Functions v2 (Node 20, région `europe-west1`) pour l'intégration Stripe
 - Stripe (Checkout + Billing Portal + Webhooks) pour l'abonnement vétérinaire
-- PWA : `manifest.json` + `sw.js` + icônes dans `icons/`
+- PWA : `manifest.json` + `sw.js` + icônes dans `icons/`, installable sur mobile (Add to Home Screen)
+- Firestore : persistance locale IndexedDB activée (`persistentLocalCache` + `persistentMultipleTabManager`)
+  pour permettre la consultation/modification hors connexion avec synchronisation au retour du réseau
 - Google Tag Manager : GTM-MVNX7BHT
 - Google AdSense : ca-pub-2220007213028900
 

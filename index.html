@@ -75,7 +75,7 @@
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/app/+esm";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
-        import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
+        import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
         import { getFunctions, httpsCallable } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/functions/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
@@ -98,7 +98,17 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Persistance locale (IndexedDB) : permet de consulter et modifier les données
+        // déjà chargées hors connexion, avec synchronisation automatique au retour du réseau
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+            });
+        } catch (e) {
+            console.warn('Persistance Firestore indisponible, mode mémoire utilisé:', e);
+            db = getFirestore(app);
+        }
         const functions = getFunctions(app, 'europe-west1');
 
         // Reference data for animal profiles, vaccines, medications and vets
