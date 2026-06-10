@@ -74,7 +74,7 @@
 
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/app/+esm";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
         import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc, setDoc } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
@@ -351,6 +351,7 @@
             const [animals, setAnimals] = React.useState([]);
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
+            const [userRole, setUserRole] = React.useState(null); // null (chargement) | 'proprietaire' | 'veterinaire'
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [showMenu, setShowMenu] = React.useState(false);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
@@ -363,6 +364,8 @@
                     if (currentUser) {
                         loadAnimalsFromFirestore(currentUser.uid);
                         loadSettings(currentUser.uid);
+                    } else {
+                        setUserRole(null);
                     }
                 });
             }, []);
@@ -396,9 +399,13 @@
                         const settings = querySnapshot.docs[0].data();
                         const s = settings.reminders || {};
                         setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
+                        setUserRole(settings.role || 'proprietaire');
+                    } else {
+                        setUserRole('proprietaire');
                     }
                 } catch (error) {
                     console.error('Erreur loading settings:', error);
+                    setUserRole('proprietaire');
                 }
             };
 
@@ -519,10 +526,14 @@
                 if (reminders.length > 0) scheduleReminders(reminders);
             }, [animals, reminderSettings]);
 
-            if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+            if (loading || (user && userRole === null)) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
 
             if (!user) {
-                return <LoginScreen auth={auth} />;
+                return <LoginScreen auth={auth} db={db} />;
+            }
+
+            if (userRole === 'veterinaire') {
+                return <VetApp auth={auth} db={db} />;
             }
 
             return (
@@ -588,12 +599,19 @@
         }
 
         // Auth form (shared between landing CTA and direct login)
-        function AuthForm({ auth, onBack }) {
+        function AuthForm({ auth, db, onBack, defaultPro }) {
             const [email, setEmail] = React.useState('');
             const [password, setPassword] = React.useState('');
             const [isSignup, setIsSignup] = React.useState(false);
+            const [isVet, setIsVet] = React.useState(!!defaultPro);
             const [error, setError] = React.useState('');
             const [resetMsg, setResetMsg] = React.useState('');
+
+            const createSettingsDoc = async (uid, role) => {
+                try {
+                    await addDoc(collection(db, 'settings'), { userId: uid, role, reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
+                } catch (err) { console.error('Erreur creating settings:', err); }
+            };
 
             const handlePasswordReset = async () => {
                 if (!email) { setError('Entrez votre adresse email pour réinitialiser le mot de passe.'); return; }
@@ -608,15 +626,23 @@
                 e.preventDefault();
                 setError('');
                 try {
-                    if (isSignup) await createUserWithEmailAndPassword(auth, email, password);
-                    else await signInWithEmailAndPassword(auth, email, password);
+                    if (isSignup) {
+                        const cred = await createUserWithEmailAndPassword(auth, email, password);
+                        await createSettingsDoc(cred.user.uid, isVet ? 'veterinaire' : 'proprietaire');
+                    } else {
+                        await signInWithEmailAndPassword(auth, email, password);
+                    }
                 } catch (err) { setError(err.message); }
             };
 
             const handleGoogleAuth = async () => {
                 setError('');
-                try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-                catch (err) { setError(err.message); }
+                try {
+                    const result = await signInWithPopup(auth, new GoogleAuthProvider());
+                    if (getAdditionalUserInfo(result)?.isNewUser) {
+                        await createSettingsDoc(result.user.uid, isVet ? 'veterinaire' : 'proprietaire');
+                    }
+                } catch (err) { setError(err.message); }
             };
 
             return (
@@ -654,6 +680,13 @@
                         <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
                     </div>
 
+                    {isSignup && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '14px', padding: '10px', background: '#f0fdf4', borderRadius: '8px' }}>
+                            <input type="checkbox" id="is-vet" checked={isVet} onChange={(e) => setIsVet(e.target.checked)} style={{ width: 'auto', marginTop: '2px' }} />
+                            <label htmlFor="is-vet" style={{ fontSize: '13px', color: '#374151', cursor: 'pointer' }}>🩺 Je suis vétérinaire / professionnel de santé animale (espace pro)</label>
+                        </div>
+                    )}
+
                     <form onSubmit={handleAuth}>
                         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
                             style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '10px', fontSize: '16px' }} />
@@ -686,8 +719,9 @@
         }
 
         // Landing page + login/signup screen
-        function LoginScreen({ auth }) {
+        function LoginScreen({ auth, db }) {
             const [showForm, setShowForm] = React.useState(false);
+            const [proMode, setProMode] = React.useState(false);
 
             const FEATURES = [
                 { emoji: '💉', title: 'Vaccins & rappels', desc: 'Calendrier vaccinal complet avec alertes automatiques avant expiration.' },
@@ -707,7 +741,7 @@
             if (showForm) {
                 return (
                     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)', padding: '20px' }}>
-                        <AuthForm auth={auth} onBack={() => setShowForm(false)} />
+                        <AuthForm auth={auth} db={db} onBack={() => setShowForm(false)} defaultPro={proMode} />
                     </div>
                 );
             }
@@ -718,10 +752,16 @@
                     {/* ── NAV ── */}
                     <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
                         <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🐾 Carnet Santé PRO</span>
-                        <button onClick={() => setShowForm(true)}
-                            style={{ padding: '8px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
-                            Se connecter
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button onClick={() => { setProMode(true); setShowForm(true); }}
+                                style={{ padding: '8px 16px', background: 'white', color: '#10b981', border: '1px solid #10b981', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                                🩺 Espace vétérinaire
+                            </button>
+                            <button onClick={() => { setProMode(false); setShowForm(true); }}
+                                style={{ padding: '8px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                Se connecter
+                            </button>
+                        </div>
                     </nav>
 
                     {/* ── HERO ── */}
@@ -972,13 +1012,13 @@
         // Tabs Content
         function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
-            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+            const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '' });
             const [editingAnimal, setEditingAnimal] = React.useState(null);
 
             const handleAddAnimal = () => {
                 if (newAnimal.nom && newAnimal.espece) {
                     saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
-                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false });
+                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '' });
                     setShowAddAnimal(false);
                 }
             };
@@ -1048,6 +1088,15 @@
                                             <p style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>{(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€</p>
                                         </div>
                                     </div>
+
+                                    {animal.identifiant && (
+                                        <div style={{ marginTop: '12px', padding: '10px', background: '#f3f4f6', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <div style={{ fontSize: '12px', color: '#6b7280' }}>🩺 ID vétérinaire: <strong style={{ color: '#1f2937' }}>{animal.identifiant}</strong></div>
+                                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(animal.identifiant); }} style={{ padding: '4px 10px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                                                📋 Copier
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -1075,6 +1124,7 @@
                                         <input type="checkbox" id="edit-sterilise" checked={editingAnimal.sterilise || false} onChange={(e) => setEditingAnimal({ ...editingAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
                                         <label htmlFor="edit-sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
                                     </div>
+                                    <input type="text" placeholder="Identifiant vétérinaire (puce électronique, optionnel)" value={editingAnimal.identifiant || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, identifiant: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', gridColumn: '1 / -1' }} />
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={handleEditAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
@@ -1109,6 +1159,7 @@
                                     <input type="checkbox" id="sterilise" checked={newAnimal.sterilise} onChange={(e) => setNewAnimal({ ...newAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
                                     <label htmlFor="sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
                                 </div>
+                                <input type="text" placeholder="Identifiant vétérinaire (puce électronique, optionnel)" value={newAnimal.identifiant} onChange={(e) => setNewAnimal({ ...newAnimal, identifiant: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', gridColumn: '1 / -1' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
@@ -2214,6 +2265,117 @@
                             </label>
                             {importMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: importMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{importMsg}</p>}
                         </div>
+                    </div>
+                </div>
+            );
+        }
+
+                // Tabs available to veterinarians for an animal record
+        const VET_TABS = [
+            { id: 'vaccins', label: '💉 Vaccins' },
+            { id: 'medicaments', label: '💊 Médicaments' },
+            { id: 'notes', label: '📋 Observations' },
+            { id: 'poids', label: '⚖️ Poids' },
+        ];
+
+        // Pro space for veterinarians: search an animal by its identifiant and add medical acts
+        function VetApp({ auth, db }) {
+            const [identifiant, setIdentifiant] = React.useState('');
+            const [animal, setAnimal] = React.useState(null);
+            const [error, setError] = React.useState('');
+            const [searching, setSearching] = React.useState(false);
+            const [activeTab, setActiveTab] = React.useState('vaccins');
+
+            const handleSearch = async () => {
+                const id = identifiant.trim();
+                setError('');
+                setAnimal(null);
+                if (!id) return;
+                setSearching(true);
+                try {
+                    const q = query(collection(db, 'animals'), where('identifiant', '==', id));
+                    const querySnapshot = await getDocs(q);
+                    if (querySnapshot.empty) {
+                        setError("Aucun animal trouvé avec cet identifiant.");
+                    } else {
+                        const docSnap = querySnapshot.docs[0];
+                        setAnimal({ id: docSnap.id, ...docSnap.data() });
+                    }
+                } catch (err) {
+                    setError("Erreur lors de la recherche : " + err.message);
+                } finally {
+                    setSearching(false);
+                }
+            };
+
+            const saveAnimal = async (animalData) => {
+                try {
+                    const { id, ...data } = animalData;
+                    await updateDoc(doc(db, 'animals', id), data);
+                    setAnimal(animalData);
+                } catch (err) {
+                    setError("Erreur lors de l'enregistrement : " + err.message);
+                }
+            };
+
+            const addAnimalItem = (animalObj, type, item) => {
+                saveAnimal({ ...animalObj, [type]: [...(animalObj[type] || []), { ...item, id: Date.now() }] });
+            };
+
+            const deleteAnimalItem = (animalObj, type, itemId) => {
+                saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).filter(i => i.id !== itemId) });
+            };
+
+            return (
+                <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                    <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
+                        <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
+                        <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                            Déconnexion
+                        </button>
+                    </nav>
+
+                    <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>🔍 Rechercher un animal par identifiant</h2>
+                            <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez l'identifiant vétérinaire (puce électronique…) renseigné par le propriétaire dans le profil de l'animal.</p>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <input type="text" placeholder="Identifiant vétérinaire" value={identifiant}
+                                    onChange={(e) => setIdentifiant(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+                                    style={{ flex: 1, minWidth: '200px', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
+                                <button onClick={handleSearch} disabled={searching} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                    {searching ? 'Recherche…' : 'Rechercher'}
+                                </button>
+                            </div>
+                            {error && <p style={{ color: '#ef4444', marginTop: '10px', fontSize: '14px' }}>{error}</p>}
+                        </div>
+
+                        {animal && (
+                            <div>
+                                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}</h3>
+                                    <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
+                                        {animal.espece}{animal.race ? ` • ${animal.race}` : ''}{animal.sexe ? ` • ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}` : ''}
+                                    </p>
+                                    {animal.dateNaissance && <p style={{ color: '#6b7280', fontSize: '14px' }}>Né(e) le : {formatDate(animal.dateNaissance)}</p>}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                                    {VET_TABS.map(t => (
+                                        <button key={t.id} onClick={() => setActiveTab(t.id)}
+                                            style={{ padding: '10px 16px', background: activeTab === t.id ? '#10b981' : 'white', color: activeTab === t.id ? 'white' : '#1f2937', border: '1px solid #e5e7eb', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                            {t.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {activeTab === 'vaccins' && <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
+                                {activeTab === 'medicaments' && <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
+                                {activeTab === 'notes' && <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
+                                {activeTab === 'poids' && <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
+                            </div>
+                        )}
                     </div>
                 </div>
             );
