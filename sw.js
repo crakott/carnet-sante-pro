@@ -1,4 +1,4 @@
-const CACHE = 'carnet-sante-v6';
+const CACHE = 'carnet-sante-v7';
 const PRECACHE = [
   './',
   'manifest.json',
