@@ -75,7 +75,8 @@
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/app/+esm";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
-        import { getFirestore, collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc, setDoc } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
+        import { getFirestore, collection, addDoc, query, where, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
+        import { getFunctions, httpsCallable } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/functions/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
         const formatDate = (dateStr) => {
@@ -98,6 +99,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const functions = getFunctions(app, 'europe-west1');
 
         // Reference data for animal profiles, vaccines, medications and vets
         const ESPECES = ['Chien', 'Chat', 'Lapin', 'Hamster', 'Gerbille', 'Cheval', 'Oiseau', 'Tortue'];
@@ -390,17 +392,26 @@
                 }
             };
 
-            // Load Settings
+            // Load Settings (settings/{uid}; migrates legacy docs keyed by a random id)
             const loadSettings = async (uid) => {
                 try {
-                    const q = query(collection(db, 'settings'), where('userId', '==', uid));
-                    const querySnapshot = await getDocs(q);
-                    if (querySnapshot.docs.length > 0) {
-                        const settings = querySnapshot.docs[0].data();
+                    const ref = doc(db, 'settings', uid);
+                    let snap = await getDoc(ref);
+                    if (!snap.exists()) {
+                        const q = query(collection(db, 'settings'), where('userId', '==', uid));
+                        const legacy = await getDocs(q);
+                        if (legacy.docs.length > 0) {
+                            await setDoc(ref, legacy.docs[0].data(), { merge: true });
+                            snap = await getDoc(ref);
+                        }
+                    }
+                    if (snap.exists()) {
+                        const settings = snap.data();
                         const s = settings.reminders || {};
                         setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
                         setUserRole(settings.role || 'proprietaire');
                     } else {
+                        await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
                         setUserRole('proprietaire');
                     }
                 } catch (error) {
@@ -533,7 +544,7 @@
             }
 
             if (userRole === 'veterinaire') {
-                return <VetApp auth={auth} db={db} />;
+                return <VetApp user={user} auth={auth} db={db} />;
             }
 
             return (
@@ -609,7 +620,9 @@
 
             const createSettingsDoc = async (uid, role) => {
                 try {
-                    await addDoc(collection(db, 'settings'), { userId: uid, role, reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
+                    const data = { userId: uid, role, reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } };
+                    if (role === 'veterinaire') data.subscriptionStatus = 'inactive';
+                    await setDoc(doc(db, 'settings', uid), data, { merge: true });
                 } catch (err) { console.error('Erreur creating settings:', err); }
             };
 
@@ -2158,24 +2171,11 @@
 
             const saveSettings = async () => {
                 try {
-                    const settingsRef = collection(db, 'settings');
-                    const q = query(settingsRef, where('userId', '==', user.uid));
-                    const querySnapshot = await getDocs(q);
-
-                    if (querySnapshot.docs.length > 0) {
-                        await updateDoc(doc(db, 'settings', querySnapshot.docs[0].id), {
-                            reminders: reminderSettings
-                        });
-                    } else {
-                        await addDoc(settingsRef, {
-                            userId: user.uid,
-                            reminders: reminderSettings
-                        });
-                    }
+                    await setDoc(doc(db, 'settings', user.uid), { userId: user.uid, reminders: reminderSettings }, { merge: true });
                     alert('Paramètres sauvegardés !');
                 } catch (error) {
                     console.error('Erreur saving settings:', error);
-                    alert("Échec de la sauvegarde des paramètres : les règles de sécurité Firestore du projet n'autorisent pas l'écriture dans la collection « settings » pour cet utilisateur. Mettez à jour les règles Firestore (Console Firebase) pour autoriser allow read, write sur /settings/{id} si request.auth.uid == resource.data.userId (et la création si request.auth.uid == request.resource.data.userId).");
+                    alert("Échec de la sauvegarde des paramètres : les règles de sécurité Firestore du projet n'autorisent pas l'écriture dans la collection « settings » pour cet utilisateur. Mettez à jour les règles Firestore (Console Firebase) pour autoriser allow read, write sur /settings/{uid} si request.auth.uid == uid.");
                 }
             };
 
@@ -2270,7 +2270,7 @@
             );
         }
 
-                // Tabs available to veterinarians for an animal record
+        // Tabs available to veterinarians for an animal record
         const VET_TABS = [
             { id: 'vaccins', label: '💉 Vaccins' },
             { id: 'medicaments', label: '💊 Médicaments' },
@@ -2278,13 +2278,51 @@
             { id: 'poids', label: '⚖️ Poids' },
         ];
 
-        // Pro space for veterinarians: search an animal by its identifiant and add medical acts
-        function VetApp({ auth, db }) {
+        // Pro space for veterinarians: requires an active subscription, then search an animal by its identifiant and add medical acts
+        function VetApp({ user, auth, db }) {
+            const [subStatus, setSubStatus] = React.useState(null); // null (chargement) | 'active' | 'inactive' | 'past_due' | 'canceled' | ...
+            const [checkoutLoading, setCheckoutLoading] = React.useState(false);
+            const [billingError, setBillingError] = React.useState('');
             const [identifiant, setIdentifiant] = React.useState('');
             const [animal, setAnimal] = React.useState(null);
             const [error, setError] = React.useState('');
             const [searching, setSearching] = React.useState(false);
             const [activeTab, setActiveTab] = React.useState('vaccins');
+
+            // Live subscription status, kept in sync with the Stripe webhook
+            React.useEffect(() => {
+                const unsub = onSnapshot(doc(db, 'settings', user.uid), (snap) => {
+                    setSubStatus(snap.exists() ? (snap.data().subscriptionStatus || 'inactive') : 'inactive');
+                }, (err) => {
+                    console.error('Erreur abonnement:', err);
+                    setSubStatus('inactive');
+                });
+                return () => unsub();
+            }, [user.uid]);
+
+            const handleSubscribe = async () => {
+                setBillingError('');
+                setCheckoutLoading(true);
+                try {
+                    const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
+                    const result = await createCheckoutSession();
+                    window.location.href = result.data.url;
+                } catch (err) {
+                    setBillingError("Erreur lors de la création du paiement : " + err.message);
+                    setCheckoutLoading(false);
+                }
+            };
+
+            const handleManageSubscription = async () => {
+                setBillingError('');
+                try {
+                    const createPortalSession = httpsCallable(functions, 'createPortalSession');
+                    const result = await createPortalSession();
+                    window.location.href = result.data.url;
+                } catch (err) {
+                    setBillingError("Erreur : " + err.message);
+                }
+            };
 
             const handleSearch = async () => {
                 const id = identifiant.trim();
@@ -2326,16 +2364,63 @@
                 saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).filter(i => i.id !== itemId) });
             };
 
+            if (subStatus === null) {
+                return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+            }
+
+            if (subStatus !== 'active') {
+                const checkoutResult = new URLSearchParams(window.location.search).get('vet_checkout');
+                return (
+                    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                        <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
+                            <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
+                            <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                Déconnexion
+                            </button>
+                        </nav>
+
+                        <div style={{ padding: '40px 20px', maxWidth: '480px', margin: '0 auto', textAlign: 'center' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🩺</div>
+                            <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '12px' }}>Abonnement Espace Vétérinaire</h2>
+                            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
+                                Recherchez les animaux de vos patients par identifiant (puce électronique) et ajoutez vaccins, médicaments, antiparasitaires, vermifuges, observations et pesées directement dans leur carnet de santé.
+                            </p>
+                            <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 14px rgba(0,0,0,0.08)', marginBottom: '20px' }}>
+                                <p style={{ fontSize: '36px', fontWeight: '800', color: '#10b981', marginBottom: '4px' }}>49,99 €<span style={{ fontSize: '15px', fontWeight: '500', color: '#6b7280' }}> / mois</span></p>
+                                <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>Sans engagement, résiliable à tout moment.</p>
+                                <button onClick={handleSubscribe} disabled={checkoutLoading} style={{ width: '100%', padding: '14px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: checkoutLoading ? 'wait' : 'pointer', fontSize: '16px' }}>
+                                    {checkoutLoading ? 'Redirection vers le paiement…' : "S'abonner — 49,99 €/mois"}
+                                </button>
+                            </div>
+                            {checkoutResult === 'success' && (
+                                <p style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px' }}>✅ Paiement reçu ! Activation de votre abonnement en cours (quelques secondes)…</p>
+                            )}
+                            {checkoutResult === 'cancel' && (
+                                <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '12px' }}>Paiement annulé.</p>
+                            )}
+                            {billingError && <p style={{ color: '#ef4444', fontSize: '14px' }}>{billingError}</p>}
+                            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>Paiement sécurisé par Stripe.</p>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
                         <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
-                        <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
-                            Déconnexion
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={handleManageSubscription} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                ⚙️ Abonnement
+                            </button>
+                            <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                Déconnexion
+                            </button>
+                        </div>
                     </nav>
 
                     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+                        {billingError && <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px' }}>{billingError}</p>}
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
                             <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>🔍 Rechercher un animal par identifiant</h2>
                             <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez l'identifiant vétérinaire (puce électronique…) renseigné par le propriétaire dans le profil de l'animal.</p>
