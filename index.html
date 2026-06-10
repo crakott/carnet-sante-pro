@@ -1014,7 +1014,7 @@
             } else if (activeTab === 'vaccins') {
                 return <VaccinsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'aliment') {
-                return <AlimentTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <AlimentTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'medicaments') {
                 return <MedicamentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'notes') {
@@ -1528,7 +1528,7 @@
             );
         }
 
-        function AlimentTab({ animal, addAnimalItem, deleteAnimalItem }) {
+        function AlimentTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const [showForm, setShowForm] = React.useState(false);
@@ -1545,6 +1545,7 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🍎 Alimentation de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #f59e0b' }}>
