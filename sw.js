@@ -1,8 +1,9 @@
-const CACHE = 'carnet-sante-v2';
+const CACHE = 'carnet-sante-v3';
 const PRECACHE = [
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  './',
+  'manifest.json',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
   'https://unpkg.com/@babel/standalone/babel.min.js',
@@ -49,7 +50,7 @@ self.addEventListener('fetch', e => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;
-      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/index.html')))
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('./')))
     );
     return;
   }
@@ -64,7 +65,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => caches.match('/index.html'));
+      }).catch(() => caches.match('./'));
     })
   );
 });
@@ -75,7 +76,7 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       if (list.length > 0) return list[0].focus();
-      return clients.openWindow('/');
+      return clients.openWindow('./');
     })
   );
 });
@@ -87,8 +88,8 @@ self.addEventListener('message', e => {
     setTimeout(() => {
       self.registration.showNotification(title, {
         body,
-        icon: '/icons/icon-192.png',
-        badge: '/icons/icon-192.png',
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
         tag: 'reminder',
         requireInteraction: false,
         vibrate: [200, 100, 200],
