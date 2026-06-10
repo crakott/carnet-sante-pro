@@ -1,7 +1,5 @@
-const CACHE = 'carnet-sante-v1';
+const CACHE = 'carnet-sante-v2';
 const PRECACHE = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
@@ -36,12 +34,27 @@ self.addEventListener('fetch', e => {
     url.hostname.includes('gstatic') ||
     url.hostname.includes('overpass') ||
     url.hostname.includes('googlesyndication') ||
-    url.hostname.includes('googletagmanager')
+    url.hostname.includes('googletagmanager') ||
+    url.hostname.includes('google-analytics')
   ) {
     return; // Let browser handle these normally
   }
 
-  // Cache-first for same-origin static assets
+  // Network-first for navigation requests and HTML documents, so users
+  // always get the latest app shell instead of being stuck on a stale
+  // cached index.html. Falls back to cache when offline.
+  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/index.html')))
+    );
+    return;
+  }
+
+  // Cache-first for other same-origin static assets
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
