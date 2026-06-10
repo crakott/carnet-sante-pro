@@ -512,18 +512,18 @@
                 window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             };
 
-            if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
-
-            if (!user) {
-                return <LoginScreen auth={auth} />;
-            }
-
             const reminders = getReminders();
 
             // Schedule local push notifications whenever reminders change
             React.useEffect(() => {
                 if (reminders.length > 0) scheduleReminders(reminders);
             }, [animals, reminderSettings]);
+
+            if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+
+            if (!user) {
+                return <LoginScreen auth={auth} />;
+            }
 
             return (
                 <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
