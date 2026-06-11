@@ -132,6 +132,46 @@
             reader.readAsDataURL(file);
         };
 
+        // Local-only video storage (IndexedDB) — videos never leave this device, no Firestore/cloud sync
+        const VIDEO_DB_NAME = 'carnet-sante-videos';
+        const VIDEO_STORE = 'videos';
+        const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 Mo
+
+        const openVideoDB = () => new Promise((resolve, reject) => {
+            const req = indexedDB.open(VIDEO_DB_NAME, 1);
+            req.onupgradeneeded = () => {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(VIDEO_STORE)) {
+                    const store = db.createObjectStore(VIDEO_STORE, { keyPath: 'id' });
+                    store.createIndex('animalId', 'animalId', { unique: false });
+                }
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+
+        const addVideoToDB = (animalId, { nom, date, blob, mimeType }) => openVideoDB().then(db => new Promise((resolve, reject) => {
+            const id = Date.now();
+            const tx = db.transaction(VIDEO_STORE, 'readwrite');
+            tx.objectStore(VIDEO_STORE).put({ id, animalId, nom, date, blob, mimeType, size: blob.size });
+            tx.oncomplete = () => resolve(id);
+            tx.onerror = () => reject(tx.error);
+        }));
+
+        const getVideosForAnimal = (animalId) => openVideoDB().then(db => new Promise((resolve, reject) => {
+            const tx = db.transaction(VIDEO_STORE, 'readonly');
+            const req = tx.objectStore(VIDEO_STORE).index('animalId').getAll(animalId);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        }));
+
+        const deleteVideoFromDB = (id) => openVideoDB().then(db => new Promise((resolve, reject) => {
+            const tx = db.transaction(VIDEO_STORE, 'readwrite');
+            tx.objectStore(VIDEO_STORE).delete(id);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        }));
+
         // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyDZ_dc_HfSmXL1pjeKwT7uD1xX2lbr48c0",
@@ -979,6 +1019,7 @@
             { id: 'chirurgies', label: '🔪 Chirurgies' },
             { id: 'notes', label: '📋 Observations' },
             { id: 'documents', label: '📄 Documents' },
+            { id: 'videos', label: '🎥 Vidéos' },
             { id: 'poids', label: '⚖️ Poids' },
             { id: 'budget', label: '💰 Budget' },
             { id: 'veterinaires', label: '🏥 Vétérinaires' },
@@ -1106,6 +1147,8 @@
                 return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'documents') {
                 return <DocumentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+            } else if (activeTab === 'videos') {
+                return <VideosTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />;
             } else if (activeTab === 'poids') {
                 return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'budget') {
@@ -2181,6 +2224,139 @@
                             <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px', gridColumn: '1 / -1' }}>Aucun document enregistré</p>
                         )}
                     </div>
+                </div>
+            );
+        }
+
+        // Owner-only: local video storage (IndexedDB) — videos stay on this device, never synced to the cloud
+        function VideosTab({ animal, animals, selectedAnimal, setSelectedAnimal }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [videos, setVideos] = React.useState([]);
+            const [showForm, setShowForm] = React.useState(false);
+            const [nom, setNom] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+            const [file, setFile] = React.useState(null);
+            const [fileError, setFileError] = React.useState('');
+            const [saving, setSaving] = React.useState(false);
+
+            const loadVideos = React.useCallback(() => {
+                getVideosForAnimal(animal.id)
+                    .then(list => setVideos(list.sort((a, b) => b.id - a.id)))
+                    .catch(() => setVideos([]));
+            }, [animal.id]);
+
+            React.useEffect(() => { loadVideos(); }, [loadVideos]);
+
+            const formatSize = (bytes) => bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} Mo` : `${Math.round(bytes / 1024)} Ko`;
+
+            const handleFile = (f) => {
+                setFileError('');
+                setFile(null);
+                if (!f) return;
+                if (!f.type.startsWith('video/')) {
+                    setFileError('Veuillez choisir un fichier vidéo.');
+                    return;
+                }
+                if (f.size > MAX_VIDEO_SIZE) {
+                    setFileError(`Vidéo trop volumineuse (max ${MAX_VIDEO_SIZE / (1024 * 1024)} Mo).`);
+                    return;
+                }
+                setFile(f);
+            };
+
+            const resetForm = () => {
+                setNom('');
+                setDate(todayStr);
+                setFile(null);
+                setFileError('');
+                setShowForm(false);
+            };
+
+            const handleAdd = async () => {
+                if (!file) return;
+                setSaving(true);
+                try {
+                    await addVideoToDB(animal.id, { nom, date, blob: file, mimeType: file.type });
+                    resetForm();
+                    loadVideos();
+                } catch (e) {
+                    setFileError("Impossible d'enregistrer la vidéo (espace de stockage de l'appareil insuffisant ?).");
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            const handleDelete = async (id) => {
+                await deleteVideoFromDB(id);
+                loadVideos();
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🎥 Vidéos de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+
+                    <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: '#92400e' }}>
+                        📱 Les vidéos sont enregistrées uniquement sur cet appareil (non synchronisées, non sauvegardées dans le cloud). Si vous changez d'appareil, désinstallez l'application ou videz les données du navigateur, elles seront définitivement perdues.
+                    </div>
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #ec4899' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une vidéo</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder="Description (optionnel)" value={nom} onChange={(e) => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>🎥 Choisir une vidéo (max {MAX_VIDEO_SIZE / (1024 * 1024)} Mo)</label>
+                                    <input type="file" accept="video/*" capture="environment" onChange={(e) => handleFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {file && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ {file.name} ({formatSize(file.size)})</p>}
+                                </div>
+                                {fileError && <p style={{ color: '#ef4444', fontSize: '13px' }}>{fileError}</p>}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} disabled={!file || saving} style={{ padding: '10px 20px', background: '#ec4899', color: 'white', border: 'none', borderRadius: '6px', cursor: (!file || saving) ? 'default' : 'pointer', fontWeight: '600', opacity: (!file || saving) ? 0.6 : 1 }}>
+                                    {saving ? 'Enregistrement...' : '➕ Ajouter'}
+                                </button>
+                                <button onClick={resetForm} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#ec4899', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une vidéo
+                        </button>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                        {videos.length > 0 ? (
+                            videos.map(v => (
+                                <VideoCard key={v.id} video={v} formatSize={formatSize} onDelete={() => handleDelete(v.id)} />
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px', gridColumn: '1 / -1' }}>Aucune vidéo enregistrée sur cet appareil</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Renders a single locally-stored video, managing its object URL lifecycle
+        function VideoCard({ video, formatSize, onDelete }) {
+            const [url, setUrl] = React.useState('');
+
+            React.useEffect(() => {
+                const objectUrl = URL.createObjectURL(video.blob);
+                setUrl(objectUrl);
+                return () => URL.revokeObjectURL(objectUrl);
+            }, [video.blob]);
+
+            return (
+                <div style={{ background: 'white', padding: '12px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #ec4899' }}>
+                    {url && <video src={url} controls style={{ width: '100%', borderRadius: '6px', marginBottom: '8px', background: '#000' }} />}
+                    {video.nom && <p style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>{video.nom}</p>}
+                    <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(video.date)} · {formatSize(video.size || video.blob.size)}</p>
+                    <button onClick={onDelete} style={{ marginTop: '8px', padding: '6px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>🗑️ Supprimer</button>
                 </div>
             );
         }
