@@ -21,7 +21,7 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 - Firestore : persistance locale IndexedDB activée (`persistentLocalCache` + `persistentMultipleTabManager`)
   pour permettre la consultation/modification hors connexion avec synchronisation au retour du réseau
 - Google Tag Manager : GTM-MVNX7BHT
-- Google AdSense : ca-pub-2220007213028900
+- Google AdSense : ca-pub-2220007721302800
 
 ## Branche de développement
 
