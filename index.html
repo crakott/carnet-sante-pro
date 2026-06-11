@@ -516,6 +516,12 @@
                 saveAnimal(updated);
             };
 
+            // Update an existing item in an animal's array field by id and persist to Firestore
+            const updateAnimalItem = (animal, type, itemId, updates) => {
+                const updated = { ...animal, [type]: (animal[type] || []).map(i => i.id === itemId ? { ...i, ...updates } : i) };
+                saveAnimal(updated);
+            };
+
             // Merge field updates (e.g. assigned vétérinaire) into an animal and persist to Firestore
             const updateAnimalFields = (animal, updates) => {
                 saveAnimal({ ...animal, ...updates });
@@ -645,6 +651,7 @@
                             deleteAnimal={deleteAnimalFromFirestore}
                             addAnimalItem={addAnimalItem}
                             deleteAnimalItem={deleteAnimalItem}
+                            updateAnimalItem={updateAnimalItem}
                             updateAnimalFields={updateAnimalFields}
                             budgetFilter={budgetFilter}
                             setBudgetFilter={setBudgetFilter}
@@ -1051,7 +1058,7 @@
 
         // Content Router
         function Content(props) {
-            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalFields, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem, updateAnimalFields, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
             const animal = animals.find(a => a.id === selectedAnimal);
 
             if (activeTab === 'accueil') {
@@ -1059,21 +1066,21 @@
             } else if (activeTab === 'sante') {
                 return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'vaccins') {
-                return <VaccinsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <VaccinsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'aliment') {
-                return <AlimentTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <AlimentTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'medicaments') {
-                return <MedicamentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <MedicamentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'notes') {
-                return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'poids') {
-                return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'budget') {
-                return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
                 return <VeterinairesTab animal={animal} updateAnimalFields={updateAnimalFields} />;
             } else if (activeTab === 'planning') {
-                return <PlanningTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <PlanningTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'rappels') {
                 return <RappelsTab {...props} />;
             } else if (activeTab === 'parametres') {
@@ -1349,7 +1356,7 @@
             );
         }
 
-        function TraitementSection({ title, emoji, color, items, itemKey, onAdd, onDelete }) {
+        function TraitementSection({ title, emoji, color, items, itemKey, onAdd, onUpdate, onDelete }) {
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
             const [nom, setNom] = React.useState('');
@@ -1395,18 +1402,85 @@
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         {items && items.length > 0 ? items.map((t, i) => (
                             <div key={t.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
+                                <EditableRow
+                                    item={t}
+                                    color={color}
+                                    fields={[
+                                        { key: 'nom', label: 'Nom du produit' },
+                                        { key: 'dernierTraitement', label: 'Dernier traitement', type: 'date' },
+                                        { key: 'intervalMois', label: 'Fréquence (mois)', type: 'number' },
+                                        { key: 'prochainTraitement', label: 'Prochain traitement', type: 'date' }
+                                    ]}
+                                    onSave={(vals) => onUpdate(t.id, vals)}
+                                    onDelete={() => onDelete(t.id)}
+                                >
                                     <p style={{ fontWeight: '600' }}>{t.nom}</p>
                                     <p style={{ color: '#6b7280', fontSize: '14px' }}>Dernier : {formatDate(t.dernierTraitement)} · Prochain : <strong style={{ color }}>{formatDate(t.prochainTraitement)}</strong></p>
                                     <p style={{ color: '#9ca3af', fontSize: '12px' }}>Tous les {t.intervalMois} mois</p>
-                                </div>
-                                {t.id && <button onClick={() => onDelete(t.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                </EditableRow>
                             </div>
                         )) : (
                             <p style={{ color: '#9ca3af' }}>Aucun traitement enregistré</p>
                         )}
                     </div>
                 </div>
+            );
+        }
+
+        // Generic row that can switch between a read-only display and an inline edit form for its fields
+        function EditableRow({ item, fields, color = '#10b981', onSave, onDelete, children }) {
+            const [editing, setEditing] = React.useState(false);
+            const [values, setValues] = React.useState({});
+
+            const startEdit = () => {
+                const init = {};
+                fields.forEach(f => { init[f.key] = item[f.key] ?? ''; });
+                setValues(init);
+                setEditing(true);
+            };
+
+            const handleSave = () => {
+                const out = {};
+                fields.forEach(f => { out[f.key] = f.type === 'number' ? (parseFloat(values[f.key]) || 0) : values[f.key]; });
+                onSave(out);
+                setEditing(false);
+            };
+
+            if (editing) {
+                return (
+                    <div style={{ width: '100%' }}>
+                        <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', marginBottom: '8px' }}>
+                            {fields.map(f => (
+                                <div key={f.key} style={f.fullWidth ? { gridColumn: '1 / -1' } : undefined}>
+                                    {f.label && <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>{f.label}</label>}
+                                    {f.type === 'select' ? (
+                                        <select value={values[f.key]} onChange={e => setValues({ ...values, [f.key]: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}>
+                                            {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                        </select>
+                                    ) : f.type === 'textarea' ? (
+                                        <textarea value={values[f.key]} onChange={e => setValues({ ...values, [f.key]: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px' }} />
+                                    ) : (
+                                        <input type={f.type || 'text'} step={f.step} value={values[f.key]} onChange={e => setValues({ ...values, [f.key]: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={handleSave} style={{ padding: '8px 16px', background: color, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>✅ Enregistrer</button>
+                            <button onClick={() => setEditing(false)} style={{ padding: '8px 16px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>Annuler</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <React.Fragment>
+                    <div style={{ flex: 1 }}>{children}</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {item.id && <button onClick={startEdit} style={{ padding: '8px 12px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>✏️</button>}
+                        {item.id && onDelete && <button onClick={onDelete} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                    </div>
+                </React.Fragment>
             );
         }
 
@@ -1444,7 +1518,7 @@
             );
         }
 
-        function VaccinsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+        function VaccinsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1495,11 +1569,20 @@
                         {animal.vaccins && animal.vaccins.length > 0 ? (
                             animal.vaccins.map((v, i) => (
                                 <div key={v.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
+                                    <EditableRow
+                                        item={v}
+                                        color="#10b981"
+                                        fields={[
+                                            { key: 'nom', label: 'Nom du vaccin' },
+                                            { key: 'date', label: 'Date du vaccin', type: 'date' },
+                                            { key: 'rappel', label: 'Date de rappel', type: 'date' }
+                                        ]}
+                                        onSave={(vals) => updateAnimalItem(animal, 'vaccins', v.id, vals)}
+                                        onDelete={() => deleteAnimalItem(animal, 'vaccins', v.id)}
+                                    >
                                         <p style={{ fontWeight: '600' }}>{v.nom}</p>
                                         <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {formatDate(v.date)}{v.rappel ? ` | Rappel: ${formatDate(v.rappel)}` : ''}</p>
-                                    </div>
-                                    {v.id && <button onClick={() => deleteAnimalItem(animal, 'vaccins', v.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </EditableRow>
                                 </div>
                             ))
                         ) : (
@@ -1513,6 +1596,7 @@
                         color="#7c3aed"
                         items={animal.antiparasitaires}
                         onAdd={item => addAnimalItem(animal, 'antiparasitaires', item)}
+                        onUpdate={(id, vals) => updateAnimalItem(animal, 'antiparasitaires', id, vals)}
                         onDelete={id => deleteAnimalItem(animal, 'antiparasitaires', id)}
                     />
 
@@ -1522,13 +1606,14 @@
                         color="#b45309"
                         items={animal.vermifuges}
                         onAdd={item => addAnimalItem(animal, 'vermifuges', item)}
+                        onUpdate={(id, vals) => updateAnimalItem(animal, 'vermifuges', id, vals)}
                         onDelete={id => deleteAnimalItem(animal, 'vermifuges', id)}
                     />
                 </div>
             );
         }
 
-        function MedicamentsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+        function MedicamentsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1589,7 +1674,20 @@
                                 const isActive = m.dateFin ? (todayStr >= m.dateDebut && todayStr <= m.dateFin) : false;
                                 return (
                                     <div key={m.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', borderLeft: `4px solid ${isActive ? '#ec4899' : '#9ca3af'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div>
+                                        <EditableRow
+                                            item={m}
+                                            color="#ec4899"
+                                            fields={[
+                                                { key: 'nom', label: 'Nom du médicament', fullWidth: true },
+                                                { key: 'dosage', label: 'Dosage' },
+                                                { key: 'unite', label: 'Unité', type: 'select', options: ['g', 'mg', 'ml', 'UI'].map(u => ({ value: u, label: u })) },
+                                                { key: 'frequence', label: 'Fréquence' },
+                                                { key: 'dateDebut', label: 'Date de début', type: 'date' },
+                                                { key: 'dateFin', label: 'Date de fin', type: 'date' }
+                                            ]}
+                                            onSave={(vals) => updateAnimalItem(animal, 'medicaments', m.id, vals)}
+                                            onDelete={() => deleteAnimalItem(animal, 'medicaments', m.id)}
+                                        >
                                             <p style={{ fontWeight: '600' }}>{m.nom}</p>
                                             {m.dosage && <p style={{ color: '#6b7280', fontSize: '14px' }}>💊 {m.dosage} {m.unite} • {m.frequence}</p>}
                                             <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {formatDate(m.dateDebut)}{m.dateFin ? ` → ${formatDate(m.dateFin)}` : ''}</p>
@@ -1598,8 +1696,7 @@
                                                     {isActive ? '✅ En cours' : '⏱️ Fini'}
                                                 </span>
                                             )}
-                                        </div>
-                                        {m.id && <button onClick={() => deleteAnimalItem(animal, 'medicaments', m.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                        </EditableRow>
                                     </div>
                                 );
                             })
@@ -1611,7 +1708,7 @@
             );
         }
 
-        function AlimentTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+        function AlimentTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const [showForm, setShowForm] = React.useState(false);
@@ -1658,11 +1755,20 @@
                         {animal.aliments && animal.aliments.length > 0 ? (
                             animal.aliments.map((a, i) => (
                                 <div key={a.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #f59e0b' }}>
-                                    <div>
+                                    <EditableRow
+                                        item={a}
+                                        color="#f59e0b"
+                                        fields={[
+                                            { key: 'nom', label: "Nom de l'aliment" },
+                                            { key: 'quantite', label: 'Quantité' },
+                                            { key: 'horaire', label: 'Horaire', type: 'time' }
+                                        ]}
+                                        onSave={(vals) => updateAnimalItem(animal, 'aliments', a.id, vals)}
+                                        onDelete={() => deleteAnimalItem(animal, 'aliments', a.id)}
+                                    >
                                         <p style={{ fontWeight: '600' }}>{a.nom}</p>
                                         <p style={{ color: '#6b7280', fontSize: '14px' }}>{a.quantite} • {a.horaire}</p>
-                                    </div>
-                                    {a.id && <button onClick={() => deleteAnimalItem(animal, 'aliments', a.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </EditableRow>
                                 </div>
                             ))
                         ) : (
@@ -1673,7 +1779,7 @@
             );
         }
 
-        function NotesTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+        function NotesTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1781,11 +1887,20 @@
                             [...animal.observations].reverse().map((o, i) => (
                                 <div key={o.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #0891b2' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div>
+                                        <EditableRow
+                                            item={o}
+                                            color="#0891b2"
+                                            fields={[
+                                                { key: 'type', label: 'Type', type: 'select', options: Object.entries(TYPE_LABELS).map(([key, label]) => ({ value: key, label })) },
+                                                { key: 'description', label: 'Description', type: 'textarea', fullWidth: true },
+                                                { key: 'date', label: 'Date', type: 'date' }
+                                            ]}
+                                            onSave={(vals) => updateAnimalItem(animal, 'observations', o.id, vals)}
+                                            onDelete={() => deleteAnimalItem(animal, 'observations', o.id)}
+                                        >
                                             <p style={{ fontWeight: '600' }}>{TYPE_LABELS[o.type] || o.type}</p>
                                             <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(o.date)}</p>
-                                        </div>
-                                        {o.id && <button onClick={() => deleteAnimalItem(animal, 'observations', o.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                        </EditableRow>
                                     </div>
                                     {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
                                     {(o.photo || o.audio) && (() => {
@@ -1890,7 +2005,7 @@
             );
         }
 
-        function PoidsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+        function PoidsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -1962,11 +2077,19 @@
                         {sortedDesc.length > 0 ? (
                             sortedDesc.map((p, i) => (
                                 <div key={p.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
+                                    <EditableRow
+                                        item={p}
+                                        color="#10b981"
+                                        fields={[
+                                            { key: 'valeur', label: 'Poids (kg)', type: 'number', step: '0.1' },
+                                            { key: 'date', label: 'Date', type: 'date' }
+                                        ]}
+                                        onSave={(vals) => updateAnimalItem(animal, 'poids', p.id, vals)}
+                                        onDelete={() => deleteAnimalItem(animal, 'poids', p.id)}
+                                    >
                                         <h4 style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{p.valeur} kg</h4>
                                         <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(p.date)}</p>
-                                    </div>
-                                    {p.id && <button onClick={() => deleteAnimalItem(animal, 'poids', p.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </EditableRow>
                                 </div>
                             ))
                         ) : (
@@ -1977,7 +2100,7 @@
             );
         }
 
-        function PlanningTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
+        function PlanningTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -2002,15 +2125,25 @@
                 const c = getCountdown(r.date);
                 return (
                     <div key={r.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                        <div>
-                            <p style={{ fontWeight: '600' }}>{r.motif}</p>
+                        <EditableRow
+                            item={r}
+                            color="#10b981"
+                            fields={[
+                                { key: 'motif', label: 'Motif' },
+                                { key: 'date', label: 'Date', type: 'date' },
+                                { key: 'heure', label: 'Heure', type: 'time' },
+                                { key: 'lieu', label: 'Lieu' }
+                            ]}
+                            onSave={(vals) => updateAnimalItem(animal, 'rdvs', r.id, vals)}
+                            onDelete={() => deleteAnimalItem(animal, 'rdvs', r.id)}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <p style={{ fontWeight: '600' }}>{r.motif}</p>
+                                {c && <span style={{ fontSize: '13px', fontWeight: '700', color: c.color, background: `${c.color}1a`, padding: '2px 10px', borderRadius: '12px' }}>{c.label}</span>}
+                            </div>
                             <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {formatDate(r.date)}{r.heure ? ` à ${r.heure}` : ''}</p>
                             {r.lieu && <p style={{ color: '#6b7280', fontSize: '14px' }}>📍 {r.lieu}</p>}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {c && <span style={{ fontSize: '13px', fontWeight: '700', color: c.color, background: `${c.color}1a`, padding: '2px 10px', borderRadius: '12px' }}>{c.label}</span>}
-                            {r.id && <button onClick={() => deleteAnimalItem(animal, 'rdvs', r.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
-                        </div>
+                        </EditableRow>
                     </div>
                 );
             };
@@ -2059,7 +2192,7 @@
             );
         }
 
-        function BudgetTab({ animal, animals, budgetFilter, setBudgetFilter, getFilteredBudget, addAnimalItem, deleteAnimalItem }) {
+        function BudgetTab({ animal, animals, budgetFilter, setBudgetFilter, getFilteredBudget, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
@@ -2184,12 +2317,21 @@
                         ) : (
                             [...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((b, i) => (
                                 <div key={b.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
+                                    <EditableRow
+                                        item={b}
+                                        color="#f59e0b"
+                                        fields={[
+                                            { key: 'type', label: 'Catégorie', type: 'select', options: CATEGORIES.map(c => ({ value: c, label: `${CATEGORY_EMOJIS[c]} ${c}` })) },
+                                            { key: 'montant', label: 'Montant (€)', type: 'number', step: '0.01' },
+                                            { key: 'date', label: 'Date', type: 'date' }
+                                        ]}
+                                        onSave={(vals) => updateAnimalItem(animals.find(a => a.id === b.animalId) || animal, 'budget', b.id, vals)}
+                                        onDelete={() => deleteAnimalItem(animals.find(a => a.id === b.animalId) || animal, 'budget', b.id)}
+                                    >
                                         <p style={{ fontWeight: '600' }}>{CATEGORY_EMOJIS[b.type] || ''} {b.type}{budgetAnimalFilter === 'tous' && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#10b981', background: '#f0fdf4', padding: '2px 8px', borderRadius: '4px' }}>{b.animalEmoji} {b.animalNom}</span>}</p>
                                         <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(b.date)}</p>
                                         <p style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b', marginTop: '4px' }}>{b.montant.toFixed(2)}€</p>
-                                    </div>
-                                    {b.id && <button onClick={() => deleteAnimalItem(animals.find(a => a.id === b.animalId) || animal, 'budget', b.id)} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>🗑️</button>}
+                                    </EditableRow>
                                 </div>
                             ))
                         )}
@@ -2615,6 +2757,10 @@
                 saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).filter(i => i.id !== itemId) });
             };
 
+            const updateAnimalItem = (animalObj, type, itemId, updates) => {
+                saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).map(i => i.id === itemId ? { ...i, ...updates } : i) });
+            };
+
             if (subStatus === null) {
                 return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
             }
@@ -2706,10 +2852,10 @@
                                     ))}
                                 </div>
 
-                                {activeTab === 'vaccins' && <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
-                                {activeTab === 'medicaments' && <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
-                                {activeTab === 'notes' && <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
-                                {activeTab === 'poids' && <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />}
+                                {activeTab === 'vaccins' && <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
+                                {activeTab === 'medicaments' && <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
+                                {activeTab === 'notes' && <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
+                                {activeTab === 'poids' && <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                             </div>
                         )}
                     </div>
