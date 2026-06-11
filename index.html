@@ -1090,6 +1090,7 @@
 
         // Tabs Content
         function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
+            const todayStr = new Date().toISOString().split('T')[0];
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
             const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
             const [editingAnimal, setEditingAnimal] = React.useState(null);
@@ -1161,20 +1162,34 @@
                                         </div>
                                     )}
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                        <div style={{ background: '#f0fdf4', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💉 Vaccins</p>
-                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{(animal.vaccins || []).length}</p>
-                                        </div>
-                                        <div style={{ background: '#ecfdf5', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💊 Médicaments</p>
-                                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{(animal.medicaments || []).length}</p>
-                                        </div>
-                                        <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                                            <p style={{ fontSize: '10px', color: '#6b7280' }}>💰 Budget</p>
-                                            <p style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>{(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€</p>
-                                        </div>
-                                    </div>
+                                    {(() => {
+                                        const vaccins = animal.vaccins || [];
+                                        const vaccinAJour = vaccins.length > 0 && vaccins.every(v => {
+                                            const c = getCountdown(v.rappel || v.date);
+                                            return !c || c.days >= 0;
+                                        });
+                                        const medicamentsAujourdhui = (animal.medicaments || []).filter(m => m.dateDebut && m.dateFin && todayStr >= m.dateDebut && todayStr <= m.dateFin);
+                                        return (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                                <div style={{ background: vaccins.length === 0 ? '#f3f4f6' : (vaccinAJour ? '#f0fdf4' : '#fef2f2'), padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                                    <p style={{ fontSize: '10px', color: '#6b7280' }}>💉 Vaccins</p>
+                                                    <p style={{ fontSize: '13px', fontWeight: '700', color: vaccins.length === 0 ? '#9ca3af' : (vaccinAJour ? '#10b981' : '#ef4444') }}>
+                                                        {vaccins.length === 0 ? 'Aucun' : (vaccinAJour ? '✅ À jour' : '⚠️ À renouveler')}
+                                                    </p>
+                                                </div>
+                                                <div style={{ background: medicamentsAujourdhui.length > 0 ? '#fce7f3' : '#f3f4f6', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                                    <p style={{ fontSize: '10px', color: '#6b7280' }}>💊 Aujourd'hui</p>
+                                                    <p style={{ fontSize: '13px', fontWeight: '700', color: medicamentsAujourdhui.length > 0 ? '#ec4899' : '#9ca3af' }}>
+                                                        {medicamentsAujourdhui.length > 0 ? `À donner (${medicamentsAujourdhui.length})` : 'Aucun'}
+                                                    </p>
+                                                </div>
+                                                <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
+                                                    <p style={{ fontSize: '10px', color: '#6b7280' }}>💰 Budget</p>
+                                                    <p style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>{(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
 
                                     {animal.identifiant && (
                                         <div style={{ marginTop: '12px', padding: '10px', background: '#f3f4f6', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
