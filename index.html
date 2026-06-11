@@ -410,6 +410,7 @@
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
             const [userRole, setUserRole] = React.useState(null); // null (chargement) | 'proprietaire' | 'veterinaire'
+            const [userProfile, setUserProfile] = React.useState({ nom: '', prenom: '' });
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [showMenu, setShowMenu] = React.useState(false);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
@@ -465,6 +466,7 @@
                         const settings = snap.data();
                         const s = settings.reminders || {};
                         setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
+                        setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '' });
                         setUserRole(settings.role || 'proprietaire');
                     } else {
                         await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
@@ -483,8 +485,12 @@
                         // Update existing
                         await updateDoc(doc(db, 'animals', animalData.id), animalData);
                     } else {
-                        // Create new
-                        const docRef = await addDoc(collection(db, 'animals'), { ...animalData, userId: user.uid, createdAt: new Date() });
+                        // Create new (owner nom/prénom are denormalized so vets can search by owner name)
+                        const docRef = await addDoc(collection(db, 'animals'), {
+                            ...animalData, userId: user.uid,
+                            proprietaireNom: userProfile.nom, proprietairePrenom: userProfile.prenom,
+                            createdAt: new Date()
+                        });
                         animalData.id = docRef.id;
                     }
                     loadAnimalsFromFirestore(user.uid);
@@ -673,12 +679,18 @@
             const [password, setPassword] = React.useState('');
             const [isSignup, setIsSignup] = React.useState(false);
             const [isVet, setIsVet] = React.useState(!!defaultPro);
+            const [nom, setNom] = React.useState('');
+            const [prenom, setPrenom] = React.useState('');
+            const [dateNaissance, setDateNaissance] = React.useState('');
             const [error, setError] = React.useState('');
             const [resetMsg, setResetMsg] = React.useState('');
 
             const createSettingsDoc = async (uid, role) => {
                 try {
-                    const data = { userId: uid, role, reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } };
+                    const data = {
+                        userId: uid, role, nom, prenom, dateNaissance,
+                        reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 }
+                    };
                     if (role === 'veterinaire') data.subscriptionStatus = 'inactive';
                     await setDoc(doc(db, 'settings', uid), data, { merge: true });
                 } catch (err) { console.error('Erreur creating settings:', err); }
@@ -750,6 +762,20 @@
                         <span style={{ color: '#9ca3af', fontSize: '13px' }}>ou par email</span>
                         <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
                     </div>
+
+                    {isSignup && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+                            <input type="text" placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)}
+                                style={{ padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px' }} />
+                            <input type="text" placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)}
+                                style={{ padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', gridColumn: '1 / -1' }}>
+                                <label htmlFor="signup-date-naissance" style={{ fontSize: '14px', color: '#374151', whiteSpace: 'nowrap' }}>Date de naissance</label>
+                                <input id="signup-date-naissance" type="date" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)}
+                                    style={{ padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', flex: 1 }} />
+                            </div>
+                        </div>
+                    )}
 
                     {isSignup && (
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '14px', padding: '10px', background: '#f0fdf4', borderRadius: '8px' }}>
@@ -950,7 +976,9 @@
             { id: 'vaccins', label: '💉 Vaccins' },
             { id: 'aliment', label: '🍎 Alimentation' },
             { id: 'medicaments', label: '💊 Médication' },
+            { id: 'chirurgies', label: '🔪 Chirurgies' },
             { id: 'notes', label: '📋 Observations' },
+            { id: 'documents', label: '📄 Documents' },
             { id: 'poids', label: '⚖️ Poids' },
             { id: 'budget', label: '💰 Budget' },
             { id: 'veterinaires', label: '🏥 Vétérinaires' },
@@ -1072,8 +1100,12 @@
                 return <AlimentTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'medicaments') {
                 return <MedicamentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+            } else if (activeTab === 'chirurgies') {
+                return <ChirurgiesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'notes') {
                 return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+            } else if (activeTab === 'documents') {
+                return <DocumentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'poids') {
                 return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'budget') {
@@ -1973,6 +2005,186 @@
             );
         }
 
+        const CHIRURGIE_COLOR = '#be123c';
+
+        function ChirurgiesTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [newChirurgie, setNewChirurgie] = React.useState({ nom: '', date: todayStr, notes: '' });
+
+            const handleAdd = () => {
+                if (newChirurgie.nom && newChirurgie.date) {
+                    addAnimalItem(animal, 'chirurgies', { nom: newChirurgie.nom, date: newChirurgie.date, notes: newChirurgie.notes });
+                    setNewChirurgie({ nom: '', date: todayStr, notes: '' });
+                    setShowForm(false);
+                }
+            };
+
+            const sortedDesc = [...(animal.chirurgies || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🔪 Chirurgies et interventions de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${CHIRURGIE_COLOR}` }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une chirurgie / intervention</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <input type="text" placeholder="Type d'intervention (ex. Stérilisation, Détartrage, Extraction dentaire…)" value={newChirurgie.nom} onChange={(e) => setNewChirurgie({ ...newChirurgie, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={newChirurgie.date} onChange={(e) => setNewChirurgie({ ...newChirurgie, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <textarea placeholder="Notes (déroulement, suites opératoires, anesthésie…)" value={newChirurgie.notes} onChange={(e) => setNewChirurgie({ ...newChirurgie, notes: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px' }} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: CHIRURGIE_COLOR, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: CHIRURGIE_COLOR, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter une chirurgie / intervention
+                        </button>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {sortedDesc.length > 0 ? (
+                            sortedDesc.map((c, i) => (
+                                <div key={c.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: `4px solid ${CHIRURGIE_COLOR}` }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <EditableRow
+                                            item={c}
+                                            color={CHIRURGIE_COLOR}
+                                            fields={[
+                                                { key: 'nom', label: "Type d'intervention" },
+                                                { key: 'date', label: 'Date', type: 'date' },
+                                                { key: 'notes', label: 'Notes', type: 'textarea', fullWidth: true }
+                                            ]}
+                                            onSave={(vals) => updateAnimalItem(animal, 'chirurgies', c.id, vals)}
+                                            onDelete={() => deleteAnimalItem(animal, 'chirurgies', c.id)}
+                                        >
+                                            <p style={{ fontWeight: '600' }}>{c.nom}</p>
+                                            <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(c.date)}</p>
+                                        </EditableRow>
+                                    </div>
+                                    {c.notes && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{c.notes}</p>}
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune chirurgie ou intervention enregistrée</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const DOCUMENT_TYPES = {
+            vaccin: '💉 Carnet de vaccination',
+            ordonnance: '📝 Ordonnance',
+            certificat: '📜 Certificat / Attestation',
+            analyse: '🔬 Analyse / Résultat',
+            facture: '🧾 Facture',
+            autres: '📄 Autre document'
+        };
+
+        // Owner-only: scan/store documents (vaccination records, prescriptions, certificates...) as compressed photos
+        function DocumentsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [showForm, setShowForm] = React.useState(false);
+            const [type, setType] = React.useState('vaccin');
+            const [nom, setNom] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+            const [photoBase64, setPhotoBase64] = React.useState('');
+            const [fileError, setFileError] = React.useState('');
+
+            const handlePhoto = (file) => {
+                setFileError('');
+                readImageAsResizedDataUrl(file, 1600, 0.82, setPhotoBase64, () => setFileError('Impossible de lire ce fichier.'));
+            };
+
+            const resetForm = () => {
+                setType('vaccin');
+                setNom('');
+                setDate(todayStr);
+                setPhotoBase64('');
+                setFileError('');
+                setShowForm(false);
+            };
+
+            const handleAdd = () => {
+                if (photoBase64) {
+                    addAnimalItem(animal, 'documents', { type, nom, date, photo: photoBase64 });
+                    resetForm();
+                }
+            };
+
+            const documents = [...(animal.documents || [])].reverse();
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📄 Documents de {animal.nom}</h2>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+
+                    {showForm ? (
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #6366f1' }}>
+                            <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un document</h3>
+                            <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    {Object.entries(DOCUMENT_TYPES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                </select>
+                                <input type="text" placeholder="Description (optionnel)" value={nom} onChange={(e) => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Scanner / choisir une photo</label>
+                                    <input type="file" accept="image/*" capture="environment" onChange={(e) => handlePhoto(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Document sélectionné (compressé automatiquement)</p>}
+                                </div>
+                                {fileError && <p style={{ color: '#ef4444', fontSize: '13px' }}>{fileError}</p>}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                <button onClick={resetForm} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button onClick={() => setShowForm(true)} style={{ marginBottom: '20px', padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                            ➕ Ajouter un document
+                        </button>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                        {documents.length > 0 ? (
+                            documents.map((d, i) => (
+                                <div key={d.id || i} style={{ background: 'white', padding: '12px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #6366f1' }}>
+                                    {d.photo && <img src={d.photo} alt={d.nom || 'Document'} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />}
+                                    <EditableRow
+                                        item={d}
+                                        color="#6366f1"
+                                        fields={[
+                                            { key: 'type', label: 'Type', type: 'select', options: Object.entries(DOCUMENT_TYPES).map(([key, label]) => ({ value: key, label })) },
+                                            { key: 'nom', label: 'Description' },
+                                            { key: 'date', label: 'Date', type: 'date' }
+                                        ]}
+                                        onSave={(vals) => updateAnimalItem(animal, 'documents', d.id, vals)}
+                                        onDelete={() => deleteAnimalItem(animal, 'documents', d.id)}
+                                    >
+                                        <p style={{ fontWeight: '600', fontSize: '14px' }}>{DOCUMENT_TYPES[d.type] || d.type}</p>
+                                        {d.nom && <p style={{ fontSize: '13px', color: '#374151' }}>{d.nom}</p>}
+                                        <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(d.date)}</p>
+                                    </EditableRow>
+                                </div>
+                            ))
+                        ) : (
+                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px', gridColumn: '1 / -1' }}>Aucun document enregistré</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
         function PoidsChart({ poids }) {
             const sorted = [...poids].sort((a, b) => new Date(a.date) - new Date(b.date));
             const values = sorted.map(p => p.valeur);
@@ -2698,6 +2910,7 @@
         const VET_TABS = [
             { id: 'vaccins', label: '💉 Vaccins' },
             { id: 'medicaments', label: '💊 Médicaments' },
+            { id: 'chirurgies', label: '🔪 Chirurgies' },
             { id: 'notes', label: '📋 Observations' },
             { id: 'poids', label: '⚖️ Poids' },
         ];
@@ -2707,7 +2920,12 @@
             const [subStatus, setSubStatus] = React.useState(null); // null (chargement) | 'active' | 'inactive' | 'past_due' | 'canceled' | ...
             const [checkoutLoading, setCheckoutLoading] = React.useState(false);
             const [billingError, setBillingError] = React.useState('');
+            const [searchMode, setSearchMode] = React.useState('identifiant'); // 'identifiant' | 'nom'
             const [identifiant, setIdentifiant] = React.useState('');
+            const [animalNomSearch, setAnimalNomSearch] = React.useState('');
+            const [proprietaireNomSearch, setProprietaireNomSearch] = React.useState('');
+            const [proprietairePrenomSearch, setProprietairePrenomSearch] = React.useState('');
+            const [searchResults, setSearchResults] = React.useState([]);
             const [animal, setAnimal] = React.useState(null);
             const [error, setError] = React.useState('');
             const [searching, setSearching] = React.useState(false);
@@ -2748,10 +2966,11 @@
                 }
             };
 
-            const handleSearch = async () => {
+            const handleSearchIdentifiant = async () => {
                 const id = identifiant.trim();
                 setError('');
                 setAnimal(null);
+                setSearchResults([]);
                 if (!id) return;
                 setSearching(true);
                 try {
@@ -2762,6 +2981,37 @@
                     } else {
                         const docSnap = querySnapshot.docs[0];
                         setAnimal({ id: docSnap.id, ...docSnap.data() });
+                    }
+                } catch (err) {
+                    setError("Erreur lors de la recherche : " + err.message);
+                } finally {
+                    setSearching(false);
+                }
+            };
+
+            const handleSearchNom = async () => {
+                const animalNom = animalNomSearch.trim();
+                const ownerNom = proprietaireNomSearch.trim();
+                const ownerPrenom = proprietairePrenomSearch.trim();
+                setError('');
+                setAnimal(null);
+                setSearchResults([]);
+                if (!animalNom || !ownerNom) return;
+                setSearching(true);
+                try {
+                    const filters = [where('nom', '==', animalNom), where('proprietaireNom', '==', ownerNom)];
+                    if (ownerPrenom) filters.push(where('proprietairePrenom', '==', ownerPrenom));
+                    const q = query(collection(db, 'animals'), ...filters);
+                    const querySnapshot = await getDocs(q);
+                    if (querySnapshot.empty) {
+                        setError("Aucun animal trouvé avec ce nom et ce propriétaire.");
+                    } else {
+                        const results = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                        if (results.length === 1) {
+                            setAnimal(results[0]);
+                        } else {
+                            setSearchResults(results);
+                        }
                     }
                 } catch (err) {
                     setError("Erreur lors de la recherche : " + err.message);
@@ -2811,7 +3061,7 @@
                             <div style={{ fontSize: '48px', marginBottom: '12px' }}>🩺</div>
                             <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '12px' }}>Abonnement Espace Vétérinaire</h2>
                             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                                Recherchez les animaux de vos patients par identifiant (puce électronique) et ajoutez vaccins, médicaments, antiparasitaires, vermifuges, observations et pesées directement dans leur carnet de santé.
+                                Recherchez les animaux de vos patients par identifiant (puce électronique) ou par nom de l'animal et du propriétaire, et ajoutez vaccins, médicaments, chirurgies, antiparasitaires, vermifuges, observations et pesées directement dans leur carnet de santé.
                             </p>
                             <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 14px rgba(0,0,0,0.08)', marginBottom: '20px' }}>
                                 <p style={{ fontSize: '36px', fontWeight: '800', color: '#10b981', marginBottom: '4px' }}>49,99 €<span style={{ fontSize: '15px', fontWeight: '500', color: '#6b7280' }}> / mois</span></p>
@@ -2850,18 +3100,67 @@
                     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
                         {billingError && <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px' }}>{billingError}</p>}
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>🔍 Rechercher un animal par identifiant</h2>
-                            <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez l'identifiant vétérinaire (puce électronique…) renseigné par le propriétaire dans le profil de l'animal.</p>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                <input type="text" placeholder="Identifiant vétérinaire" value={identifiant}
-                                    onChange={(e) => setIdentifiant(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-                                    style={{ flex: 1, minWidth: '200px', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
-                                <button onClick={handleSearch} disabled={searching} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
-                                    {searching ? 'Recherche…' : 'Rechercher'}
+                            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>🔍 Rechercher un animal</h2>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                                <button onClick={() => { setSearchMode('identifiant'); setError(''); setAnimal(null); setSearchResults([]); }}
+                                    style={{ padding: '8px 14px', background: searchMode === 'identifiant' ? '#10b981' : '#f3f4f6', color: searchMode === 'identifiant' ? 'white' : '#1f2937', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                                    Par identifiant
+                                </button>
+                                <button onClick={() => { setSearchMode('nom'); setError(''); setAnimal(null); setSearchResults([]); }}
+                                    style={{ padding: '8px 14px', background: searchMode === 'nom' ? '#10b981' : '#f3f4f6', color: searchMode === 'nom' ? 'white' : '#1f2937', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                                    Par nom de l'animal et du propriétaire
                                 </button>
                             </div>
+
+                            {searchMode === 'identifiant' ? (
+                                <div>
+                                    <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez l'identifiant vétérinaire (puce électronique…) renseigné par le propriétaire dans le profil de l'animal.</p>
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <input type="text" placeholder="Identifiant vétérinaire" value={identifiant}
+                                            onChange={(e) => setIdentifiant(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchIdentifiant(); }}
+                                            style={{ flex: 1, minWidth: '200px', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
+                                        <button onClick={handleSearchIdentifiant} disabled={searching} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                            {searching ? 'Recherche…' : 'Rechercher'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez le nom de l'animal ainsi que le nom (et éventuellement le prénom) de son propriétaire.</p>
+                                    <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: '12px' }}>
+                                        <input type="text" placeholder="Nom de l'animal" value={animalNomSearch}
+                                            onChange={(e) => setAnimalNomSearch(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
+                                            style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
+                                        <input type="text" placeholder="Nom du propriétaire" value={proprietaireNomSearch}
+                                            onChange={(e) => setProprietaireNomSearch(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
+                                            style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
+                                        <input type="text" placeholder="Prénom du propriétaire (optionnel)" value={proprietairePrenomSearch}
+                                            onChange={(e) => setProprietairePrenomSearch(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
+                                            style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
+                                    </div>
+                                    <button onClick={handleSearchNom} disabled={searching} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                        {searching ? 'Recherche…' : 'Rechercher'}
+                                    </button>
+                                </div>
+                            )}
+
                             {error && <p style={{ color: '#ef4444', marginTop: '10px', fontSize: '14px' }}>{error}</p>}
+
+                            {searchResults.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>{searchResults.length} résultats trouvés :</p>
+                                    {searchResults.map(a => (
+                                        <button key={a.id} onClick={() => { setAnimal(a); setSearchResults([]); }}
+                                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', marginBottom: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer' }}>
+                                            <strong>{a.nom}</strong> — {a.espece} • Propriétaire : {a.proprietairePrenom} {a.proprietaireNom}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {animal && (
@@ -2885,6 +3184,7 @@
 
                                 {activeTab === 'vaccins' && <VaccinsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                                 {activeTab === 'medicaments' && <MedicamentsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
+                                {activeTab === 'chirurgies' && <ChirurgiesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                                 {activeTab === 'notes' && <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                                 {activeTab === 'poids' && <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                             </div>

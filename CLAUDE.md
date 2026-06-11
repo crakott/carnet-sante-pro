@@ -6,7 +6,9 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 
 - [ ] **Slots AdSense** : remplacer les 5 occurrences de `xxxxxxxxxx` dans `index.html` par les vrais IDs de slot depuis le tableau de bord AdSense
 - [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
-- [x] **Règles Firestore** : copier le contenu de `firestore.rules` dans Firebase Console > Firestore Database > Règles, puis publier (nécessaire pour activer l'espace vétérinaire et le contrôle d'abonnement)
+- [ ] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
+  Console > Firestore Database > Règles (la recherche vétérinaire par nom + le nouvel onglet
+  Chirurgies nécessitent les nouvelles règles ci-dessous)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
 
 ## Stack technique
@@ -37,12 +39,15 @@ l'app standard.
   ouvre une session Stripe Checkout (mode `subscription`).
 - **Gestion de l'abonnement** : un bouton "⚙️ Abonnement" ouvre le portail de facturation Stripe
   (résiliation, moyen de paiement, factures).
-- **Accès une fois abonné** : le vétérinaire recherche un animal via son `identifiant` (ex :
-  numéro de puce électronique), un champ optionnel renseigné par le propriétaire dans le profil
-  de l'animal (et affiché avec un bouton "Copier" sur la fiche).
-- **Permissions** : lecture complète du dossier + ajout de vaccins, médicaments,
-  antiparasitaires, vermifuges, observations et pesées. Pas d'accès au profil de base
-  (nom, race, sexe…), au budget, ni aux partages — ces champs restent réservés au propriétaire.
+- **Accès une fois abonné** : le vétérinaire recherche un animal soit via son `identifiant` (ex :
+  numéro de puce électronique, champ optionnel renseigné par le propriétaire dans le profil de
+  l'animal et affiché avec un bouton "Copier" sur la fiche), soit par le **nom de l'animal +
+  nom (et prénom optionnel) du propriétaire**. Cette seconde recherche fonctionne pour tout
+  animal (pas seulement ceux ayant un `identifiant`).
+- **Permissions** : lecture complète du dossier + ajout de vaccins, médicaments, chirurgies/petites
+  interventions, antiparasitaires, vermifuges, observations et pesées. Pas d'accès au profil de
+  base (nom, race, sexe…), au budget, aux documents, ni aux partages — ces champs restent
+  réservés au propriétaire.
 
 ## Document `settings/{uid}`
 
@@ -54,10 +59,28 @@ ancien document (`userId == uid` mais ID aléatoire) est automatiquement migré 
 Champs :
 - `userId` : uid du propriétaire du document
 - `role` : `'proprietaire'` ou `'veterinaire'`
+- `nom`, `prenom`, `dateNaissance` : identité de l'utilisateur, saisis à l'inscription. `nom`
+  et `prenom` sont recopiés (dénormalisés) sur chaque animal créé (`proprietaireNom`,
+  `proprietairePrenom`) pour permettre la recherche vétérinaire par nom de propriétaire
 - `reminders` : préférences de rappels (`vaccin`, `medicament`, `antiparasitaire`, `vermifuge`)
 - `subscriptionStatus` (vétérinaires uniquement) : `'inactive' | 'active' | 'past_due' | 'canceled' | ...`
   mis à jour par le webhook Stripe (`functions/index.js`)
 - `stripeCustomerId`, `stripeSubscriptionId` : identifiants Stripe associés au compte
+
+## Document `animals/{animalId}`
+
+En plus des champs de profil existants (`nom`, `espece`, `race`, `sexe`, `dateNaissance`,
+`identifiant`, `photo`…) et des tableaux d'actes médicaux (`vaccins`, `medicaments`,
+`antiparasitaires`, `vermifuges`, `observations`, `poids`) :
+- `proprietaireNom`, `proprietairePrenom` : copie du nom/prénom du propriétaire
+  (`settings/{userId}`) au moment de la création de l'animal, utilisée par la recherche
+  vétérinaire par nom
+- `chirurgies` : tableau des chirurgies et petites interventions (`nom`, `date`, `notes`),
+  visible et modifiable par le propriétaire (onglet "🔪 Chirurgies") et par le vétérinaire
+  abonné (onglet du même nom dans l'espace pro)
+- `documents` : tableau de documents scannés par le propriétaire (`type`, `nom`, `date`,
+  `photo` en base64) — carnet de vaccination, ordonnances, certificats, analyses, factures…
+  Réservé au propriétaire (non accessible au vétérinaire)
 
 ## Règles Firestore (à jour)
 
@@ -72,15 +95,14 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
 
-      // Vétérinaires "pro" abonnés : lecture de tout animal ayant un identifiant, écriture limitée
-      // aux actes médicaux (pas le profil, le budget ou les partages)
-      allow read: if request.auth != null && resource.data.identifiant is string && resource.data.identifiant != ''
+      // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
+      // aux actes médicaux (pas le profil, le budget, les documents ou les partages)
+      allow read: if request.auth != null
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active';
       allow update: if request.auth != null
-        && resource.data.identifiant is string && resource.data.identifiant != ''
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['vaccins', 'medicaments', 'antiparasitaires', 'vermifuges', 'observations', 'poids']);
+             .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids']);
     }
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
