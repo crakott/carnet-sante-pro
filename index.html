@@ -522,10 +522,6 @@
                 saveAnimal(updated);
             };
 
-            // Merge field updates (e.g. assigned vétérinaire) into an animal and persist to Firestore
-            const updateAnimalFields = (animal, updates) => {
-                saveAnimal({ ...animal, ...updates });
-            };
 
             // Filter an animal's budget entries by the selected period
             const getFilteredBudget = (budget) => {
@@ -652,7 +648,6 @@
                             addAnimalItem={addAnimalItem}
                             deleteAnimalItem={deleteAnimalItem}
                             updateAnimalItem={updateAnimalItem}
-                            updateAnimalFields={updateAnimalFields}
                             budgetFilter={budgetFilter}
                             setBudgetFilter={setBudgetFilter}
                             getFilteredBudget={getFilteredBudget}
@@ -1058,7 +1053,7 @@
 
         // Content Router
         function Content(props) {
-            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem, updateAnimalFields, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
             const animal = animals.find(a => a.id === selectedAnimal);
 
             if (activeTab === 'accueil') {
@@ -1078,7 +1073,7 @@
             } else if (activeTab === 'budget') {
                 return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
-                return <VeterinairesTab animal={animal} updateAnimalFields={updateAnimalFields} />;
+                return <VeterinairesTab />;
             } else if (activeTab === 'planning') {
                 return <PlanningTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'rappels') {
@@ -1221,7 +1216,10 @@
                                         <option value="male">♂️ Mâle</option>
                                         <option value="femelle">♀️ Femelle</option>
                                     </select>
-                                    <input type="date" value={editingAnimal.dateNaissance || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <label htmlFor="edit-date-naissance" style={{ fontSize: '14px', color: '#374151', whiteSpace: 'nowrap' }}>Date de naissance</label>
+                                        <input id="edit-date-naissance" type="date" value={editingAnimal.dateNaissance || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', flex: 1 }} />
+                                    </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <input type="checkbox" id="edit-sterilise" checked={editingAnimal.sterilise || false} onChange={(e) => setEditingAnimal({ ...editingAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
                                         <label htmlFor="edit-sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
@@ -1265,7 +1263,10 @@
                                     <option value="male">♂️ Mâle</option>
                                     <option value="femelle">♀️ Femelle</option>
                                 </select>
-                                <input type="date" value={newAnimal.dateNaissance} onChange={(e) => setNewAnimal({ ...newAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <label htmlFor="new-date-naissance" style={{ fontSize: '14px', color: '#374151', whiteSpace: 'nowrap' }}>Date de naissance</label>
+                                    <input id="new-date-naissance" type="date" value={newAnimal.dateNaissance} onChange={(e) => setNewAnimal({ ...newAnimal, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', flex: 1 }} />
+                                </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <input type="checkbox" id="sterilise" checked={newAnimal.sterilise} onChange={(e) => setNewAnimal({ ...newAnimal, sterilise: e.target.checked })} style={{ width: 'auto' }} />
                                     <label htmlFor="sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
@@ -2355,7 +2356,7 @@
             );
         }
 
-        function VeterinairesTab({ animal, updateAnimalFields }) {
+        function VeterinairesTab() {
             const [userPos, setUserPos] = React.useState(null);
             const [geoStatus, setGeoStatus] = React.useState('idle'); // idle | loading | done | error
             const [geoError, setGeoError] = React.useState('');
@@ -2437,14 +2438,23 @@
                                 {vet.telephone && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>}
                                 {vet.horaires && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>}
                                 {(vet.rating || vet.specialites) && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>}
-                                {animal && (
-                                    <button
-                                        onClick={() => updateAnimalFields(animal, { veterinaire: { id: vet.id, nom: vet.nom } })}
-                                        style={{ marginTop: '12px', width: '100%', padding: '10px 20px', background: animal.veterinaire?.id === vet.id ? '#059669' : '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                                <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                                    <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        style={{ flex: 1, padding: '10px 12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textAlign: 'center', textDecoration: 'none', display: 'inline-block' }}
                                     >
-                                        {animal.veterinaire?.id === vet.id ? '✅ Assigné' : '📌 Assigner'}
-                                    </button>
-                                )}
+                                        🔍 Voir sur Google
+                                    </a>
+                                    {vet.telephone && (
+                                        <a
+                                            href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
+                                            style={{ flex: 1, padding: '10px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textAlign: 'center', textDecoration: 'none', display: 'inline-block' }}
+                                        >
+                                            📞 Appeler
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>
