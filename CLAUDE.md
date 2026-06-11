@@ -10,6 +10,12 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
   Console > Firestore Database > Règles (la recherche vétérinaire par nom + le nouvel onglet
   Chirurgies nécessitent les nouvelles règles ci-dessous)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
+- [ ] **AdSense — repo `crakott.github.io` (hors périmètre de cet agent)** : la page de
+  redirection `index.html` de ce repo contient encore le mauvais ID éditeur
+  (`ca-pub-2220007213028900`) à corriger en `ca-pub-2220007721302800`. Il manque aussi le
+  fichier `ads.txt` à la racine du domaine (`https://crakott.github.io/ads.txt`, actuellement
+  404) — contenu exact disponible dans AdSense > Sites > statut "Introuvable" pour
+  `crakott.github.io`. Une fois ces deux points corrigés, relancer "Valider" dans AdSense.
 
 ## Stack technique
 
