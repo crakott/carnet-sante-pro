@@ -537,7 +537,7 @@
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
             const [userRole, setUserRole] = React.useState(null); // null (chargement) | 'proprietaire' | 'veterinaire'
-            const [userProfile, setUserProfile] = React.useState({ nom: '', prenom: '' });
+            const [userProfile, setUserProfile] = React.useState({ nom: '', prenom: '', dateNaissance: '' });
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
 
@@ -592,7 +592,7 @@
                         const settings = snap.data();
                         const s = settings.reminders || {};
                         setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
-                        setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '' });
+                        setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '' });
                         setUserRole(settings.role || 'proprietaire');
                     } else {
                         await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
@@ -601,6 +601,17 @@
                 } catch (error) {
                     console.error('Erreur loading settings:', error);
                     setUserRole('proprietaire');
+                }
+            };
+
+            // Save the owner's profile (nom, prénom, date de naissance) to settings/{uid}
+            const saveUserProfile = async (profile) => {
+                try {
+                    await setDoc(doc(db, 'settings', user.uid), { userId: user.uid, ...profile }, { merge: true });
+                    setUserProfile(profile);
+                } catch (error) {
+                    console.error('Erreur saving profile:', error);
+                    throw error;
                 }
             };
 
@@ -789,6 +800,8 @@
                             user={user}
                             db={db}
                             auth={auth}
+                            userProfile={userProfile}
+                            saveUserProfile={saveUserProfile}
                         />
 
                         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px 16px', width: '100%' }}>
@@ -3053,16 +3066,30 @@
             );
         }
 
-        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth }) {
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth, userProfile, saveUserProfile }) {
             const [importing, setImporting] = React.useState(false);
             const [importMsg, setImportMsg] = React.useState('');
             const [linkCopied, setLinkCopied] = React.useState(false);
             const appUrl = window.location.origin + window.location.pathname;
 
+            const [profile, setProfile] = React.useState(userProfile);
+            const [profileMsg, setProfileMsg] = React.useState('');
+            React.useEffect(() => setProfile(userProfile), [userProfile]);
+
             const copyAppLink = () => {
                 navigator.clipboard.writeText(appUrl);
                 setLinkCopied(true);
                 setTimeout(() => setLinkCopied(false), 2000);
+            };
+
+            const handleSaveProfile = async () => {
+                try {
+                    await saveUserProfile(profile);
+                    setProfileMsg('✅ Profil mis à jour !');
+                } catch (error) {
+                    setProfileMsg('❌ Erreur lors de la mise à jour du profil.');
+                }
+                setTimeout(() => setProfileMsg(''), 2500);
             };
 
             // ── Export JSON ──────────────────────────────────────────────────
@@ -3121,6 +3148,37 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚙️ Paramètres</h2>
+
+                    {/* ── Owner profile ── */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>👤 Mon profil</h3>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Prénom</label>
+                                <input type="text" value={profile.prenom} onChange={(e) => setProfile({ ...profile, prenom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Nom</label>
+                                <input type="text" value={profile.nom} onChange={(e) => setProfile({ ...profile, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '12px' }}>
+                            <label htmlFor="profile-date-naissance" style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Date de naissance</label>
+                            <input id="profile-date-naissance" type="date" value={profile.dateNaissance || ''} onChange={(e) => setProfile({ ...profile, dateNaissance: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                        </div>
+
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Email</label>
+                            <input type="email" value={user?.email || ''} disabled style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', background: '#f3f4f6', color: '#6b7280' }} />
+                        </div>
+
+                        <button onClick={handleSaveProfile} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                            💾 Enregistrer
+                        </button>
+                        {profileMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: profileMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{profileMsg}</p>}
+                    </div>
 
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Délais de rappels (en jours)</h3>
