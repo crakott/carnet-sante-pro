@@ -1086,7 +1086,6 @@
         const NAV_TABS = [
             { id: 'accueil', label: '🏠 Accueil' },
             { id: 'dossier', label: '📁 Dossier' },
-            { id: 'sante', label: '💪 Santé' },
             { id: 'vaccins', label: '💉 Vaccins' },
             { id: 'aliment', label: '🍎 Alimentation' },
             { id: 'medicaments', label: '💊 Médication' },
@@ -1208,9 +1207,7 @@
             if (activeTab === 'accueil') {
                 return <HomeTab {...props} />;
             } else if (activeTab === 'dossier') {
-                return <DossierTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={setActiveTab} />;
-            } else if (activeTab === 'sante') {
-                return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <DossierTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={setActiveTab} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'vaccins') {
                 return <VaccinsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'aliment') {
@@ -1458,14 +1455,26 @@
         }
 
         // Per-animal overview: profile header + clickable status cards linking to each section
-        function DossierTab({ animal, animals, selectedAnimal, setSelectedAnimal, setActiveTab }) {
+        function DossierTab({ animal, animals, selectedAnimal, setSelectedAnimal, setActiveTab, addAnimalItem, deleteAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const [videoCount, setVideoCount] = React.useState(0);
+            const [email, setEmail] = React.useState('');
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
             }, [animal.id]);
+
+            // Record the share, then open the user's email client with the dossier pre-filled for the vétérinaire
+            const handleShare = () => {
+                if (email && email.includes('@')) {
+                    addAnimalItem(animal, 'partages', { email });
+                    const subject = `Dossier santé de ${animal.nom}`;
+                    const body = buildDossierEmailBody(animal);
+                    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    setEmail('');
+                }
+            };
 
             const computeAge = (dateNaissance) => {
                 if (!dateNaissance) return null;
@@ -1512,76 +1521,24 @@
                             );
                         })}
                     </div>
-                </div>
-            );
-        }
 
-        function SanteTab({ animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem }) {
-            if (animals.length === 0) return <div style={{ padding: '20px' }}>Aucun animal enregistré</div>;
-
-            return (
-                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💪 Tableau de Santé</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                        {animals.map(animal => (
-                            <SanteCard
-                                key={animal.id}
-                                animal={animal}
-                                selected={selectedAnimal === animal.id}
-                                onSelect={() => setSelectedAnimal(animal.id)}
-                                addAnimalItem={addAnimalItem}
-                                deleteAnimalItem={deleteAnimalItem}
-                            />
-                        ))}
-                    </div>
-                </div>
-            );
-        }
-
-        function SanteCard({ animal, selected, onSelect, addAnimalItem, deleteAnimalItem }) {
-            const [email, setEmail] = React.useState('');
-            const dossier = getAnimalDossier(animal);
-
-            // Record the share, then open the user's email client with the dossier pre-filled for the vétérinaire
-            const handleShare = (e) => {
-                e.stopPropagation();
-                if (email && email.includes('@')) {
-                    addAnimalItem(animal, 'partages', { email });
-                    const subject = `Dossier santé de ${animal.nom}`;
-                    const body = buildDossierEmailBody(animal);
-                    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    setEmail('');
-                }
-            };
-
-            return (
-                <div onClick={onSelect} className="animate-fade-in" style={{ background: 'white', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #10b981', border: selected ? '2px solid #10b981' : '1px solid #e5e7eb', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}><AnimalAvatar animal={animal} /> {animal.nom}</h3>
-
-                    <div style={{ marginTop: '12px', display: 'grid', gap: '6px', fontSize: '13px', color: '#374151' }}>
-                        <p><strong>💉 Vaccins :</strong> {dossier.vaccinNames.length > 0 ? dossier.vaccinNames.join(', ') : 'aucun'}</p>
-                        <p><strong>⚖️ Poids actuel :</strong> {dossier.lastWeight ? `${dossier.lastWeight.valeur} kg (${dossier.lastWeight.date})` : 'non renseigné'}</p>
-                        <p><strong>💊 Médicaments en cours :</strong> {dossier.currentMedications.length > 0 ? dossier.currentMedications.map(m => m.nom).join(', ') : 'aucun'}</p>
-                        <p><strong>📋 Observations :</strong> {dossier.observationTypes.length > 0 ? dossier.observationTypes.map(t => (TYPE_LABELS[t] || t)).join(', ') : 'aucune'}</p>
-                    </div>
-
-                    <div style={{ marginTop: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-                        <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
-                        <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</p>
-                        <button onClick={(e) => { e.stopPropagation(); openDossierReport(animal); }} style={{ width: '100%', marginBottom: '8px', padding: '6px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos et audio)</button>
+                    <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</p>
+                        <button onClick={() => openDossierReport(animal)} style={{ width: '100%', marginBottom: '8px', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos et audio)</button>
                         {(animal.partages && animal.partages.length > 0) ? (
                             animal.partages.map(p => (
-                                <div key={p.id} style={{ fontSize: '11px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div key={p.id} style={{ fontSize: '13px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <span>✉️ {p.email}</span>
-                                    <button onClick={(e) => { e.stopPropagation(); deleteAnimalItem(animal, 'partages', p.id); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+                                    <button onClick={() => deleteAnimalItem(animal, 'partages', p.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px' }}>✕</button>
                                 </div>
                             ))
                         ) : (
-                            <p style={{ fontSize: '11px', color: '#9ca3af' }}>Aucun partage</p>
+                            <p style={{ fontSize: '13px', color: '#9ca3af' }}>Aucun partage</p>
                         )}
-                        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }} onClick={(e) => e.stopPropagation()}>
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email vétérinaire" style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px' }} />
-                            <button onClick={handleShare} style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>📧 Partager</button>
+                        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email vétérinaire" style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }} />
+                            <button onClick={handleShare} style={{ padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>📧 Partager</button>
                         </div>
                     </div>
                 </div>
