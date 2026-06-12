@@ -287,6 +287,79 @@
             return { vaccinNames, lastWeight, currentMedications, observationTypes };
         };
 
+        // Cards shown on the per-animal "Dossier" overview, each linking to its corresponding tab
+        const DOSSIER_CARDS = [
+            { id: 'vaccins', label: '💉 Vaccins', color: '#10b981' },
+            { id: 'medicaments', label: '💊 Médicaments', color: '#ec4899' },
+            { id: 'chirurgies', label: '🔪 Chirurgies', color: '#6366f1' },
+            { id: 'planning', label: '📅 Rendez-vous', color: '#10b981' },
+            { id: 'documents', label: '📄 Documents', color: '#6366f1' },
+            { id: 'videos', label: '🎥 Vidéos', color: '#ec4899' },
+            { id: 'poids', label: '⚖️ Poids', color: '#10b981' },
+            { id: 'aliment', label: '🍎 Alimentation', color: '#f59e0b' },
+            { id: 'notes', label: '📋 Observations', color: '#0891b2' },
+            { id: 'budget', label: '💰 Budget', color: '#f59e0b' }
+        ];
+
+        // Compute the status text and indicator icon shown on a Dossier card for a given section
+        const getDossierCardStatus = (animal, cardId, videoCount) => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const ok = { icon: '✅', iconColor: '#10b981' };
+            const none = { icon: '⭘', iconColor: '#d1d5db' };
+            switch (cardId) {
+                case 'vaccins': {
+                    const vaccins = animal.vaccins || [];
+                    if (vaccins.length === 0) return { text: 'Aucun vaccin enregistré', ...none };
+                    const aJour = vaccins.every(v => { const c = getCountdown(v.rappel || v.date); return !c || c.days >= 0; });
+                    return aJour ? { text: 'À jour', ...ok } : { text: 'À renouveler', icon: '⚠️', iconColor: '#ef4444' };
+                }
+                case 'medicaments': {
+                    const meds = animal.medicaments || [];
+                    const enCours = meds.filter(m => m.dateDebut && m.dateFin && todayStr >= m.dateDebut && todayStr <= m.dateFin);
+                    if (enCours.length > 0) return { text: `${enCours.length} en cours`, icon: '💊', iconColor: '#ec4899' };
+                    return meds.length > 0 ? { text: `${meds.length} enregistré(s)`, ...none } : { text: 'Aucun', ...none };
+                }
+                case 'chirurgies': {
+                    const n = (animal.chirurgies || []).length;
+                    return n > 0 ? { text: `${n} enregistrée(s)`, ...ok } : { text: 'Aucune', ...none };
+                }
+                case 'planning': {
+                    const rdvs = animal.rdvs || [];
+                    const now = new Date();
+                    const upcoming = rdvs.filter(r => new Date(`${r.date}T${r.heure || '00:00'}`) >= now)
+                        .sort((a, b) => `${a.date}T${a.heure || '00:00'}`.localeCompare(`${b.date}T${b.heure || '00:00'}`));
+                    return upcoming.length > 0
+                        ? { text: `Prochain : ${formatDate(upcoming[0].date)}`, icon: '📅', iconColor: '#8b5cf6' }
+                        : { text: 'Aucun RDV programmé', ...none };
+                }
+                case 'documents': {
+                    const n = (animal.documents || []).length;
+                    return n > 0 ? { text: `${n} fichier(s)`, ...ok } : { text: 'Aucun document', ...none };
+                }
+                case 'videos': {
+                    return videoCount > 0 ? { text: `${videoCount} vidéo(s)`, ...ok } : { text: 'Aucune vidéo', ...none };
+                }
+                case 'poids': {
+                    const lastWeight = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                    return lastWeight ? { text: `${lastWeight.valeur} kg (${formatDate(lastWeight.date)})`, ...ok } : { text: 'Non renseigné', ...none };
+                }
+                case 'aliment': {
+                    const n = (animal.aliments || []).length;
+                    return n > 0 ? { text: `${n} repas enregistré(s)`, ...ok } : { text: 'Aucun', ...none };
+                }
+                case 'notes': {
+                    const n = (animal.observations || []).length;
+                    return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+                }
+                case 'budget': {
+                    const total = (animal.budget || []).reduce((s, b) => s + b.montant, 0);
+                    return { text: `${total.toFixed(0)} €`, icon: '💰', iconColor: '#f59e0b' };
+                }
+                default:
+                    return { text: '', ...none };
+            }
+        };
+
         // Format an animal's record as plain text, ready to be sent by email to a vétérinaire.
         // Includes the full written content of every observation (mailto: links can't carry photo/audio attachments,
         // so those are pointed to the printable dossier report instead).
@@ -1012,6 +1085,7 @@
 
         const NAV_TABS = [
             { id: 'accueil', label: '🏠 Accueil' },
+            { id: 'dossier', label: '📁 Dossier' },
             { id: 'sante', label: '💪 Santé' },
             { id: 'vaccins', label: '💉 Vaccins' },
             { id: 'aliment', label: '🍎 Alimentation' },
@@ -1128,11 +1202,13 @@
 
         // Content Router
         function Content(props) {
-            const { activeTab, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, setActiveTab, addAnimalItem, deleteAnimalItem, updateAnimalItem, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
             const animal = animals.find(a => a.id === selectedAnimal);
 
             if (activeTab === 'accueil') {
                 return <HomeTab {...props} />;
+            } else if (activeTab === 'dossier') {
+                return <DossierTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={setActiveTab} />;
             } else if (activeTab === 'sante') {
                 return <SanteTab animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
             } else if (activeTab === 'vaccins') {
@@ -1205,7 +1281,7 @@
                                 <div
                                     key={animal.id}
                                     className="animate-fade-in"
-                                    onClick={() => { setSelectedAnimal(animal.id); setActiveTab('sante'); }}
+                                    onClick={() => { setSelectedAnimal(animal.id); setActiveTab('dossier'); }}
                                     style={{
                                         background: 'white',
                                         padding: '16px',
@@ -1377,6 +1453,65 @@
                             ➕ Ajouter un animal
                         </button>
                     )}
+                </div>
+            );
+        }
+
+        // Per-animal overview: profile header + clickable status cards linking to each section
+        function DossierTab({ animal, animals, selectedAnimal, setSelectedAnimal, setActiveTab }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const [videoCount, setVideoCount] = React.useState(0);
+
+            React.useEffect(() => {
+                getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
+            }, [animal.id]);
+
+            const computeAge = (dateNaissance) => {
+                if (!dateNaissance) return null;
+                const birth = new Date(dateNaissance);
+                const now = new Date();
+                let years = now.getFullYear() - birth.getFullYear();
+                let months = now.getMonth() - birth.getMonth();
+                if (now.getDate() < birth.getDate()) months--;
+                if (months < 0) { years--; months += 12; }
+                if (years <= 0) return `${Math.max(months, 0)} mois`;
+                return months > 0 ? `${years} an${years > 1 ? 's' : ''} ${months} mois` : `${years} an${years > 1 ? 's' : ''}`;
+            };
+
+            const age = computeAge(animal.dateNaissance);
+            const subtitle = [animal.race, age].filter(Boolean).join(' — ');
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                        <AnimalAvatar animal={animal} size={56} />
+                        <div>
+                            <h2 style={{ fontSize: '22px', fontWeight: '700' }}>{animal.nom}</h2>
+                            {subtitle && <p style={{ color: '#6b7280', fontSize: '14px' }}>{subtitle}</p>}
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                        {DOSSIER_CARDS.map(card => {
+                            const status = getDossierCardStatus(animal, card.id, videoCount);
+                            return (
+                                <div
+                                    key={card.id}
+                                    onClick={() => setActiveTab(card.id)}
+                                    style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: `4px solid ${card.color}`, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                >
+                                    <div>
+                                        <p style={{ fontWeight: '700', fontSize: '15px' }}>{card.label}</p>
+                                        <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>{status.text}</p>
+                                    </div>
+                                    <div style={{ fontSize: '20px', color: status.iconColor }}>{status.icon}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             );
         }
