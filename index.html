@@ -1252,7 +1252,6 @@
 
         // Tabs Content
         function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal }) {
-            const todayStr = new Date().toISOString().split('T')[0];
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
             const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
             const [editingAnimal, setEditingAnimal] = React.useState(null);
@@ -1286,83 +1285,44 @@
 
                     {/* Animals List */}
                     {animals.length > 0 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-                            {animals.map(animal => (
-                                <div
-                                    key={animal.id}
-                                    className="animate-fade-in"
-                                    onClick={() => { setSelectedAnimal(animal.id); setActiveTab('dossier'); }}
-                                    style={{
-                                        background: 'white',
-                                        padding: '16px',
-                                        borderRadius: '8px',
-                                        border: selectedAnimal === animal.id ? '2px solid #10b981' : '1px solid #e5e7eb',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                        <div>
-                                            <h3 style={{ fontSize: '18px', fontWeight: '700' }}><AnimalAvatar animal={animal} /> {animal.nom}</h3>
-                                            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '2px' }}>{animal.espece}</p>
-                                            {animal.race && <p style={{ color: '#6b7280', fontSize: '14px' }}>Race: {animal.race}</p>}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                            {animals.map(animal => {
+                                const age = computeAge(animal.dateNaissance);
+                                const subtitle = [animal.race, age].filter(Boolean).join(' — ');
+                                return (
+                                    <div
+                                        key={animal.id}
+                                        className="animate-fade-in"
+                                        onClick={() => { setSelectedAnimal(animal.id); setActiveTab('dossier'); }}
+                                        style={{
+                                            background: 'white',
+                                            padding: '12px 16px',
+                                            borderRadius: '8px',
+                                            border: selectedAnimal === animal.id ? '2px solid #10b981' : '1px solid #e5e7eb',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '16px'
+                                        }}
+                                    >
+                                        <AnimalAvatar animal={animal} size={48} />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <h3 style={{ fontSize: '18px', fontWeight: '700' }}>{animal.nom}</h3>
+                                            {subtitle && <p style={{ color: '#6b7280', fontSize: '14px' }}>{subtitle}</p>}
                                         </div>
-                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
                                                 ✏️
                                             </button>
                                             <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '16px' }}>
                                                 🗑️
                                             </button>
+                                            <span style={{ color: '#9ca3af', fontSize: '22px', marginLeft: '4px' }}>›</span>
                                         </div>
                                     </div>
-
-                                    {animal.sexe && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '12px', padding: '10px 0', borderTop: '1px solid #e5e7eb', borderBottom: '1px solid #e5e7eb', marginBottom: '12px' }}>
-                                            <div><span style={{ color: '#6b7280' }}>Sexe:</span> <strong>{animal.sexe === 'male' ? '♂️ Mâle' : '♀️ Femelle'}</strong></div>
-                                            <div><span style={{ color: '#6b7280' }}>Stérilisé:</span> <strong>{animal.sterilise ? '✅ Oui' : '❌ Non'}</strong></div>
-                                        </div>
-                                    )}
-
-                                    {(() => {
-                                        const vaccins = animal.vaccins || [];
-                                        const vaccinAJour = vaccins.length > 0 && vaccins.every(v => {
-                                            const c = getCountdown(v.rappel || v.date);
-                                            return !c || c.days >= 0;
-                                        });
-                                        const medicamentsAujourdhui = (animal.medicaments || []).filter(m => m.dateDebut && m.dateFin && todayStr >= m.dateDebut && todayStr <= m.dateFin);
-                                        return (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                                                <div style={{ background: vaccins.length === 0 ? '#f3f4f6' : (vaccinAJour ? '#f0fdf4' : '#fef2f2'), padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                                                    <p style={{ fontSize: '10px', color: '#6b7280' }}>💉 Vaccins</p>
-                                                    <p style={{ fontSize: '13px', fontWeight: '700', color: vaccins.length === 0 ? '#9ca3af' : (vaccinAJour ? '#10b981' : '#ef4444') }}>
-                                                        {vaccins.length === 0 ? 'Aucun' : (vaccinAJour ? '✅ À jour' : '⚠️ À renouveler')}
-                                                    </p>
-                                                </div>
-                                                <div style={{ background: medicamentsAujourdhui.length > 0 ? '#fce7f3' : '#f3f4f6', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                                                    <p style={{ fontSize: '10px', color: '#6b7280' }}>💊 Aujourd'hui</p>
-                                                    <p style={{ fontSize: '13px', fontWeight: '700', color: medicamentsAujourdhui.length > 0 ? '#ec4899' : '#9ca3af' }}>
-                                                        {medicamentsAujourdhui.length > 0 ? `À donner (${medicamentsAujourdhui.length})` : 'Aucun'}
-                                                    </p>
-                                                </div>
-                                                <div style={{ background: '#fef3c7', padding: '10px', borderRadius: '8px', textAlign: 'center' }}>
-                                                    <p style={{ fontSize: '10px', color: '#6b7280' }}>💰 Budget</p>
-                                                    <p style={{ fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>{(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€</p>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {animal.identifiant && (
-                                        <div style={{ marginTop: '12px', padding: '10px', background: '#f3f4f6', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                            <div style={{ fontSize: '12px', color: '#6b7280' }}>🩺 ID vétérinaire: <strong style={{ color: '#1f2937' }}>{animal.identifiant}</strong></div>
-                                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(animal.identifiant); }} style={{ padding: '4px 10px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>
-                                                📋 Copier
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 
