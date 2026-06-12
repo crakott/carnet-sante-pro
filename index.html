@@ -24,6 +24,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2220007721302800" crossorigin="anonymous"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1067,11 +1068,35 @@
 
                     {/* ── FOOTER ── */}
                     <footer style={{ background: '#111827', color: '#9ca3af', padding: '28px 20px', textAlign: 'center', fontSize: '13px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                            <ShareQRCode size={120} />
+                            <p>📱 Scannez ce code pour ouvrir Carnet Santé PRO sur votre téléphone</p>
+                        </div>
                         <p style={{ marginBottom: '8px' }}>🐾 Carnet Santé PRO — © {new Date().getFullYear()}</p>
                         <a href="privacy.html" target="_blank" rel="noopener" style={{ color: '#6b7280', textDecoration: 'underline' }}>Politique de confidentialité</a>
                     </footer>
                 </div>
             );
+        }
+
+        // QR code linking to the app's URL, used to share/install the app from another device
+        function ShareQRCode({ size = 120 }) {
+            const ref = React.useRef(null);
+
+            React.useEffect(() => {
+                if (ref.current && window.QRCode) {
+                    ref.current.innerHTML = '';
+                    new window.QRCode(ref.current, {
+                        text: window.location.origin + window.location.pathname,
+                        width: size,
+                        height: size,
+                        colorDark: '#111827',
+                        colorLight: '#ffffff'
+                    });
+                }
+            }, [size]);
+
+            return <div ref={ref} style={{ display: 'inline-block', borderRadius: '8px', overflow: 'hidden' }} />;
         }
 
         // Reusable AdSense banner (real client ID; slot IDs are placeholders to replace with real ones from AdSense)
@@ -3031,6 +3056,14 @@
         function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth }) {
             const [importing, setImporting] = React.useState(false);
             const [importMsg, setImportMsg] = React.useState('');
+            const [linkCopied, setLinkCopied] = React.useState(false);
+            const appUrl = window.location.origin + window.location.pathname;
+
+            const copyAppLink = () => {
+                navigator.clipboard.writeText(appUrl);
+                setLinkCopied(true);
+                setTimeout(() => setLinkCopied(false), 2000);
+            };
 
             // ── Export JSON ──────────────────────────────────────────────────
             const exportJSON = (withPhotos) => {
@@ -3171,6 +3204,18 @@
                             </label>
                             {importMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: importMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{importMsg}</p>}
                         </div>
+                    </div>
+
+                    {/* ── Share app ── */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px', textAlign: 'center' }}>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>📱 Partager l'application</h3>
+                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Faites scanner ce code pour ouvrir Carnet Santé PRO sur un autre téléphone.</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                            <ShareQRCode size={140} />
+                        </div>
+                        <button onClick={copyAppLink} style={{ padding: '10px 16px', background: linkCopied ? '#d1fae5' : '#f3f4f6', color: linkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                            {linkCopied ? '✅ Lien copié !' : '🔗 Copier le lien'}
+                        </button>
                     </div>
 
                     <button
