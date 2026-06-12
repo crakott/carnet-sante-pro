@@ -86,6 +86,19 @@
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         };
 
+        // Compute a human-readable age ("2 ans 3 mois") from a birth date
+        const computeAge = (dateNaissance) => {
+            if (!dateNaissance) return null;
+            const birth = new Date(dateNaissance);
+            const now = new Date();
+            let years = now.getFullYear() - birth.getFullYear();
+            let months = now.getMonth() - birth.getMonth();
+            if (now.getDate() < birth.getDate()) months--;
+            if (months < 0) { years--; months += 12; }
+            if (years <= 0) return `${Math.max(months, 0)} mois`;
+            return months > 0 ? `${years} an${years > 1 ? 's' : ''} ${months} mois` : `${years} an${years > 1 ? 's' : ''}`;
+        };
+
         // Compute the number of days remaining until a date, with a display label and color
         const getCountdown = (dateStr) => {
             if (!dateStr) return null;
@@ -1476,32 +1489,11 @@
                 }
             };
 
-            const computeAge = (dateNaissance) => {
-                if (!dateNaissance) return null;
-                const birth = new Date(dateNaissance);
-                const now = new Date();
-                let years = now.getFullYear() - birth.getFullYear();
-                let months = now.getMonth() - birth.getMonth();
-                if (now.getDate() < birth.getDate()) months--;
-                if (months < 0) { years--; months += 12; }
-                if (years <= 0) return `${Math.max(months, 0)} mois`;
-                return months > 0 ? `${years} an${years > 1 ? 's' : ''} ${months} mois` : `${years} an${years > 1 ? 's' : ''}`;
-            };
-
-            const age = computeAge(animal.dateNaissance);
-            const subtitle = [animal.race, age].filter(Boolean).join(' — ');
-
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                        <AnimalAvatar animal={animal} size={56} />
-                        <div>
-                            <h2 style={{ fontSize: '22px', fontWeight: '700' }}>{animal.nom}</h2>
-                            {subtitle && <p style={{ color: '#6b7280', fontSize: '14px' }}>{subtitle}</p>}
-                        </div>
-                    </div>
+                    <AnimalProfileCard animal={animal} />
 
                     <div style={{ display: 'grid', gap: '12px' }}>
                         {DOSSIER_CARDS.map(card => {
@@ -1588,9 +1580,9 @@
                             ➕ Ajouter un traitement
                         </button>
                     )}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'grid', gap: '12px' }}>
                         {items && items.length > 0 ? items.map((t, i) => (
-                            <div key={t.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div key={t.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: `4px solid ${color}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <EditableRow
                                     item={t}
                                     color={color}
@@ -1609,7 +1601,7 @@
                                 </EditableRow>
                             </div>
                         )) : (
-                            <p style={{ color: '#9ca3af' }}>Aucun traitement enregistré</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun traitement enregistré</p>
                         )}
                     </div>
                 </div>
@@ -1707,6 +1699,21 @@
             );
         }
 
+        // Profile header (photo + name + race/age) shown at the top of each animal tab, as on the Dossier page
+        function AnimalProfileCard({ animal }) {
+            const age = computeAge(animal.dateNaissance);
+            const subtitle = [animal.race, age].filter(Boolean).join(' — ');
+            return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                    <AnimalAvatar animal={animal} size={56} />
+                    <div>
+                        <h2 style={{ fontSize: '22px', fontWeight: '700' }}>{animal.nom}</h2>
+                        {subtitle && <p style={{ color: '#6b7280', fontSize: '14px' }}>{subtitle}</p>}
+                    </div>
+                </div>
+            );
+        }
+
         function VaccinsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
@@ -1725,8 +1732,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💉 Vaccins de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {/* Add Vaccin */}
                     {showForm ? (
@@ -1754,10 +1761,10 @@
                     )}
 
                     {/* Vaccins List */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'grid', gap: '12px' }}>
                         {animal.vaccins && animal.vaccins.length > 0 ? (
                             animal.vaccins.map((v, i) => (
-                                <div key={v.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div key={v.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <EditableRow
                                         item={v}
                                         color="#10b981"
@@ -1775,7 +1782,7 @@
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af' }}>Aucun vaccin</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun vaccin</p>
                         )}
                     </div>
 
@@ -1821,8 +1828,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>💊 Médication de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {/* Add Medicament */}
                     {showForm ? (
@@ -1857,12 +1864,12 @@
                     )}
 
                     {/* Medicaments List */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'grid', gap: '12px' }}>
                         {animal.medicaments && animal.medicaments.length > 0 ? (
                             animal.medicaments.map((m, i) => {
                                 const isActive = m.dateFin ? (todayStr >= m.dateDebut && todayStr <= m.dateFin) : false;
                                 return (
-                                    <div key={m.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', borderLeft: `4px solid ${isActive ? '#ec4899' : '#9ca3af'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div key={m.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: `4px solid ${isActive ? '#ec4899' : '#9ca3af'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <EditableRow
                                             item={m}
                                             color="#ec4899"
@@ -1890,7 +1897,7 @@
                                 );
                             })
                         ) : (
-                            <p style={{ color: '#9ca3af' }}>Aucun traitement</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun traitement</p>
                         )}
                     </div>
                 </div>
@@ -1913,8 +1920,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🍎 Alimentation de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #f59e0b' }}>
@@ -1940,10 +1947,10 @@
                         </button>
                     )}
 
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <div style={{ display: 'grid', gap: '12px' }}>
                         {animal.aliments && animal.aliments.length > 0 ? (
                             animal.aliments.map((a, i) => (
-                                <div key={a.id || i} style={{ padding: '12px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #f59e0b' }}>
+                                <div key={a.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <EditableRow
                                         item={a}
                                         color="#f59e0b"
@@ -1961,7 +1968,7 @@
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af' }}>Aucun aliment</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun aliment</p>
                         )}
                     </div>
                 </div>
@@ -2033,8 +2040,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📋 Observations de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2' }}>
@@ -2133,7 +2140,7 @@
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune observation</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucune observation</p>
                         )}
                     </div>
                 </div>
@@ -2161,8 +2168,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🔪 Chirurgies et interventions de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${CHIRURGIE_COLOR}` }}>
@@ -2207,7 +2214,7 @@
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune chirurgie ou intervention enregistrée</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucune chirurgie ou intervention enregistrée</p>
                         )}
                     </div>
                 </div>
@@ -2260,8 +2267,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📄 Documents de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #6366f1' }}>
@@ -2313,7 +2320,7 @@
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px', gridColumn: '1 / -1' }}>Aucun document enregistré</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', gridColumn: '1 / -1' }}>Aucun document enregistré</p>
                         )}
                     </div>
                 </div>
@@ -2387,8 +2394,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🎥 Vidéos de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: '#92400e' }}>
                         📱 Les vidéos sont enregistrées uniquement sur cet appareil (non synchronisées, non sauvegardées dans le cloud). Si vous changez d'appareil, désinstallez l'application ou videz les données du navigateur, elles seront définitivement perdues.
@@ -2426,7 +2433,7 @@
                                 <VideoCard key={v.id} video={v} formatSize={formatSize} onDelete={() => handleDelete(v.id)} />
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px', gridColumn: '1 / -1' }}>Aucune vidéo enregistrée sur cet appareil</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', gridColumn: '1 / -1' }}>Aucune vidéo enregistrée sur cet appareil</p>
                         )}
                     </div>
                 </div>
@@ -2530,8 +2537,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚖️ Suivi du poids de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
@@ -2595,7 +2602,7 @@
                                 </div>
                             ))
                         ) : (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune mesure enregistrée</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucune mesure enregistrée</p>
                         )}
                     </div>
                 </div>
@@ -2626,7 +2633,7 @@
             const renderRdv = (r) => {
                 const c = getCountdown(r.date);
                 return (
-                    <div key={r.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div key={r.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                         <EditableRow
                             item={r}
                             color="#10b981"
@@ -2652,8 +2659,8 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>📅 Planning de {animal.nom}</h2>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
@@ -2679,7 +2686,7 @@
 
                     <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>À venir</h3>
                     {upcoming.length > 0 ? upcoming.map(renderRdv) : (
-                        <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucun rendez-vous à venir</p>
+                        <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun rendez-vous à venir</p>
                     )}
 
                     {past.length > 0 && (
@@ -2815,7 +2822,7 @@
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {entries.length === 0 ? (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>Aucune dépense</p>
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucune dépense</p>
                         ) : (
                             [...entries].sort((a, b) => new Date(b.date) - new Date(a.date)).map((b, i) => (
                                 <div key={b.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2917,7 +2924,7 @@
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
                         {vets.map(vet => (
-                            <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #2563eb' }}>
                                 <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</h3>
                                 <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distanceKm != null ? `≈ ${vet.distanceKm.toFixed(1)} km de votre position` : vet.distance}</p>
                                 {vet.adresse && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🏠 {vet.adresse}</p>}
@@ -2994,7 +3001,7 @@
                             ))}
                         </div>
                     ) : (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', textAlign: 'center', color: '#6b7280', marginBottom: '24px' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center', color: '#6b7280', marginBottom: '24px' }}>
                             ✅ Aucun rappel pour le moment
                         </div>
                     )}
@@ -3004,7 +3011,7 @@
                         {(animals || []).map(animal => {
                             const echeances = buildEcheances(animal);
                             return (
-                                <div key={animal.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                                <div key={animal.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b' }}>
                                     <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}><AnimalAvatar animal={animal} /> {animal.nom}</h4>
                                     {echeances.length > 0 ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
