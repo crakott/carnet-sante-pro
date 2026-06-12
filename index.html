@@ -538,7 +538,6 @@
             const [userRole, setUserRole] = React.useState(null); // null (chargement) | 'proprietaire' | 'veterinaire'
             const [userProfile, setUserProfile] = React.useState({ nom: '', prenom: '' });
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
-            const [showMenu, setShowMenu] = React.useState(false);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
 
             // Auth State
@@ -741,9 +740,8 @@
                 <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
                     {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} user={user} auth={auth} />}
 
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-                        {!isDesktop && <MobileHeader showMenu={showMenu} setShowMenu={setShowMenu} setActiveTab={setActiveTab} />}
-                        {!isDesktop && showMenu && <MobileMenu activeTab={activeTab} setActiveTab={setActiveTab} setShowMenu={setShowMenu} auth={auth} />}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: isDesktop ? 0 : '64px' }}>
+                        {!isDesktop && <MobileHeader setActiveTab={setActiveTab} />}
 
                         {/* Reminders Banner */}
                         {reminders.length > 0 && (
@@ -789,12 +787,15 @@
                             sendEmailReminder={sendEmailReminder}
                             user={user}
                             db={db}
+                            auth={auth}
                         />
 
                         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px 16px', width: '100%' }}>
                             <AdBanner format="horizontal" slot="xxxxxxxxxx" className="ad-banner-bottom" />
                         </div>
                     </div>
+
+                    {!isDesktop && <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />}
                 </div>
             );
         }
@@ -1177,38 +1178,54 @@
             );
         }
 
-        // Mobile header with hamburger toggle
-        function MobileHeader({ showMenu, setShowMenu, setActiveTab }) {
+        // Mobile header with quick access to Paramètres
+        function MobileHeader({ setActiveTab }) {
             return (
                 <div style={{ background: 'white', padding: '15px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <button onClick={() => setActiveTab('accueil')} title="Accueil" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>🏠</button>
                         <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>🐾 Carnet Santé</h1>
                     </div>
-                    <button onClick={() => setShowMenu(!showMenu)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>☰</button>
+                    <button onClick={() => setActiveTab('parametres')} title="Paramètres" style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>⚙️</button>
                 </div>
             );
         }
 
-        // Mobile slide-in navigation menu
-        function MobileMenu({ activeTab, setActiveTab, setShowMenu, auth }) {
+        // Mobile bottom navigation bar
+        const BOTTOM_NAV_TABS = [
+            { id: 'veterinaires', icon: '🏥', label: 'Vétérinaires' },
+            { id: 'accueil', icon: '🏠', label: 'Accueil' },
+            { id: 'dossier', icon: '📁', label: 'Dossier' },
+            { id: 'rappels', icon: '⚠️', label: 'Rappels' }
+        ];
+
+        function BottomNav({ activeTab, setActiveTab }) {
             return (
-                <div className="animate-slide-in" style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '10px' }}>
-                    {NAV_TABS.map(tab => (
-                        <NavButton
+                <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e5e7eb', display: 'flex', zIndex: 100 }}>
+                    {BOTTOM_NAV_TABS.map(tab => (
+                        <button
                             key={tab.id}
-                            tab={tab}
-                            active={activeTab === tab.id}
-                            onClick={() => { setActiveTab(tab.id); setShowMenu(false); }}
-                        />
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '2px',
+                                padding: '8px 0 10px',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: activeTab === tab.id ? '#10b981' : '#6b7280',
+                                fontWeight: activeTab === tab.id ? '600' : '400',
+                                fontSize: '11px'
+                            }}
+                        >
+                            <span style={{ fontSize: '20px' }}>{tab.icon}</span>
+                            {tab.label}
+                        </button>
                     ))}
-                    <button
-                        onClick={() => signOut(auth)}
-                        style={{ width: '100%', padding: '10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', marginTop: '10px' }}
-                    >
-                        Déconnexion
-                    </button>
-                </div>
+                </nav>
             );
         }
 
@@ -2993,7 +3010,7 @@
             );
         }
 
-        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal }) {
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth }) {
             const [importing, setImporting] = React.useState(false);
             const [importMsg, setImportMsg] = React.useState('');
 
@@ -3137,6 +3154,16 @@
                             {importMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: importMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{importMsg}</p>}
                         </div>
                     </div>
+
+                    <button
+                        onClick={() => signOut(auth)}
+                        style={{ width: '100%', padding: '12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', marginTop: '24px' }}
+                    >
+                        Déconnexion
+                    </button>
+                    <p style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: '#9ca3af' }}>
+                        <a href="privacy.html" target="_blank" rel="noopener" style={{ color: '#9ca3af' }}>Politique de confidentialité</a>
+                    </p>
                 </div>
             );
         }
