@@ -85,6 +85,9 @@ En plus des champs de profil existants (`nom`, `espece`, `race`, `sexe`, `dateNa
 - `chirurgies` : tableau des chirurgies et petites interventions (`nom`, `date`, `notes`),
   visible et modifiable par le propriétaire (onglet "🔪 Chirurgies") et par le vétérinaire
   abonné (onglet du même nom dans l'espace pro)
+- `poidsObjectif` : poids cible (kg, nombre), défini par le propriétaire dans l'onglet
+  "⚖️ Poids" ("🎯 Objectif de poids"). Affiché comme ligne pointillée sur la courbe de poids
+  et utilisé pour calculer la barre de progression vers l'objectif
 - `documents` : tableau de documents scannés par le propriétaire (`type`, `nom`, `date`,
   `photo` en base64) — carnet de vaccination, ordonnances, certificats, analyses, factures…
   Réservé au propriétaire (non accessible au vétérinaire)

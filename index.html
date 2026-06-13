@@ -1432,7 +1432,7 @@
             } else if (activeTab === 'videos') {
                 return <VideosTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />;
             } else if (activeTab === 'poids') {
-                return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+                return <PoidsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} saveAnimal={saveAnimal} />;
             } else if (activeTab === 'budget') {
                 return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
@@ -2645,11 +2645,12 @@
             );
         }
 
-        function PoidsChart({ poids }) {
+        function PoidsChart({ poids, objectif }) {
             const sorted = [...poids].sort((a, b) => new Date(a.date) - new Date(b.date));
             const values = sorted.map(p => p.valeur);
-            const minVal = Math.min(...values);
-            const maxVal = Math.max(...values);
+            const allValues = objectif ? [...values, objectif] : values;
+            const minVal = Math.min(...allValues);
+            const maxVal = Math.max(...allValues);
             const range = maxVal - minVal || 1;
             const W = 350, H = 220;
             const padLeft = 45, padRight = 25, padTop = 15, padBottom = 50;
@@ -2694,21 +2695,36 @@
                         })}
                         <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#poidsGrad)" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                         {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="white" strokeWidth="2" />)}
+                        {objectif != null && (() => {
+                            const y = H - padBottom - ((objectif - minVal) / range * chartH);
+                            return (
+                                <g>
+                                    <line x1={padLeft} y1={y} x2={W - padRight} y2={y} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,4" />
+                                    <text x={W - padRight} y={y - 4} fontSize="10" fill="#f59e0b" textAnchor="end" fontWeight="600">🎯 {objectif} kg</text>
+                                </g>
+                            );
+                        })()}
                     </svg>
                 </div>
             );
         }
 
-        function PoidsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
+        function PoidsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem, saveAnimal }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
             const [valeur, setValeur] = React.useState('');
             const [date, setDate] = React.useState(todayStr);
+            const [objectif, setObjectif] = React.useState(animal.poidsObjectif ?? '');
+
+            React.useEffect(() => setObjectif(animal.poidsObjectif ?? ''), [animal.id, animal.poidsObjectif]);
 
             const poids = animal.poids || [];
-            const sortedDesc = [...poids].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sortedAsc = [...poids].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const sortedDesc = [...sortedAsc].reverse();
+            const latest = sortedDesc[0];
+            const first = sortedAsc[0];
 
             const handleAdd = () => {
                 const val = parseFloat(valeur);
@@ -2720,10 +2736,50 @@
                 }
             };
 
+            const handleSaveObjectif = () => {
+                const val = parseFloat(objectif);
+                saveAnimal({ ...animal, poidsObjectif: isNaN(val) ? null : val });
+            };
+
+            // Progress towards the goal weight, based on the first and most recent measurements
+            let progressPct = null;
+            if (animal.poidsObjectif != null && first && latest && first.valeur !== animal.poidsObjectif) {
+                progressPct = (first.valeur - latest.valeur) / (first.valeur - animal.poidsObjectif) * 100;
+                progressPct = Math.max(0, Math.min(100, progressPct));
+            }
+
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
                     <AnimalProfileCard animal={animal} />
+
+                    {saveAnimal && (
+                        <div style={{ background: 'white', padding: '16px 20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <h4 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: '700' }}>🎯 Objectif de poids</h4>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <input type="number" step="0.1" placeholder="Poids cible (kg)" value={objectif} onChange={(e) => setObjectif(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', flex: '1', minWidth: '120px' }} />
+                                <button onClick={handleSaveObjectif} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>✅ Enregistrer</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {animal.poidsObjectif != null && latest && (
+                        <div style={{ background: 'white', padding: '16px 20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <h4 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: '700' }}>📊 Progression vers l'objectif ({animal.poidsObjectif} kg)</h4>
+                            {Math.abs(latest.valeur - animal.poidsObjectif) < 0.1 ? (
+                                <p style={{ color: '#10b981', fontWeight: '600' }}>🎉 Objectif atteint !</p>
+                            ) : (
+                                <p style={{ color: '#374151', marginBottom: '8px' }}>
+                                    Il reste <strong>{Math.abs(latest.valeur - animal.poidsObjectif).toFixed(1)} kg</strong> à {latest.valeur > animal.poidsObjectif ? 'perdre' : 'prendre'} pour atteindre l'objectif.
+                                </p>
+                            )}
+                            {progressPct != null && (
+                                <div style={{ background: '#f3f4f6', borderRadius: '6px', height: '10px', overflow: 'hidden' }}>
+                                    <div style={{ background: '#10b981', height: '100%', width: `${progressPct}%`, borderRadius: '6px' }} />
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
@@ -2746,7 +2802,7 @@
                     {poids.length >= 2 && (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                             <h4 style={{ marginBottom: '16px', fontSize: '14px', fontWeight: '700' }}>📈 Courbe d'évolution</h4>
-                            <PoidsChart poids={poids} />
+                            <PoidsChart poids={poids} objectif={animal.poidsObjectif} />
                         </div>
                     )}
 
