@@ -1644,7 +1644,7 @@
             } else if (activeTab === 'budget') {
                 return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
-                return <VeterinairesTab />;
+                return <VeterinairesTab animals={animals} saveAnimal={saveAnimal} />;
             } else if (activeTab === 'planning') {
                 return <PlanningTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'rappels') {
@@ -3411,7 +3411,7 @@
             );
         }
 
-        function VeterinairesTab() {
+        function VeterinairesTab({ animals, saveAnimal }) {
             const [userPos, setUserPos] = React.useState(null);
             const [geoStatus, setGeoStatus] = React.useState('idle'); // idle | loading | done | error
             const [geoError, setGeoError] = React.useState('');
@@ -3469,8 +3469,14 @@
                         .sort((a, b) => a.distanceKm - b.distanceKm)
                     : VETERINAIRES);
 
+            // Toggle whether this animal's "vétérinaire habituel" is the given vet
+            const toggleVetAssignment = (animal, vet) => {
+                const isAssigned = animal.veterinaire && animal.veterinaire.id === vet.id;
+                saveAnimal({ ...animal, veterinaire: isAssigned ? null : { id: vet.id, nom: vet.nom } });
+            };
+
             return (
-                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🏥 Vétérinaires</h2>
 
                     <div style={{ marginBottom: '20px' }}>
@@ -3485,42 +3491,70 @@
                     </div>
 
                     <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 8px' }}>À proximité</p>
-                    <div style={{ background: 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-                        {vets.map((vet, i) => {
-                            const distanceText = vet.distanceKm != null ? `${vet.distanceKm.toFixed(1)} km` : vet.distance;
-                            const subtitleParts = [];
-                            if (vet.horaires) subtitleParts.push(vet.horaires);
-                            if (vet.rating || vet.specialites) subtitleParts.push(`⭐ ${vet.rating || '?'}${vet.specialites ? ' • ' + vet.specialites.join(', ') : ''}`);
-                            if (subtitleParts.length === 0 && vet.adresse) subtitleParts.push(vet.adresse);
-                            return (
-                                <div key={vet.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', borderBottom: i < vets.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, background: '#dbeafe', color: '#2563eb' }}>🏥</div>
+                    {vets.map(vet => {
+                        const distanceText = vet.distanceKm != null ? `${vet.distanceKm.toFixed(1)} km` : vet.distance;
+                        const ratingFull = vet.rating ? Math.round(vet.rating) : 0;
+                        return (
+                            <div key={vet.id} style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '16px', marginBottom: '14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
+                                    <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🏥</div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: '700', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vet.nom}</div>
-                                        {subtitleParts.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitleParts.join(' • ')}</div>}
-                                    </div>
-                                    {distanceText && <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', background: '#f3f4f6', color: '#374151', flexShrink: 0 }}>{distanceText}</span>}
-                                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                                        <a
-                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
-                                            target="_blank" rel="noopener noreferrer"
-                                            style={{ width: '32px', height: '32px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', textDecoration: 'none' }}
-                                        >
-                                            🗺️
-                                        </a>
-                                        {vet.telephone && (
-                                            <a
-                                                href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
-                                                style={{ width: '32px', height: '32px', background: '#d1fae5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', textDecoration: 'none' }}
-                                            >
-                                                📞
-                                            </a>
+                                        <div style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</div>
+                                        {vet.rating && (
+                                            <div style={{ color: '#f59e0b', fontSize: '13px', marginTop: '2px' }}>
+                                                {'★'.repeat(ratingFull)}<span style={{ color: '#e5e7eb' }}>{'★'.repeat(5 - ratingFull)}</span> {vet.rating}
+                                            </div>
                                         )}
                                     </div>
+                                    {distanceText && <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', background: '#f3f4f6', color: '#374151', whiteSpace: 'nowrap', flexShrink: 0 }}>{distanceText}</span>}
                                 </div>
-                            );
-                        })}
-                    </div>
+                                {vet.horaires && <p style={{ fontSize: '13px', color: '#6b7280', margin: '4px 0' }}>🕐 {vet.horaires}</p>}
+                                {vet.adresse && <p style={{ fontSize: '13px', color: '#6b7280', margin: '4px 0' }}>🏠 {vet.adresse}</p>}
+                                {vet.specialites && (
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '8px 0 12px' }}>
+                                        {vet.specialites.map(s => <span key={s} style={{ fontSize: '11px', fontWeight: '600', padding: '3px 9px', borderRadius: '999px', background: '#ede9fe', color: '#7c3aed' }}>{s}</span>)}
+                                    </div>
+                                )}
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#e0f2fe', color: '#0369a1' }}
+                                    >
+                                        🗺️ Itinéraire
+                                    </a>
+                                    {vet.telephone && (
+                                        <a
+                                            href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
+                                            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#d1fae5', color: '#059669' }}
+                                        >
+                                            📞 Appeler
+                                        </a>
+                                    )}
+                                </div>
+                                {(animals || []).length > 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: '600', marginRight: '2px', whiteSpace: 'nowrap' }}>👤 Vétérinaire de :</span>
+                                        {animals.map(animal => {
+                                            const active = animal.veterinaire && animal.veterinaire.id === vet.id;
+                                            return (
+                                                <span
+                                                    key={animal.id}
+                                                    onClick={() => toggleVetAssignment(animal, vet)}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px 4px 5px', borderRadius: '999px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: '1px solid', background: active ? '#d1fae5' : '#f9fafb', color: active ? '#047857' : '#9ca3af', borderColor: active ? '#a7f3d0' : '#e5e7eb' }}
+                                                >
+                                                    <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', flexShrink: 0 }}>
+                                                        <AnimalAvatar animal={animal} size={12} />
+                                                    </span>
+                                                    {animal.nom}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             );
         }
