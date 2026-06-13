@@ -738,6 +738,12 @@
                 if (reminders.length > 0) scheduleReminders(reminders);
             }, [animals, reminderSettings]);
 
+            // Public "fiche de garde" link (?share=<animalId>) — no authentication required
+            const sharedAnimalId = new URLSearchParams(window.location.search).get('share');
+            if (sharedAnimalId) {
+                return <SharedDossierView animalId={sharedAnimalId} db={db} />;
+            }
+
             if (loading || (user && userRole === null)) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
 
             if (!user) {
@@ -1092,24 +1098,141 @@
             );
         }
 
-        // QR code linking to the app's URL, used to share/install the app from another device
-        function ShareQRCode({ size = 120 }) {
+        // QR code linking to the app's URL (or a custom `value`, e.g. a shared dossier link)
+        function ShareQRCode({ size = 120, value }) {
             const ref = React.useRef(null);
 
             React.useEffect(() => {
                 if (ref.current && window.QRCode) {
                     ref.current.innerHTML = '';
                     new window.QRCode(ref.current, {
-                        text: window.location.origin + window.location.pathname,
+                        text: value || (window.location.origin + window.location.pathname),
                         width: size,
                         height: size,
                         colorDark: '#111827',
                         colorLight: '#ffffff'
                     });
                 }
-            }, [size]);
+            }, [size, value]);
 
             return <div ref={ref} style={{ display: 'inline-block', borderRadius: '8px', overflow: 'hidden' }} />;
+        }
+
+        // Read-only "fiche de garde" shown to anyone opening a ?share=<animalId> link (no login required)
+        function SharedDossierView({ animalId, db }) {
+            const [animal, setAnimal] = React.useState(null);
+            const [status, setStatus] = React.useState('loading'); // 'loading' | 'ok' | 'error'
+
+            React.useEffect(() => {
+                (async () => {
+                    try {
+                        const snap = await getDoc(doc(db, 'animals', animalId));
+                        if (snap.exists() && snap.data().shareEnabled) {
+                            setAnimal({ id: snap.id, ...snap.data() });
+                            setStatus('ok');
+                        } else {
+                            setStatus('error');
+                        }
+                    } catch (error) {
+                        console.error('Erreur loading shared dossier:', error);
+                        setStatus('error');
+                    }
+                })();
+            }, [animalId]);
+
+            if (status === 'loading') {
+                return <div style={{ padding: '40px', textAlign: 'center' }}>Chargement...</div>;
+            }
+
+            if (status === 'error') {
+                return (
+                    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' }}>
+                        <div>
+                            <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>🔒 Fiche indisponible</h2>
+                            <p style={{ color: '#6b7280' }}>Ce lien n'est plus valide ou le partage a été désactivé par le propriétaire.</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const Section = ({ title, children }) => (
+                <div style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '12px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '8px' }}>{title}</h3>
+                    {children}
+                </div>
+            );
+            const Empty = ({ text }) => <p style={{ fontSize: '14px', color: '#9ca3af' }}>{text}</p>;
+
+            return (
+                <div style={{ minHeight: '100vh', background: '#f3f4f6' }}>
+                    <header style={{ background: '#10b981', color: 'white', padding: '16px 20px', textAlign: 'center' }}>
+                        <h1 style={{ fontSize: '18px', fontWeight: '700' }}>🐾 Fiche de garde — Carnet Santé PRO</h1>
+                    </header>
+                    <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
+                        <AnimalProfileCard animal={animal} />
+
+                        <Section title="ℹ️ Informations">
+                            <p style={{ fontSize: '14px', color: '#374151' }}>
+                                Espèce : {EMOJIS_ESPECE[animal.espece] || ''} {animal.espece}
+                                {animal.sexe ? ` — ${animal.sexe === 'male' ? '♂️ Mâle' : '♀️ Femelle'}` : ''}
+                                {animal.sterilise ? ' — Stérilisé/Castré' : ''}
+                            </p>
+                            {animal.identifiant && <p style={{ fontSize: '14px', color: '#374151', marginTop: '4px' }}>Identifiant (puce) : {animal.identifiant}</p>}
+                        </Section>
+
+                        <Section title="💉 Vaccins">
+                            {(animal.vaccins && animal.vaccins.length > 0) ? animal.vaccins.map(v => (
+                                <p key={v.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{v.nom} — fait le {formatDate(v.date)}, rappel le {formatDate(v.rappel)}</p>
+                            )) : <Empty text="Aucun vaccin enregistré" />}
+                        </Section>
+
+                        <Section title="💊 Médicaments">
+                            {(animal.medicaments && animal.medicaments.length > 0) ? animal.medicaments.map(m => (
+                                <p key={m.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{m.nom} — {m.dosage} {m.unite}, {m.frequence}, du {formatDate(m.dateDebut)} au {formatDate(m.dateFin)}</p>
+                            )) : <Empty text="Aucun médicament enregistré" />}
+                        </Section>
+
+                        <Section title="🦟 Antiparasitaires / 🪱 Vermifuges">
+                            {[...(animal.antiparasitaires || []), ...(animal.vermifuges || [])].length > 0 ? (
+                                [...(animal.antiparasitaires || []), ...(animal.vermifuges || [])].map(t => (
+                                    <p key={t.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{t.nom} — dernier traitement le {formatDate(t.dernierTraitement)}, prochain le {formatDate(t.prochainTraitement)}</p>
+                                ))
+                            ) : <Empty text="Aucun traitement enregistré" />}
+                        </Section>
+
+                        <Section title="🔪 Chirurgies">
+                            {(animal.chirurgies && animal.chirurgies.length > 0) ? animal.chirurgies.map(c => (
+                                <p key={c.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{c.nom} — {formatDate(c.date)}{c.notes ? ` — ${c.notes}` : ''}</p>
+                            )) : <Empty text="Aucune chirurgie enregistrée" />}
+                        </Section>
+
+                        <Section title="🍎 Alimentation">
+                            {(animal.aliments && animal.aliments.length > 0) ? animal.aliments.map(a => (
+                                <p key={a.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{a.nom} — {a.quantite}{a.horaire ? ` — ${a.horaire}` : ''}</p>
+                            )) : <Empty text="Aucune information d'alimentation" />}
+                        </Section>
+
+                        <Section title="⚖️ Poids">
+                            {(animal.poids && animal.poids.length > 0) ? (
+                                <p style={{ fontSize: '14px', color: '#374151' }}>
+                                    {[...animal.poids].sort((a, b) => new Date(b.date) - new Date(a.date))[0].valeur} kg
+                                    {' '}(le {formatDate([...animal.poids].sort((a, b) => new Date(b.date) - new Date(a.date))[0].date)})
+                                </p>
+                            ) : <Empty text="Non renseigné" />}
+                        </Section>
+
+                        <Section title="📋 Observations">
+                            {(animal.observations && animal.observations.length > 0) ? animal.observations.map(o => (
+                                <p key={o.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{formatDate(o.date)} — {o.type}{o.description ? ` : ${o.description}` : ''}</p>
+                            )) : <Empty text="Aucune observation" />}
+                        </Section>
+
+                        <p style={{ textAlign: 'center', fontSize: '12px', color: '#9ca3af', margin: '20px 0' }}>
+                            Fiche en lecture seule générée par <a href={window.location.origin + window.location.pathname} style={{ color: '#10b981' }}>Carnet Santé PRO</a>
+                        </p>
+                    </div>
+                </div>
+            );
         }
 
         // Reusable AdSense banner (real client ID; slot IDs are placeholders to replace with real ones from AdSense)
@@ -1287,13 +1410,13 @@
 
         // Content Router
         function Content(props) {
-            const { activeTab, animals, selectedAnimal, setSelectedAnimal, setActiveTab, addAnimalItem, deleteAnimalItem, updateAnimalItem, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
+            const { activeTab, animals, selectedAnimal, setSelectedAnimal, setActiveTab, addAnimalItem, deleteAnimalItem, updateAnimalItem, saveAnimal, budgetFilter, setBudgetFilter, getFilteredBudget } = props;
             const animal = animals.find(a => a.id === selectedAnimal);
 
             if (activeTab === 'accueil') {
                 return <HomeTab {...props} />;
             } else if (activeTab === 'dossier') {
-                return <DossierTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={setActiveTab} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />;
+                return <DossierTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} setActiveTab={setActiveTab} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} saveAnimal={saveAnimal} />;
             } else if (activeTab === 'vaccins') {
                 return <VaccinsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'aliment') {
@@ -1501,11 +1624,12 @@
         }
 
         // Per-animal overview: profile header + clickable status cards linking to each section
-        function DossierTab({ animal, animals, selectedAnimal, setSelectedAnimal, setActiveTab, addAnimalItem, deleteAnimalItem }) {
+        function DossierTab({ animal, animals, selectedAnimal, setSelectedAnimal, setActiveTab, addAnimalItem, deleteAnimalItem, saveAnimal }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const [videoCount, setVideoCount] = React.useState(0);
             const [email, setEmail] = React.useState('');
+            const [shareLinkCopied, setShareLinkCopied] = React.useState(false);
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
@@ -1520,6 +1644,16 @@
                     window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                     setEmail('');
                 }
+            };
+
+            // Enable/disable the public read-only "fiche de garde" link for this animal
+            const toggleShare = () => saveAnimal({ ...animal, shareEnabled: !animal.shareEnabled });
+
+            const shareUrl = `${window.location.origin}${window.location.pathname}?share=${animal.id}`;
+            const copyShareLink = () => {
+                navigator.clipboard.writeText(shareUrl);
+                setShareLinkCopied(true);
+                setTimeout(() => setShareLinkCopied(false), 2000);
             };
 
             return (
@@ -1565,6 +1699,24 @@
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email vétérinaire" style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }} />
                             <button onClick={handleShare} style={{ padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>📧 Partager</button>
                         </div>
+                    </div>
+
+                    <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>🔗 Fiche de garde</h4>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Générez un lien (ou QR code) en lecture seule avec les infos essentielles de {animal.nom} (vaccins, traitements, poids, alimentation…), à partager avec un pet-sitter, un proche ou un vétérinaire — sans connexion requise.</p>
+                        <button onClick={toggleShare} style={{ width: '100%', padding: '8px 12px', background: animal.shareEnabled ? '#fee2e2' : '#10b981', color: animal.shareEnabled ? '#ef4444' : 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                            {animal.shareEnabled ? '🔒 Désactiver le partage' : '🔗 Activer le partage'}
+                        </button>
+                        {animal.shareEnabled && (
+                            <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                                    <ShareQRCode size={140} value={shareUrl} />
+                                </div>
+                                <button onClick={copyShareLink} style={{ padding: '8px 12px', background: shareLinkCopied ? '#d1fae5' : '#f3f4f6', color: shareLinkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                                    {shareLinkCopied ? '✅ Lien copié !' : '🔗 Copier le lien'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );

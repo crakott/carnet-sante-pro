@@ -7,8 +7,9 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 - [ ] **Slots AdSense** : remplacer les 5 occurrences de `xxxxxxxxxx` dans `index.html` par les vrais IDs de slot depuis le tableau de bord AdSense
 - [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
 - [ ] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
-  Console > Firestore Database > Règles (la recherche vétérinaire par nom + le nouvel onglet
-  Chirurgies nécessitent les nouvelles règles ci-dessous)
+  Console > Firestore Database > Règles (la recherche vétérinaire par nom, le nouvel onglet
+  Chirurgies et la "Fiche de garde" partagée par QR code nécessitent les nouvelles règles
+  ci-dessous)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
 - [ ] **AdSense — repo `crakott.github.io` (hors périmètre de cet agent)** : la page de
   redirection `index.html` de ce repo contient encore le mauvais ID éditeur
@@ -87,6 +88,12 @@ En plus des champs de profil existants (`nom`, `espece`, `race`, `sexe`, `dateNa
 - `documents` : tableau de documents scannés par le propriétaire (`type`, `nom`, `date`,
   `photo` en base64) — carnet de vaccination, ordonnances, certificats, analyses, factures…
   Réservé au propriétaire (non accessible au vétérinaire)
+- `shareEnabled` : booléen activé par le propriétaire depuis l'onglet "Dossier" (carte
+  "🔗 Fiche de garde") pour générer un lien/QR code public, en lecture seule, vers une
+  fiche résumée de l'animal (profil, vaccins, traitements, chirurgies, poids,
+  alimentation, observations — sans budget ni documents). Le lien
+  (`?share=<animalId>`) ouvre `SharedDossierView` sans authentification ; voir la règle
+  Firestore `allow get` ci-dessous
 
 ## Règles Firestore (à jour)
 
@@ -109,6 +116,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids']);
+
+      // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
+      // a activé le partage via un lien/QR code (champ shareEnabled)
+      allow get: if resource.data.shareEnabled == true;
     }
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;

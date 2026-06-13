@@ -13,6 +13,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids']);
+
+      // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
+      // a activé le partage via un lien/QR code (champ shareEnabled)
+      allow get: if resource.data.shareEnabled == true;
     }
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
