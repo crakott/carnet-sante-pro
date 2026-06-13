@@ -526,22 +526,32 @@
             });
         }
 
-        // Request notification permission and schedule local reminders via SW
+        // Send local push notifications for due/overdue reminders via the service worker.
+        // Long-delay setTimeout in the SW is unreliable (the browser can kill the worker before
+        // it fires), so instead we notify immediately for anything due today, tomorrow or
+        // overdue, and re-check every time the app is opened — deduping per day via
+        // localStorage so the same reminder doesn't notify twice on the same day.
         const scheduleReminders = async (reminders) => {
             if (!('Notification' in window) || !navigator.serviceWorker) return;
-            if (Notification.permission === 'default') await Notification.requestPermission();
             if (Notification.permission !== 'granted') return;
             const reg = await navigator.serviceWorker.ready;
+            const today = new Date().toDateString();
+            let notified = {};
+            try { notified = JSON.parse(localStorage.getItem('notifiedReminders') || '{}'); } catch (e) { notified = {}; }
+            notified = Object.fromEntries(Object.entries(notified).filter(([, d]) => d === today));
             reminders.forEach(r => {
+                if (r.daysUntil > 1) return;
+                const key = `${r.animal}|${r.type}|${r.nom}|${r.daysUntil}`;
+                if (notified[key] === today) return;
                 const label = r.type === 'vaccin' ? '💉' : r.type === 'medicament' ? '💊' : r.type === 'antiparasitaire' ? '🦟' : '🪱';
-                const delayMs = Math.max(0, (r.daysUntil - 1)) * 86400 * 1000;
                 reg.active?.postMessage({
                     type: 'SCHEDULE_NOTIFICATION',
                     title: `${label} Rappel — ${r.animal}`,
                     body: `${r.nom} — ${formatReminderDelay(r.daysUntil)}`,
-                    delay: delayMs,
                 });
+                notified[key] = today;
             });
+            localStorage.setItem('notifiedReminders', JSON.stringify(notified));
         };
 
         // Main App Component
@@ -760,6 +770,8 @@
 
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: isDesktop ? 0 : '70px' }}>
                         {!isDesktop && <MobileHeader setActiveTab={setActiveTab} />}
+
+                        <NotificationPrompt animals={animals} reminders={reminders} />
 
                         {/* Reminders Banner */}
                         {reminders.length > 0 && (
@@ -1349,6 +1361,58 @@
                         <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>🐾 Carnet Santé</h1>
                     </div>
                     <button onClick={() => setActiveTab('parametres')} title="Paramètres" style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>⚙️</button>
+                </div>
+            );
+        }
+
+        // Onboarding card inviting the user to enable push notifications for reminders,
+        // shown once until the user accepts, dismisses ("Plus tard") or the browser
+        // already has a permission decision (granted/denied).
+        function NotificationPrompt({ animals, reminders }) {
+            const supported = 'Notification' in window && 'serviceWorker' in navigator;
+            const [permission, setPermission] = React.useState(supported ? Notification.permission : 'unsupported');
+            const [dismissed, setDismissed] = React.useState(localStorage.getItem('notifPromptDismissed') === 'true');
+
+            if (!supported || permission !== 'default' || dismissed || animals.length === 0) return null;
+
+            const sample = reminders[0];
+            const previewBody = sample
+                ? `${sample.nom} de ${sample.animal} 🐾 — ${formatReminderDelay(sample.daysUntil)}`
+                : `Vaccin antirabique de ${animals[0].nom} 🐾 — Prévu dans 5 jours`;
+
+            const dismiss = () => {
+                localStorage.setItem('notifPromptDismissed', 'true');
+                setDismissed(true);
+            };
+
+            const handleEnable = async () => {
+                await Notification.requestPermission();
+                setPermission(Notification.permission);
+                dismiss();
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ background: '#111827', color: 'white', borderRadius: '12px', padding: '24px', margin: '16px', textAlign: 'center' }}>
+                    <h2 style={{ fontSize: '19px', fontWeight: '700', marginBottom: '16px' }}>
+                        Reçois tous les rappels pour {animals[0].nom} 🔔
+                    </h2>
+                    <div style={{ background: '#1f2937', border: '1px solid #374151', borderRadius: '10px', padding: '12px 14px', textAlign: 'left', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '18px' }}>🐾</span>
+                            <strong style={{ fontSize: '12px', letterSpacing: '0.5px', color: '#9ca3af' }}>CARNET SANTÉ PRO</strong>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.4', color: '#f3f4f6' }}>{previewBody}. On te prévient à temps !</p>
+                    </div>
+                    <div style={{ textAlign: 'left', marginBottom: '20px', fontSize: '14px', lineHeight: '1.8' }}>
+                        <p style={{ margin: 0 }}>✅ Vaccins et traitements rappelés à temps</p>
+                        <p style={{ margin: 0 }}>✅ Désactivable à tout moment dans Paramètres</p>
+                    </div>
+                    <button onClick={handleEnable} style={{ width: '100%', padding: '14px', background: '#10b981', color: 'white', border: 'none', borderRadius: '999px', fontWeight: '700', fontSize: '15px', cursor: 'pointer', marginBottom: '12px' }}>
+                        🔔 Activer les rappels
+                    </button>
+                    <button onClick={dismiss} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '14px', textDecoration: 'underline' }}>
+                        Plus tard
+                    </button>
                 </div>
             );
         }
@@ -3360,6 +3424,15 @@
             const [profileMsg, setProfileMsg] = React.useState('');
             React.useEffect(() => setProfile(userProfile), [userProfile]);
 
+            const notifSupported = 'Notification' in window && 'serviceWorker' in navigator;
+            const [notifPermission, setNotifPermission] = React.useState(notifSupported ? Notification.permission : 'unsupported');
+
+            const handleEnableNotifications = async () => {
+                await Notification.requestPermission();
+                setNotifPermission(Notification.permission);
+                localStorage.removeItem('notifPromptDismissed');
+            };
+
             const copyAppLink = () => {
                 navigator.clipboard.writeText(appUrl);
                 setLinkCopied(true);
@@ -3514,6 +3587,26 @@
                         <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                             💾 Sauvegarder
                         </button>
+                    </div>
+
+                    {/* ── Notifications ── */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>🔔 Notifications</h3>
+                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>Recevez une notification sur votre téléphone quand un vaccin, traitement ou médicament arrive à échéance.</p>
+                        {notifPermission === 'granted' && (
+                            <p style={{ fontSize: '14px', color: '#10b981', fontWeight: '600' }}>✅ Les rappels sont activés sur cet appareil.</p>
+                        )}
+                        {notifPermission === 'denied' && (
+                            <p style={{ fontSize: '14px', color: '#ef4444' }}>🚫 Les notifications sont bloquées pour cette application. Réactivez-les dans les réglages de notifications de votre navigateur ou de votre téléphone.</p>
+                        )}
+                        {notifPermission === 'default' && (
+                            <button onClick={handleEnableNotifications} style={{ padding: '11px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                🔔 Activer les rappels
+                            </button>
+                        )}
+                        {notifPermission === 'unsupported' && (
+                            <p style={{ fontSize: '13px', color: '#6b7280' }}>Les notifications ne sont pas prises en charge par ce navigateur.</p>
+                        )}
                     </div>
 
                     {/* ── Export / Import ── */}

@@ -1,4 +1,4 @@
-const CACHE = 'carnet-sante-v14';
+const CACHE = 'carnet-sante-v15';
 const PRECACHE = [
   './',
   'manifest.json',
@@ -81,19 +81,17 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
-// Receive scheduled reminder messages from the app
+// Receive reminder notification requests from the app and display them right away
 self.addEventListener('message', e => {
   if (e.data?.type === 'SCHEDULE_NOTIFICATION') {
-    const { title, body, delay } = e.data;
-    setTimeout(() => {
-      self.registration.showNotification(title, {
-        body,
-        icon: 'icons/icon-192.png',
-        badge: 'icons/icon-192.png',
-        tag: 'reminder',
-        requireInteraction: false,
-        vibrate: [200, 100, 200],
-      });
-    }, delay);
+    const { title, body } = e.data;
+    self.registration.showNotification(title, {
+      body,
+      icon: 'icons/icon-192.png',
+      badge: 'icons/icon-192.png',
+      tag: 'reminder',
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+    });
   }
 });
