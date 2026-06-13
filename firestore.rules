@@ -12,17 +12,43 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
       // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
-      // aux actes médicaux (pas le profil, le budget, les documents ou les partages)
+      // aux actes médicaux (pas le profil, le budget ou les partages). L'écriture sur
+      // "documents" est limitée à l'ajout d'ordonnances/certificats/comptes-rendus
+      // (source: 'veterinaire'), pas aux documents du propriétaire
       allow read: if request.auth != null
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active';
       allow update: if request.auth != null
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids']);
+             .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
       // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
       // a activé le partage via un lien/QR code (champ shareEnabled)
       allow get: if resource.data.shareEnabled == true;
+    }
+
+    // Messagerie sécurisée propriétaire <-> vétérinaire, par animal
+    match /animals/{animalId}/messages/{messageId} {
+      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire abonné
+      allow read: if request.auth != null
+        && (
+          request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
+          || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+              && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
+          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+        );
+
+      // Création : même conditions d'accès, et l'auteur déclaré ("from") doit correspondre
+      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire abonné = 'veterinaire')
+      allow create: if request.auth != null
+        && (
+          (request.resource.data.from == 'proprietaire'
+            && (request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
+                || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+                    && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)))
+          || (request.resource.data.from == 'veterinaire'
+              && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active')
+        );
     }
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;

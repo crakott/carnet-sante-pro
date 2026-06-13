@@ -8,8 +8,9 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 - [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
 - [ ] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
   Console > Firestore Database > Règles (la recherche vétérinaire par nom, le nouvel onglet
-  Chirurgies, la "Fiche de garde" partagée par QR code et le "Foyer partagé" nécessitent les
-  nouvelles règles ci-dessous)
+  Chirurgies, la "Fiche de garde" partagée par QR code, le "Foyer partagé", les ordonnances
+  émises par le vétérinaire et la messagerie sécurisée nécessitent les nouvelles règles
+  ci-dessous)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
 - [ ] **AdSense — repo `crakott.github.io` (hors périmètre de cet agent)** : la page de
   redirection `index.html` de ce repo contient encore le mauvais ID éditeur
@@ -53,8 +54,25 @@ l'app standard.
   animal (pas seulement ceux ayant un `identifiant`).
 - **Permissions** : lecture complète du dossier + ajout de vaccins, médicaments, chirurgies/petites
   interventions, antiparasitaires, vermifuges, observations et pesées. Pas d'accès au profil de
-  base (nom, race, sexe…), au budget, aux documents, ni aux partages — ces champs restent
-  réservés au propriétaire.
+  base (nom, race, sexe…), au budget, ni aux partages — ces champs restent réservés au
+  propriétaire. Le vétérinaire peut en plus ajouter des documents (ordonnances, certificats,
+  comptes-rendus — onglet "📝 Ordonnances", voir ci-dessous), mais pas modifier/supprimer les
+  documents existants du propriétaire.
+- **Validation professionnelle** : chaque acte ajouté ou modifié par un vétérinaire abonné
+  (vaccin, médicament, chirurgie, antiparasitaire/vermifuge, observation, pesée) reçoit un champ
+  `validePar: { nom, prenom, date }` (nom/prénom du vétérinaire), affiché côté propriétaire comme
+  un badge "✅ Validé par Dr. X" (composant `ValidationBadge`).
+- **Ordonnances numériques** (onglet "📝 Ordonnances" de l'espace pro, `VetOrdonnanceTab`) : le
+  vétérinaire génère une ordonnance, un certificat ou un compte-rendu de consultation (titre,
+  date, contenu texte), ajouté directement au tableau `documents` de l'animal avec
+  `source: 'veterinaire'` et `veterinaire: { nom, prenom }`. Le document apparaît automatiquement
+  dans l'onglet "Documents" du propriétaire, avec un badge "🩺 Émis par Dr. X" et son contenu.
+- **Messagerie sécurisée** (onglet "💬 Messagerie") : fil de discussion par animal
+  (`animals/{animalId}/messages`), entre le propriétaire (et les membres de son foyer) et tout
+  vétérinaire abonné consultant le dossier. Chaque message a `from` (`'proprietaire'` ou
+  `'veterinaire'`), `authorNom`/`authorPrenom`, `text` et/ou `photo` (base64) et `date`. Visible
+  côté propriétaire dans la carte "Dossier" "💬 Messagerie vétérinaire" (groupe "Quotidien") et
+  dans le menu desktop, et côté vétérinaire dans l'onglet "💬 Messagerie" de l'espace pro.
 
 ## Document `settings/{uid}`
 
@@ -84,15 +102,22 @@ En plus des champs de profil existants (`nom`, `espece`, `race`, `sexe`, `dateNa
 - `proprietaireNom`, `proprietairePrenom` : copie du nom/prénom du propriétaire
   (`settings/{userId}`) au moment de la création de l'animal, utilisée par la recherche
   vétérinaire par nom
+- `validePar` (optionnel, sur chaque élément des tableaux `vaccins`, `medicaments`,
+  `chirurgies`, `antiparasitaires`, `vermifuges`, `observations`, `poids`) : `{ nom, prenom,
+  date }` du vétérinaire abonné ayant ajouté ou modifié cet élément depuis l'espace pro.
+  Affiché côté propriétaire comme badge "✅ Validé par Dr. X"
 - `chirurgies` : tableau des chirurgies et petites interventions (`nom`, `date`, `notes`),
   visible et modifiable par le propriétaire (onglet "🔪 Chirurgies") et par le vétérinaire
   abonné (onglet du même nom dans l'espace pro)
 - `poidsObjectif` : poids cible (kg, nombre), défini par le propriétaire dans l'onglet
   "⚖️ Poids" ("🎯 Objectif de poids"). Affiché comme ligne pointillée sur la courbe de poids
   et utilisé pour calculer la barre de progression vers l'objectif
-- `documents` : tableau de documents scannés par le propriétaire (`type`, `nom`, `date`,
-  `photo` en base64) — carnet de vaccination, ordonnances, certificats, analyses, factures…
-  Réservé au propriétaire (non accessible au vétérinaire)
+- `documents` : tableau de documents (`type`, `nom`, `date`, `photo` en base64) — carnet de
+  vaccination, ordonnances, certificats, analyses, factures… Ajoutés par le propriétaire
+  (scan/photo), ou par un vétérinaire abonné via l'onglet "📝 Ordonnances" (`type`:
+  `'ordonnance' | 'certificat' | 'compte-rendu'`, `contenu` : texte, `source: 'veterinaire'`,
+  `veterinaire: { nom, prenom }`). Le vétérinaire peut uniquement ajouter des documents
+  (`source: 'veterinaire'`), pas modifier/supprimer ceux du propriétaire
 - `shareEnabled` : booléen activé par le propriétaire depuis l'onglet "Dossier" (carte
   "🔗 Fiche de garde") pour générer un lien/QR code public, en lecture seule, vers une
   fiche résumée de l'animal (profil, vaccins, traitements, chirurgies, poids,
@@ -144,17 +169,43 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
       // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
-      // aux actes médicaux (pas le profil, le budget, les documents ou les partages)
+      // aux actes médicaux (pas le profil, le budget ou les partages). L'écriture sur
+      // "documents" est limitée à l'ajout d'ordonnances/certificats/comptes-rendus
+      // (source: 'veterinaire'), pas aux documents du propriétaire
       allow read: if request.auth != null
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active';
       allow update: if request.auth != null
         && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids']);
+             .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
       // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
       // a activé le partage via un lien/QR code (champ shareEnabled)
       allow get: if resource.data.shareEnabled == true;
+    }
+
+    // Messagerie sécurisée propriétaire <-> vétérinaire, par animal
+    match /animals/{animalId}/messages/{messageId} {
+      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire abonné
+      allow read: if request.auth != null
+        && (
+          request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
+          || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+              && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
+          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+        );
+
+      // Création : même conditions d'accès, et l'auteur déclaré ("from") doit correspondre
+      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire abonné = 'veterinaire')
+      allow create: if request.auth != null
+        && (
+          (request.resource.data.from == 'proprietaire'
+            && (request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
+                || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+                    && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)))
+          || (request.resource.data.from == 'veterinaire'
+              && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active')
+        );
     }
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;

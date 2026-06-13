@@ -76,7 +76,7 @@
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/app/+esm";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
-        import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
+        import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
         import { getFunctions, httpsCallable } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/functions/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
@@ -319,6 +319,7 @@
             { id: 'poids', label: '⚖️ Poids', color: '#10b981', group: 'Santé' },
             { id: 'aliment', label: '🍎 Alimentation', color: '#f59e0b', group: 'Quotidien' },
             { id: 'notes', label: '📋 Observations', color: '#0891b2', group: 'Quotidien' },
+            { id: 'messages', label: '💬 Messagerie vétérinaire', color: '#0891b2', group: 'Quotidien' },
             { id: 'journal', label: '📖 Journal de vie', color: '#ec4899', group: 'Quotidien' },
             { id: 'documents', label: '📄 Documents', color: '#6366f1', group: 'Quotidien' },
             { id: 'videos', label: '🎥 Vidéos', color: '#ec4899', group: 'Quotidien' },
@@ -396,6 +397,9 @@
                 case 'notes': {
                     const n = (animal.observations || []).length;
                     return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+                }
+                case 'messages': {
+                    return { text: 'Échanger avec le vétérinaire', icon: '💬', iconColor: '#0891b2' };
                 }
                 case 'journal': {
                     const n = (animal.vaccins || []).length + (animal.chirurgies || []).length
@@ -1341,6 +1345,7 @@
             { id: 'medicaments', label: '💊 Médication' },
             { id: 'chirurgies', label: '🔪 Chirurgies' },
             { id: 'notes', label: '📋 Observations' },
+            { id: 'messages', label: '💬 Messagerie' },
             { id: 'journal', label: '📖 Journal de vie' },
             { id: 'documents', label: '📄 Documents' },
             { id: 'videos', label: '🎥 Vidéos' },
@@ -1609,6 +1614,8 @@
                 return <ChirurgiesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'notes') {
                 return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+            } else if (activeTab === 'messages') {
+                return <MessagesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} db={props.db} currentRole="proprietaire" authorProfile={props.userProfile} />;
             } else if (activeTab === 'journal') {
                 return <JournalTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />;
             } else if (activeTab === 'documents') {
@@ -1985,6 +1992,7 @@
                                     <p style={{ fontWeight: '600' }}>{t.nom}</p>
                                     <p style={{ color: '#6b7280', fontSize: '14px' }}>Dernier : {formatDate(t.dernierTraitement)} · Prochain : <strong style={{ color }}>{formatDate(t.prochainTraitement)}</strong></p>
                                     <p style={{ color: '#9ca3af', fontSize: '12px' }}>Tous les {t.intervalMois} mois</p>
+                                    <ValidationBadge validePar={t.validePar} />
                                 </EditableRow>
                             </div>
                         )) : (
@@ -2049,6 +2057,17 @@
                         {item.id && onDelete && <button onClick={onDelete} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><DeleteIcon size={16} /></button>}
                     </div>
                 </React.Fragment>
+            );
+        }
+
+        // Small green pill shown on a medical entry that a subscribed vet added or edited
+        function ValidationBadge({ validePar }) {
+            if (!validePar) return null;
+            const vetName = [validePar.prenom, validePar.nom].filter(Boolean).join(' ') || 'vétérinaire';
+            return (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', padding: '3px 8px', background: '#d1fae5', color: '#047857', fontSize: '11px', fontWeight: '700', borderRadius: '999px' }}>
+                    ✅ Validé par Dr. {vetName}{validePar.date ? ` • ${formatDate(validePar.date)}` : ''}
+                </span>
             );
         }
 
@@ -2187,6 +2206,7 @@
                                     >
                                         <p style={{ fontWeight: '600' }}>{v.nom}</p>
                                         <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {formatDate(v.date)}{v.rappel ? ` | Rappel: ${formatDate(v.rappel)}` : ''}</p>
+                                        <ValidationBadge validePar={v.validePar} />
                                     </EditableRow>
                                 </div>
                             ))
@@ -2301,6 +2321,7 @@
                                                     {isActive ? '✅ En cours' : '⏱️ Fini'}
                                                 </span>
                                             )}
+                                            <ValidationBadge validePar={m.validePar} />
                                         </EditableRow>
                                     </div>
                                 );
@@ -2505,6 +2526,7 @@
                                         >
                                             <p style={{ fontWeight: '600' }}>{TYPE_LABELS[o.type] || o.type}</p>
                                             <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(o.date)}</p>
+                                            <ValidationBadge validePar={o.validePar} />
                                         </EditableRow>
                                     </div>
                                     {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
@@ -2686,6 +2708,7 @@
                                         >
                                             <p style={{ fontWeight: '600' }}>{c.nom}</p>
                                             <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(c.date)}</p>
+                                            <ValidationBadge validePar={c.validePar} />
                                         </EditableRow>
                                     </div>
                                     {c.notes && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{c.notes}</p>}
@@ -2703,6 +2726,7 @@
             vaccin: '💉 Carnet de vaccination',
             ordonnance: '📝 Ordonnance',
             certificat: '📜 Certificat / Attestation',
+            'compte-rendu': '🗒️ Compte-rendu de consultation',
             analyse: '🔬 Analyse / Résultat',
             facture: '🧾 Facture',
             assurance: '🛡️ Assurance / Mutuelle',
@@ -2798,6 +2822,12 @@
                                         <p style={{ fontWeight: '600', fontSize: '14px' }}>{DOCUMENT_TYPES[d.type] || d.type}</p>
                                         {d.nom && <p style={{ fontSize: '13px', color: '#374151' }}>{d.nom}</p>}
                                         <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(d.date)}</p>
+                                        {d.contenu && <p style={{ fontSize: '13px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{d.contenu}</p>}
+                                        {d.source === 'veterinaire' && (
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', padding: '3px 8px', background: '#d1fae5', color: '#047857', fontSize: '11px', fontWeight: '700', borderRadius: '999px' }}>
+                                                🩺 Émis par Dr. {[d.veterinaire?.prenom, d.veterinaire?.nom].filter(Boolean).join(' ') || 'vétérinaire'}
+                                            </span>
+                                        )}
                                     </EditableRow>
                                 </div>
                             ))
@@ -3136,12 +3166,125 @@
                                     >
                                         <h4 style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{p.valeur} kg</h4>
                                         <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(p.date)}</p>
+                                        <ValidationBadge validePar={p.validePar} />
                                     </EditableRow>
                                 </div>
                             ))
                         ) : (
                             <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucune mesure enregistrée</p>
                         )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Secure messaging thread between the owner and a subscribed vet, stored in the
+        // animals/{animalId}/messages subcollection. Shared between the owner app and VetApp:
+        // currentRole/authorProfile determine which side ("proprietaire" or "veterinaire") is speaking.
+        function MessagesTab({ animal, animals, selectedAnimal, setSelectedAnimal, db, currentRole, authorProfile }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const [messages, setMessages] = React.useState([]);
+            const [text, setText] = React.useState('');
+            const [photoBase64, setPhotoBase64] = React.useState('');
+            const [fileError, setFileError] = React.useState('');
+            const [sending, setSending] = React.useState(false);
+            const bottomRef = React.useRef(null);
+
+            React.useEffect(() => {
+                const q = query(collection(db, 'animals', animal.id, 'messages'), orderBy('date'));
+                const unsub = onSnapshot(q, (snap) => {
+                    setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                }, (err) => setFileError("Erreur lors du chargement des messages : " + err.message));
+                return () => unsub();
+            }, [animal.id]);
+
+            React.useEffect(() => {
+                bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages]);
+
+            const handlePhoto = (file) => {
+                setFileError('');
+                readImageAsResizedDataUrl(file, 1200, 0.8, setPhotoBase64, () => setFileError('Impossible de lire ce fichier.'));
+            };
+
+            const handleSend = async () => {
+                if (!text.trim() && !photoBase64) return;
+                setSending(true);
+                setFileError('');
+                try {
+                    await addDoc(collection(db, 'animals', animal.id, 'messages'), {
+                        from: currentRole,
+                        authorNom: authorProfile?.nom || '',
+                        authorPrenom: authorProfile?.prenom || '',
+                        text: text.trim(),
+                        photo: photoBase64 || null,
+                        date: new Date().toISOString(),
+                    });
+                    setText('');
+                    setPhotoBase64('');
+                } catch (err) {
+                    setFileError("Erreur lors de l'envoi : " + err.message);
+                } finally {
+                    setSending(false);
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
+
+                    <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '16px', marginBottom: '12px', minHeight: '260px', maxHeight: '50vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {messages.length === 0 ? (
+                            <p style={{ color: '#9ca3af', fontSize: '14px', textAlign: 'center', margin: 'auto' }}>
+                                Aucun message pour le moment. Posez une question {currentRole === 'proprietaire' ? 'au vétérinaire' : 'au propriétaire'}, avec une photo si besoin.
+                            </p>
+                        ) : messages.map(m => {
+                            const mine = m.from === currentRole;
+                            const authorName = [m.authorPrenom, m.authorNom].filter(Boolean).join(' ');
+                            return (
+                                <div key={m.id} style={{ alignSelf: mine ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                                    <div style={{ background: mine ? '#10b981' : '#f3f4f6', color: mine ? 'white' : '#1f2937', borderRadius: '12px', padding: '10px 14px', fontSize: '14px' }}>
+                                        {!mine && (
+                                            <p style={{ fontWeight: '700', fontSize: '12px', marginBottom: '4px', color: m.from === 'veterinaire' ? '#059669' : '#374151' }}>
+                                                {m.from === 'veterinaire' ? `🩺 Dr. ${authorName || 'Vétérinaire'}` : (authorName || 'Propriétaire')}
+                                            </p>
+                                        )}
+                                        {m.text && <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{m.text}</p>}
+                                        {m.photo && <img src={m.photo} alt="Pièce jointe" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: m.text ? '8px' : 0 }} />}
+                                    </div>
+                                    <p style={{ fontSize: '11px', color: '#9ca3af', margin: '4px 6px 0', textAlign: mine ? 'right' : 'left' }}>{new Date(m.date).toLocaleString('fr-FR')}</p>
+                                </div>
+                            );
+                        })}
+                        <div ref={bottomRef} />
+                    </div>
+
+                    {fileError && <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '8px' }}>{fileError}</p>}
+
+                    {photoBase64 && (
+                        <div style={{ marginBottom: '8px', position: 'relative', display: 'inline-block' }}>
+                            <img src={photoBase64} alt="Aperçu" style={{ maxHeight: '100px', borderRadius: '8px' }} />
+                            <button onClick={() => setPhotoBase64('')} style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontWeight: '700' }}>×</button>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                        <label style={{ padding: '10px', background: '#f3f4f6', borderRadius: '6px', cursor: 'pointer', fontSize: '18px' }}>
+                            📎
+                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handlePhoto(e.target.files[0])} />
+                        </label>
+                        <textarea
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                            placeholder="Écrire un message…"
+                            style={{ flex: 1, padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', resize: 'none', minHeight: '44px', fontFamily: 'inherit', fontSize: '14px' }}
+                        />
+                        <button onClick={handleSend} disabled={sending || (!text.trim() && !photoBase64)} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', opacity: (sending || (!text.trim() && !photoBase64)) ? 0.5 : 1 }}>
+                            Envoyer
+                        </button>
                     </div>
                 </div>
             );
@@ -4007,7 +4150,76 @@
             { id: 'chirurgies', icon: '🔪', label: 'Chirurgies' },
             { id: 'notes', icon: '📋', label: 'Observations' },
             { id: 'poids', icon: '⚖️', label: 'Poids' },
+            { id: 'ordonnances', icon: '📝', label: 'Ordonnances' },
+            { id: 'messages', icon: '💬', label: 'Messagerie' },
         ];
+
+        const ORDONNANCE_TYPES = {
+            ordonnance: '📝 Ordonnance',
+            certificat: '📜 Certificat / Attestation',
+            'compte-rendu': '🗒️ Compte-rendu de consultation',
+        };
+
+        // Vet space: generate an ordonnance/certificat/compte-rendu, added straight to the
+        // owner's "Documents" tab (tagged with the issuing vet's name)
+        function VetOrdonnanceTab({ animal, addAnimalItem, vetProfile }) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const [type, setType] = React.useState('ordonnance');
+            const [titre, setTitre] = React.useState('');
+            const [date, setDate] = React.useState(todayStr);
+            const [contenu, setContenu] = React.useState('');
+
+            const handleAdd = () => {
+                if (!contenu.trim()) return;
+                addAnimalItem(animal, 'documents', {
+                    type, nom: titre, date, contenu,
+                    source: 'veterinaire',
+                    veterinaire: { nom: vetProfile.nom, prenom: vetProfile.prenom },
+                });
+                setTitre('');
+                setContenu('');
+                setDate(todayStr);
+                setType('ordonnance');
+            };
+
+            const issued = [...(animal.documents || [])].filter(d => d.source === 'veterinaire').reverse();
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    <AnimalProfileCard animal={animal} />
+
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #6366f1' }}>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Générer un document</h3>
+                        <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
+                            <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                {Object.entries(ORDONNANCE_TYPES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                            </select>
+                            <input type="text" placeholder="Titre (ex. Antibiothérapie, Certificat de bonne santé…)" value={titre} onChange={(e) => setTitre(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                            <textarea placeholder="Contenu (posologie, observations, conclusion…)" value={contenu} onChange={(e) => setContenu(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '140px', fontFamily: 'inherit', fontSize: '14px' }} />
+                        </div>
+                        <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '12px' }}>Le document sera ajouté directement au dossier "Documents" du propriétaire, signé en votre nom.</p>
+                        <button onClick={handleAdd} disabled={!contenu.trim()} style={{ padding: '10px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', cursor: contenu.trim() ? 'pointer' : 'not-allowed', opacity: contenu.trim() ? 1 : 0.5, fontWeight: '600' }}>
+                            ➕ Ajouter au dossier
+                        </button>
+                    </div>
+
+                    <h3 style={{ marginBottom: '12px', fontWeight: '700', fontSize: '15px' }}>Documents émis pour cet animal</h3>
+                    <div style={{ display: 'grid', gap: '12px' }}>
+                        {issued.length > 0 ? issued.map((d, i) => (
+                            <div key={d.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #6366f1' }}>
+                                <p style={{ fontWeight: '600', fontSize: '14px' }}>{ORDONNANCE_TYPES[d.type] || DOCUMENT_TYPES[d.type] || d.type}</p>
+                                {d.nom && <p style={{ fontSize: '13px', color: '#374151' }}>{d.nom}</p>}
+                                <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(d.date)}</p>
+                                {d.contenu && <p style={{ fontSize: '13px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{d.contenu}</p>}
+                            </div>
+                        )) : (
+                            <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun document émis pour le moment</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
 
         // Dashboard overview for the vet space: aggregate stats and upcoming reminders across all animals
         // (a subscribed veterinarian is allowed to read every animal document, per Firestore rules)
@@ -4258,8 +4470,13 @@
                 }
             };
 
+            // Medical acts added/edited by a subscribed vet are tagged with a "validated by" stamp,
+            // shown to the owner as a "✅ Validé par Dr. X" badge
+            const validationStamp = () => ({ nom: vetProfile.nom, prenom: vetProfile.prenom, date: new Date().toISOString().split('T')[0] });
+
             const addAnimalItem = (animalObj, type, item) => {
-                saveAnimal({ ...animalObj, [type]: [...(animalObj[type] || []), { ...item, id: Date.now() }] });
+                const extra = type === 'documents' ? {} : { validePar: validationStamp() };
+                saveAnimal({ ...animalObj, [type]: [...(animalObj[type] || []), { ...item, ...extra, id: Date.now() }] });
             };
 
             const deleteAnimalItem = (animalObj, type, itemId) => {
@@ -4267,7 +4484,8 @@
             };
 
             const updateAnimalItem = (animalObj, type, itemId, updates) => {
-                saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).map(i => i.id === itemId ? { ...i, ...updates } : i) });
+                const extra = type === 'documents' ? {} : { validePar: validationStamp() };
+                saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).map(i => i.id === itemId ? { ...i, ...updates, ...extra } : i) });
             };
 
             if (subStatus === null) {
@@ -4438,6 +4656,8 @@
                                 {activeTab === 'chirurgies' && <ChirurgiesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                                 {activeTab === 'notes' && <NotesTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
                                 {activeTab === 'poids' && <PoidsTab animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />}
+                                {activeTab === 'ordonnances' && <VetOrdonnanceTab animal={animal} addAnimalItem={addAnimalItem} vetProfile={vetProfile} />}
+                                {activeTab === 'messages' && <MessagesTab animal={animal} db={db} currentRole="veterinaire" authorProfile={vetProfile} />}
                             </div>
                         )}
                         </>)}
