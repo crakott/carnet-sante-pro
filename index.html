@@ -2147,13 +2147,13 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
-            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: todayStr });
+            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: todayStr, lot: '' });
 
             const handleAddVaccin = () => {
                 if (newVaccin.nom && newVaccin.date) {
                     const rappel = new Date(new Date(newVaccin.date).getTime() + 365 * 86400000).toISOString().split('T')[0];
-                    addAnimalItem(animal, 'vaccins', { nom: newVaccin.nom, date: newVaccin.date, rappel });
-                    setNewVaccin({ nom: '', date: todayStr });
+                    addAnimalItem(animal, 'vaccins', { nom: newVaccin.nom, date: newVaccin.date, rappel, lot: newVaccin.lot });
+                    setNewVaccin({ nom: '', date: todayStr, lot: '' });
                     setShowForm(false);
                 }
             };
@@ -2175,6 +2175,7 @@
                                 </select>
                                 <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({ ...newVaccin, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({ ...newVaccin, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="text" placeholder="N° de lot (facultatif)" value={newVaccin.lot} onChange={(e) => setNewVaccin({ ...newVaccin, lot: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                             </div>
                             <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '12px' }}>Le rappel sera calculé automatiquement 1 an après la date du vaccin.</p>
                             <div style={{ display: 'flex', gap: '8px' }}>
@@ -2199,13 +2200,15 @@
                                         fields={[
                                             { key: 'nom', label: 'Nom du vaccin' },
                                             { key: 'date', label: 'Date du vaccin', type: 'date' },
-                                            { key: 'rappel', label: 'Date de rappel', type: 'date' }
+                                            { key: 'rappel', label: 'Date de rappel', type: 'date' },
+                                            { key: 'lot', label: 'N° de lot' }
                                         ]}
                                         onSave={(vals) => updateAnimalItem(animal, 'vaccins', v.id, vals)}
                                         onDelete={() => deleteAnimalItem(animal, 'vaccins', v.id)}
                                     >
                                         <p style={{ fontWeight: '600' }}>{v.nom}</p>
                                         <p style={{ color: '#6b7280', fontSize: '14px' }}>Fait: {formatDate(v.date)}{v.rappel ? ` | Rappel: ${formatDate(v.rappel)}` : ''}</p>
+                                        {v.lot && <p style={{ color: '#6b7280', fontSize: '14px' }}>N° de lot : {v.lot}</p>}
                                         <ValidationBadge validePar={v.validePar} />
                                     </EditableRow>
                                 </div>
