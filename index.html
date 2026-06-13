@@ -100,6 +100,16 @@
             return months > 0 ? `${years} an${years > 1 ? 's' : ''} ${months} mois` : `${years} an${years > 1 ? 's' : ''}`;
         };
 
+        // Human-readable description of a reminder's due date, including overdue items
+        const formatReminderDelay = (daysUntil) => {
+            if (daysUntil < 0) {
+                const n = Math.abs(daysUntil);
+                return `en retard de ${n} jour${n > 1 ? 's' : ''}`;
+            }
+            if (daysUntil === 0) return `à faire aujourd'hui`;
+            return `dans ${daysUntil} jour${daysUntil > 1 ? 's' : ''}`;
+        };
+
         // Compute the number of days remaining until a date, with a display label and color
         const getCountdown = (dateStr) => {
             if (!dateStr) return null;
@@ -312,6 +322,7 @@
             { id: 'poids', label: '⚖️ Poids', color: '#10b981' },
             { id: 'aliment', label: '🍎 Alimentation', color: '#f59e0b' },
             { id: 'notes', label: '📋 Observations', color: '#0891b2' },
+            { id: 'journal', label: '📖 Journal de vie', color: '#ec4899' },
             { id: 'budget', label: '💰 Budget', color: '#f59e0b' }
         ];
 
@@ -364,6 +375,11 @@
                 case 'notes': {
                     const n = (animal.observations || []).length;
                     return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+                }
+                case 'journal': {
+                    const n = (animal.vaccins || []).length + (animal.chirurgies || []).length
+                        + (animal.medicaments || []).length + (animal.poids || []).length + (animal.observations || []).length;
+                    return n > 0 ? { text: `${n} souvenir(s)`, icon: '📖', iconColor: '#ec4899' } : { text: 'Aucun souvenir', ...none };
                 }
                 case 'budget': {
                     const total = (animal.budget || []).reduce((s, b) => s + b.montant, 0);
@@ -522,7 +538,7 @@
                 reg.active?.postMessage({
                     type: 'SCHEDULE_NOTIFICATION',
                     title: `${label} Rappel — ${r.animal}`,
-                    body: `${r.nom} : ${r.daysUntil} jour${r.daysUntil > 1 ? 's' : ''} restant${r.daysUntil > 1 ? 's' : ''}`,
+                    body: `${r.nom} — ${formatReminderDelay(r.daysUntil)}`,
                     delay: delayMs,
                 });
             });
@@ -682,43 +698,26 @@
                 });
             };
 
-            // Check Reminders across all animals, sorted by urgency
+            // Check Reminders across all animals, sorted by urgency. Includes items already
+            // overdue (negative daysUntil), not just upcoming ones, so nothing falls through the cracks.
             const getReminders = () => {
                 const reminders = [];
                 const today = new Date();
 
+                const checkItem = (type, animalNom, nom, dateStr, threshold) => {
+                    const target = new Date(dateStr);
+                    if (isNaN(target.getTime())) return;
+                    const daysUntil = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+                    if (daysUntil <= threshold) {
+                        reminders.push({ type, animal: animalNom, nom, daysUntil, urgent: daysUntil <= 1 });
+                    }
+                };
+
                 animals.forEach(animal => {
-                    (animal.vaccins || []).forEach(v => {
-                        const vaccineDate = new Date(v.rappel || v.date);
-                        const daysUntil = Math.ceil((vaccineDate - today) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= reminderSettings.vaccin && daysUntil > 0) {
-                            reminders.push({ type: 'vaccin', animal: animal.nom, nom: v.nom, daysUntil, urgent: daysUntil <= 1 });
-                        }
-                    });
-
-                    (animal.medicaments || []).forEach(m => {
-                        const medDate = new Date(m.dateFin);
-                        const daysUntil = Math.ceil((medDate - today) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= reminderSettings.medicament && daysUntil > 0) {
-                            reminders.push({ type: 'medicament', animal: animal.nom, nom: m.nom, daysUntil, urgent: daysUntil <= 1 });
-                        }
-                    });
-
-                    (animal.antiparasitaires || []).forEach(t => {
-                        const d = new Date(t.prochainTraitement);
-                        const daysUntil = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= (reminderSettings.antiparasitaire ?? 14) && daysUntil > 0) {
-                            reminders.push({ type: 'antiparasitaire', animal: animal.nom, nom: t.nom || 'Antiparasitaire', daysUntil, urgent: daysUntil <= 1 });
-                        }
-                    });
-
-                    (animal.vermifuges || []).forEach(t => {
-                        const d = new Date(t.prochainTraitement);
-                        const daysUntil = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= (reminderSettings.vermifuge ?? 14) && daysUntil > 0) {
-                            reminders.push({ type: 'vermifuge', animal: animal.nom, nom: t.nom || 'Vermifuge', daysUntil, urgent: daysUntil <= 1 });
-                        }
-                    });
+                    (animal.vaccins || []).forEach(v => checkItem('vaccin', animal.nom, v.nom, v.rappel || v.date, reminderSettings.vaccin));
+                    (animal.medicaments || []).forEach(m => checkItem('medicament', animal.nom, m.nom, m.dateFin, reminderSettings.medicament));
+                    (animal.antiparasitaires || []).forEach(t => checkItem('antiparasitaire', animal.nom, t.nom || 'Antiparasitaire', t.prochainTraitement, reminderSettings.antiparasitaire ?? 14));
+                    (animal.vermifuges || []).forEach(t => checkItem('vermifuge', animal.nom, t.nom || 'Vermifuge', t.prochainTraitement, reminderSettings.vermifuge ?? 14));
                 });
 
                 return reminders.sort((a, b) => a.daysUntil - b.daysUntil);
@@ -726,8 +725,9 @@
 
             // Open a pre-filled email so the user can send themselves a reminder
             const sendEmailReminder = (reminder) => {
-                const subject = `⚠️ Rappel: ${reminder.nom} expire dans ${reminder.daysUntil} jours`;
-                const body = `Bonjour,\n\nRappel: ${reminder.nom} pour ${reminder.animal} expire dans ${reminder.daysUntil} jours.\n\nVeuillez prendre les mesures nécessaires.\n\nCarnet Santé PRO`;
+                const delay = formatReminderDelay(reminder.daysUntil);
+                const subject = `⚠️ Rappel: ${reminder.nom} (${delay})`;
+                const body = `Bonjour,\n\nRappel: ${reminder.nom} pour ${reminder.animal} ${delay}.\n\nVeuillez prendre les mesures nécessaires.\n\nCarnet Santé PRO`;
                 window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             };
 
@@ -768,7 +768,7 @@
                                 {reminders.map((r, i) => (
                                     <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
                                         <div>
-                                            <span>{r.nom} ({r.animal}) - {r.daysUntil} jours restants</span>
+                                            <span>{r.nom} ({r.animal}) — {formatReminderDelay(r.daysUntil)}</span>
                                             {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
                                         </div>
                                         <button onClick={() => sendEmailReminder(r)} style={{ padding: '6px 12px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
@@ -1266,6 +1266,7 @@
             { id: 'medicaments', label: '💊 Médication' },
             { id: 'chirurgies', label: '🔪 Chirurgies' },
             { id: 'notes', label: '📋 Observations' },
+            { id: 'journal', label: '📖 Journal de vie' },
             { id: 'documents', label: '📄 Documents' },
             { id: 'videos', label: '🎥 Vidéos' },
             { id: 'poids', label: '⚖️ Poids' },
@@ -1427,6 +1428,8 @@
                 return <ChirurgiesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'notes') {
                 return <NotesTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+            } else if (activeTab === 'journal') {
+                return <JournalTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />;
             } else if (activeTab === 'documents') {
                 return <DocumentsTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'videos') {
@@ -2332,6 +2335,75 @@
             );
         }
 
+        // Chronological "life journal": medical events, weight, observations and birthdays in one timeline
+        function JournalTab({ animal, animals, selectedAnimal, setSelectedAnimal }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const events = [];
+
+            (animal.vaccins || []).forEach(v => v.date && events.push({ date: v.date, icon: '💉', title: `Vaccin : ${v.nom}` }));
+            (animal.chirurgies || []).forEach(c => c.date && events.push({ date: c.date, icon: '🔪', title: c.nom, detail: c.notes }));
+            (animal.medicaments || []).forEach(m => m.dateDebut && events.push({ date: m.dateDebut, icon: '💊', title: `Traitement : ${m.nom}` }));
+            (animal.poids || []).forEach(p => p.date && events.push({ date: p.date, icon: '⚖️', title: `Pesée : ${p.valeur} kg` }));
+            (animal.observations || []).forEach(o => o.date && events.push({
+                date: o.date,
+                icon: (TYPE_LABELS[o.type] || o.type).split(' ')[0],
+                title: (TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, ''),
+                detail: o.description,
+                photo: o.photo
+            }));
+
+            if (animal.dateNaissance) {
+                const birth = new Date(animal.dateNaissance);
+                if (!isNaN(birth.getTime())) {
+                    const today = new Date();
+                    events.push({ date: animal.dateNaissance, icon: '🐣', title: 'Naissance' });
+                    for (let year = birth.getFullYear() + 1; year <= today.getFullYear(); year++) {
+                        const anniv = new Date(birth);
+                        anniv.setFullYear(year);
+                        if (anniv <= today) {
+                            const age = year - birth.getFullYear();
+                            events.push({ date: anniv.toISOString().split('T')[0], icon: '🎂', title: `${age} an${age > 1 ? 's' : ''}` });
+                        }
+                    }
+                }
+            }
+
+            events.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
+
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>📖 Journal de vie</h2>
+
+                    {events.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            {events.map((e, i) => (
+                                <div key={i} style={{ display: 'flex', gap: '12px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '20px', width: '36px', height: '36px', borderRadius: '50%', background: '#fce7f3', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{e.icon}</div>
+                                        {i < events.length - 1 && <div style={{ flex: 1, width: '2px', background: '#fbcfe8', minHeight: '12px' }} />}
+                                    </div>
+                                    <div style={{ background: 'white', padding: '12px 16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '12px', flex: 1 }}>
+                                        <p style={{ fontSize: '12px', color: '#9ca3af' }}>{formatDate(e.date)}</p>
+                                        <p style={{ fontWeight: '700', fontSize: '15px' }}>{e.title}</p>
+                                        {e.detail && <p style={{ fontSize: '14px', color: '#374151', marginTop: '4px', whiteSpace: 'pre-wrap' }}>{e.detail}</p>}
+                                        {e.photo && <img src={e.photo} alt="" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', maxHeight: '250px', marginTop: '8px' }} />}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            Aucun souvenir enregistré pour le moment. Ajoutez des vaccins, observations, photos... pour construire l'histoire de {animal.nom} !
+                        </p>
+                    )}
+                </div>
+            );
+        }
+
         const CHIRURGIE_COLOR = '#be123c';
 
         function ChirurgiesTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
@@ -2412,6 +2484,10 @@
             certificat: '📜 Certificat / Attestation',
             analyse: '🔬 Analyse / Résultat',
             facture: '🧾 Facture',
+            assurance: '🛡️ Assurance / Mutuelle',
+            icad: '🪪 I-CAD (identification)',
+            adoption: '🏠 Document d\'adoption',
+            photo: '📷 Photo importante',
             autres: '📄 Autre document'
         };
 
@@ -3233,7 +3309,7 @@
                                             {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
                                         </p>
                                         <p style={{ color: '#6b7280', fontSize: '14px' }}>Animal: {r.animal}</p>
-                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>⏰ {r.daysUntil} jours restants</p>
+                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>⏰ {formatReminderDelay(r.daysUntil)}</p>
                                     </div>
                                     <button onClick={() => sendEmailReminder(r)} style={{ padding: '8px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
                                         📧 Rappel email
