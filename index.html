@@ -534,6 +534,7 @@
         const scheduleReminders = async (reminders) => {
             if (!('Notification' in window) || !navigator.serviceWorker) return;
             if (Notification.permission !== 'granted') return;
+            if (localStorage.getItem('notificationsEnabled') === 'false') return;
             const reg = await navigator.serviceWorker.ready;
             const today = new Date().toDateString();
             let notified = {};
@@ -3580,11 +3581,33 @@
 
             const notifSupported = 'Notification' in window && 'serviceWorker' in navigator;
             const [notifPermission, setNotifPermission] = React.useState(notifSupported ? Notification.permission : 'unsupported');
+            const [notifEnabled, setNotifEnabled] = React.useState(localStorage.getItem('notificationsEnabled') !== 'false');
+            const [suggestion, setSuggestion] = React.useState('');
+            const [langMsg, setLangMsg] = React.useState('');
 
             const handleEnableNotifications = async () => {
                 await Notification.requestPermission();
                 setNotifPermission(Notification.permission);
                 localStorage.removeItem('notifPromptDismissed');
+            };
+
+            const handleToggleNotifications = (checked) => {
+                localStorage.setItem('notificationsEnabled', checked ? 'true' : 'false');
+                setNotifEnabled(checked);
+            };
+
+            const handleLangChange = (e) => {
+                if (e.target.value !== 'fr') {
+                    setLangMsg('🚧 Cette langue sera bientôt disponible !');
+                    setTimeout(() => setLangMsg(''), 2500);
+                }
+            };
+
+            const sendSuggestion = () => {
+                const subject = 'Suggestion - Carnet Santé PRO';
+                const body = `${suggestion}\n\n— Envoyé par ${user?.email || 'un utilisateur'}`;
+                window.location.href = `mailto:carnetsante2@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                setSuggestion('');
             };
 
             const copyAppLink = () => {
@@ -3743,12 +3766,30 @@
                         </button>
                     </div>
 
+                    {/* ── Langue ── */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
+                        <h3 style={{ marginBottom: '12px', fontWeight: '600' }}>🌐 Langue</h3>
+                        <select value="fr" onChange={handleLangChange} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}>
+                            <option value="fr">🇫🇷 Français</option>
+                            <option value="en">🇬🇧 English (à venir)</option>
+                            <option value="es">🇪🇸 Español (à venir)</option>
+                        </select>
+                        {langMsg ? (
+                            <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>{langMsg}</p>
+                        ) : (
+                            <p style={{ marginTop: '8px', fontSize: '12px', color: '#9ca3af' }}>D'autres langues seront bientôt disponibles.</p>
+                        )}
+                    </div>
+
                     {/* ── Notifications ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
                         <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>🔔 Notifications</h3>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>Recevez une notification sur votre téléphone quand un vaccin, traitement ou médicament arrive à échéance.</p>
                         {notifPermission === 'granted' && (
-                            <p style={{ fontSize: '14px', color: '#10b981', fontWeight: '600' }}>✅ Les rappels sont activés sur cet appareil.</p>
+                            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '600' }}>Recevoir les rappels sur cet appareil</span>
+                                <input type="checkbox" checked={notifEnabled} onChange={(e) => handleToggleNotifications(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
+                            </label>
                         )}
                         {notifPermission === 'denied' && (
                             <p style={{ fontSize: '14px', color: '#ef4444' }}>🚫 Les notifications sont bloquées pour cette application. Réactivez-les dans les réglages de notifications de votre navigateur ou de votre téléphone.</p>
@@ -3843,6 +3884,28 @@
                         </div>
                         <button onClick={copyAppLink} style={{ padding: '10px 16px', background: linkCopied ? '#d1fae5' : '#f3f4f6', color: linkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
                             {linkCopied ? '✅ Lien copié !' : '🔗 Copier le lien'}
+                        </button>
+                    </div>
+
+                    <h2 style={{ fontSize: '20px', fontWeight: '700', marginTop: '32px', marginBottom: '16px' }}>ℹ️ À propos</h2>
+
+                    {/* ── Suggestions ── */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>💡 Suggestions</h3>
+                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>Une idée pour améliorer l'application ? Un bug à signaler ? Écrivez-nous !</p>
+                        <textarea
+                            value={suggestion}
+                            onChange={(e) => setSuggestion(e.target.value)}
+                            rows={4}
+                            placeholder="Votre suggestion..."
+                            style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', resize: 'vertical', marginBottom: '12px', fontFamily: 'inherit', fontSize: '14px' }}
+                        />
+                        <button
+                            onClick={sendSuggestion}
+                            disabled={!suggestion.trim()}
+                            style={{ padding: '11px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: suggestion.trim() ? 'pointer' : 'not-allowed', opacity: suggestion.trim() ? 1 : 0.5 }}
+                        >
+                            📧 Envoyer la suggestion
                         </button>
                     </div>
 
