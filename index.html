@@ -857,24 +857,6 @@
 
                         <JoinHouseholdBanner householdId={householdId} joinHousehold={joinHousehold} leaveHousehold={leaveHousehold} />
 
-                        {/* Reminders Banner */}
-                        {reminders.length > 0 && (
-                            <div className="animate-fade-in" style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                                <h3 style={{ color: '#d97706', marginBottom: '8px' }}>⚠️ À faire urgemment ({reminders.length})</h3>
-                                {reminders.map((r, i) => (
-                                    <div key={i} style={{ padding: '8px', background: 'white', marginBottom: '8px', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
-                                        <div>
-                                            <span>{r.nom} ({r.animal}) — {formatReminderDelay(r.daysUntil)}</span>
-                                            {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
-                                        </div>
-                                        <button onClick={() => sendEmailReminder(r)} style={{ padding: '6px 12px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                                            📧 Rappel email
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
                         <Content
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
