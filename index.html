@@ -76,7 +76,7 @@
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/app/+esm";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
-        import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
+        import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
         import { getFunctions, httpsCallable } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/functions/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
@@ -566,6 +566,7 @@
             const [userProfile, setUserProfile] = React.useState({ nom: '', prenom: '', dateNaissance: '' });
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
+            const [householdId, setHouseholdId] = React.useState(null);
 
             // Auth State
             React.useEffect(() => {
@@ -573,8 +574,8 @@
                     setUser(currentUser);
                     setLoading(false);
                     if (currentUser) {
-                        loadAnimalsFromFirestore(currentUser.uid);
-                        loadSettings(currentUser.uid);
+                        const hId = await loadSettings(currentUser.uid);
+                        loadAnimalsFromFirestore(currentUser.uid, hId);
                     } else {
                         setUserRole(null);
                     }
@@ -588,10 +589,13 @@
                 return () => window.removeEventListener('resize', handleResize);
             }, []);
 
-            // Load Animals from Firestore
-            const loadAnimalsFromFirestore = async (uid) => {
+            // Load Animals from Firestore. Members of a shared household see every animal of
+            // the household (theirs and other members'); otherwise only their own animals.
+            const loadAnimalsFromFirestore = async (uid, hId = householdId) => {
                 try {
-                    const q = query(collection(db, 'animals'), where('userId', '==', uid));
+                    const q = hId
+                        ? query(collection(db, 'animals'), where('householdId', '==', hId))
+                        : query(collection(db, 'animals'), where('userId', '==', uid));
                     const querySnapshot = await getDocs(q);
                     const animalsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setAnimals(animalsData);
@@ -620,13 +624,17 @@
                         setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
                         setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '' });
                         setUserRole(settings.role || 'proprietaire');
+                        setHouseholdId(settings.householdId || null);
+                        return settings.householdId || null;
                     } else {
                         await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
                         setUserRole('proprietaire');
+                        return null;
                     }
                 } catch (error) {
                     console.error('Erreur loading settings:', error);
                     setUserRole('proprietaire');
+                    return null;
                 }
             };
 
@@ -637,6 +645,57 @@
                     setUserProfile(profile);
                 } catch (error) {
                     console.error('Erreur saving profile:', error);
+                    throw error;
+                }
+            };
+
+            // Stamp the user's own animals with a household id (or remove it when leaving)
+            const setOwnAnimalsHousehold = async (hId) => {
+                await Promise.all(
+                    animals.filter(a => a.userId === user.uid).map(a => updateDoc(doc(db, 'animals', a.id), { householdId: hId }))
+                );
+            };
+
+            // Create a shared household: the current user becomes its first member, and their
+            // existing animals are stamped with the new household id so future members see them.
+            const createHousehold = async () => {
+                try {
+                    const ref = await addDoc(collection(db, 'households'), { members: [user.uid] });
+                    await setDoc(doc(db, 'settings', user.uid), { householdId: ref.id }, { merge: true });
+                    await setOwnAnimalsHousehold(ref.id);
+                    setHouseholdId(ref.id);
+                    loadAnimalsFromFirestore(user.uid, ref.id);
+                } catch (error) {
+                    console.error('Erreur creating household:', error);
+                    throw error;
+                }
+            };
+
+            // Join a household via its invitation link/QR code
+            const joinHousehold = async (hId) => {
+                try {
+                    await updateDoc(doc(db, 'households', hId), { members: arrayUnion(user.uid) });
+                    await setDoc(doc(db, 'settings', user.uid), { householdId: hId }, { merge: true });
+                    await setOwnAnimalsHousehold(hId);
+                    setHouseholdId(hId);
+                    loadAnimalsFromFirestore(user.uid, hId);
+                } catch (error) {
+                    console.error('Erreur joining household:', error);
+                    throw error;
+                }
+            };
+
+            // Leave the current household: own animals become private again
+            const leaveHousehold = async () => {
+                if (!householdId) return;
+                try {
+                    await updateDoc(doc(db, 'households', householdId), { members: arrayRemove(user.uid) });
+                    await setDoc(doc(db, 'settings', user.uid), { householdId: null }, { merge: true });
+                    await setOwnAnimalsHousehold(null);
+                    setHouseholdId(null);
+                    loadAnimalsFromFirestore(user.uid, null);
+                } catch (error) {
+                    console.error('Erreur leaving household:', error);
                     throw error;
                 }
             };
@@ -652,6 +711,7 @@
                         const docRef = await addDoc(collection(db, 'animals'), {
                             ...animalData, userId: user.uid,
                             proprietaireNom: userProfile.nom, proprietairePrenom: userProfile.prenom,
+                            householdId: householdId || null,
                             createdAt: new Date()
                         });
                         animalData.id = docRef.id;
@@ -773,6 +833,8 @@
 
                         <NotificationPrompt animals={animals} reminders={reminders} />
 
+                        <JoinHouseholdBanner householdId={householdId} joinHousehold={joinHousehold} leaveHousehold={leaveHousehold} />
+
                         {/* Reminders Banner */}
                         {reminders.length > 0 && (
                             <div className="animate-fade-in" style={{ background: '#fef3c7', padding: '16px', margin: '16px', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
@@ -820,6 +882,9 @@
                             auth={auth}
                             userProfile={userProfile}
                             saveUserProfile={saveUserProfile}
+                            householdId={householdId}
+                            createHousehold={createHousehold}
+                            leaveHousehold={leaveHousehold}
                         />
 
                         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px 16px', width: '100%' }}>
@@ -1413,6 +1478,60 @@
                     <button onClick={dismiss} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '14px', textDecoration: 'underline' }}>
                         Plus tard
                     </button>
+                </div>
+            );
+        }
+
+        // Shown when the user opens an invitation link (?join=<householdId>) for a shared
+        // household. Lets them accept or decline before joining.
+        function JoinHouseholdBanner({ householdId, joinHousehold, leaveHousehold }) {
+            const targetId = new URLSearchParams(window.location.search).get('join');
+            const [status, setStatus] = React.useState('idle'); // idle | joining | error
+            const [dismissed, setDismissed] = React.useState(false);
+
+            const clearParam = () => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('join');
+                window.history.replaceState({}, '', url.toString());
+                setDismissed(true);
+            };
+
+            // If we just joined this household (e.g. after accepting the invite below),
+            // clean up the ?join= param from the URL.
+            React.useEffect(() => {
+                if (targetId && targetId === householdId) clearParam();
+            }, [targetId, householdId]);
+
+            if (!targetId || targetId === householdId || dismissed) return null;
+
+            const handleJoin = async () => {
+                setStatus('joining');
+                try {
+                    if (householdId) await leaveHousehold();
+                    await joinHousehold(targetId);
+                    clearParam();
+                } catch (error) {
+                    setStatus('error');
+                }
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ background: '#ecfdf5', padding: '16px', margin: '16px', borderRadius: '8px', border: '1px solid #6ee7b7' }}>
+                    <h3 style={{ marginBottom: '8px', fontWeight: '700' }}>👨‍👩‍👧 Invitation à un foyer partagé</h3>
+                    <p style={{ fontSize: '14px', color: '#374151', marginBottom: '12px' }}>
+                        Vous avez été invité(e) à rejoindre un foyer partagé. Les membres peuvent consulter et
+                        modifier les carnets de tous les animaux du foyer.
+                        {householdId && ' Si vous acceptez, vous quitterez votre foyer actuel.'}
+                    </p>
+                    {status === 'error' && <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '12px' }}>❌ Impossible de rejoindre ce foyer.</p>}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleJoin} disabled={status === 'joining'} style={{ padding: '10px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                            {status === 'joining' ? 'Adhésion…' : '✅ Rejoindre le foyer'}
+                        </button>
+                        <button onClick={clearParam} style={{ padding: '10px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                            Ignorer
+                        </button>
+                    </div>
                 </div>
             );
         }
@@ -3414,11 +3533,46 @@
             );
         }
 
-        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth, userProfile, saveUserProfile }) {
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth, userProfile, saveUserProfile, householdId, createHousehold, leaveHousehold }) {
             const [importing, setImporting] = React.useState(false);
             const [importMsg, setImportMsg] = React.useState('');
             const [linkCopied, setLinkCopied] = React.useState(false);
+            const [householdLinkCopied, setHouseholdLinkCopied] = React.useState(false);
+            const [householdMembers, setHouseholdMembers] = React.useState([]);
+            const [householdBusy, setHouseholdBusy] = React.useState(false);
             const appUrl = window.location.origin + window.location.pathname;
+
+            React.useEffect(() => {
+                if (!householdId) { setHouseholdMembers([]); return; }
+                (async () => {
+                    try {
+                        const q = query(collection(db, 'settings'), where('householdId', '==', householdId));
+                        const snap = await getDocs(q);
+                        setHouseholdMembers(snap.docs.map(d => d.data()));
+                    } catch (error) {
+                        console.error('Erreur loading household members:', error);
+                    }
+                })();
+            }, [householdId]);
+
+            const copyHouseholdLink = () => {
+                navigator.clipboard.writeText(`${appUrl}?join=${householdId}`);
+                setHouseholdLinkCopied(true);
+                setTimeout(() => setHouseholdLinkCopied(false), 2000);
+            };
+
+            const handleCreateHousehold = async () => {
+                setHouseholdBusy(true);
+                try { await createHousehold(); } catch (error) { alert('Erreur lors de la création du foyer.'); }
+                setHouseholdBusy(false);
+            };
+
+            const handleLeaveHousehold = async () => {
+                if (!window.confirm('Quitter ce foyer partagé ? Vos animaux ne seront plus visibles par les autres membres.')) return;
+                setHouseholdBusy(true);
+                try { await leaveHousehold(); } catch (error) { alert('Erreur lors du départ du foyer.'); }
+                setHouseholdBusy(false);
+            };
 
             const [profile, setProfile] = React.useState(userProfile);
             const [profileMsg, setProfileMsg] = React.useState('');
@@ -3606,6 +3760,45 @@
                         )}
                         {notifPermission === 'unsupported' && (
                             <p style={{ fontSize: '13px', color: '#6b7280' }}>Les notifications ne sont pas prises en charge par ce navigateur.</p>
+                        )}
+                    </div>
+
+                    {/* ── Foyer partagé ── */}
+                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>👨‍👩‍👧 Foyer partagé</h3>
+                        {householdId ? (
+                            <>
+                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>
+                                    Les membres de votre foyer peuvent consulter et modifier les carnets de tous les animaux du foyer.
+                                </p>
+                                {householdMembers.length > 0 && (
+                                    <p style={{ fontSize: '14px', marginBottom: '14px' }}>
+                                        👤 Membres : {householdMembers.map(m => `${m.prenom || ''} ${m.nom || ''}`.trim() || 'Membre').join(', ')}
+                                    </p>
+                                )}
+                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px' }}>Invitez un membre en partageant ce lien ou ce QR code :</p>
+                                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                                    <ShareQRCode size={140} value={`${appUrl}?join=${householdId}`} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <button onClick={copyHouseholdLink} style={{ padding: '10px 16px', background: householdLinkCopied ? '#d1fae5' : '#f3f4f6', color: householdLinkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                                        {householdLinkCopied ? '✅ Lien copié !' : "🔗 Copier le lien d'invitation"}
+                                    </button>
+                                    <button onClick={handleLeaveHousehold} disabled={householdBusy} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                                        Quitter le foyer
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>
+                                    Créez un foyer pour partager vos carnets de santé avec les autres membres de votre famille
+                                    (lecture et modification complètes de tous les animaux du foyer).
+                                </p>
+                                <button onClick={handleCreateHousehold} disabled={householdBusy} style={{ padding: '11px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                    {householdBusy ? '⏳ Création…' : '👨‍👩‍👧 Créer un foyer'}
+                                </button>
+                            </>
                         )}
                     </div>
 

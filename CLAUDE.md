@@ -8,8 +8,8 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 - [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
 - [ ] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
   Console > Firestore Database > Règles (la recherche vétérinaire par nom, le nouvel onglet
-  Chirurgies et la "Fiche de garde" partagée par QR code nécessitent les nouvelles règles
-  ci-dessous)
+  Chirurgies, la "Fiche de garde" partagée par QR code et le "Foyer partagé" nécessitent les
+  nouvelles règles ci-dessous)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
 - [ ] **AdSense — repo `crakott.github.io` (hors périmètre de cet agent)** : la page de
   redirection `index.html` de ce repo contient encore le mauvais ID éditeur
@@ -73,6 +73,8 @@ Champs :
 - `subscriptionStatus` (vétérinaires uniquement) : `'inactive' | 'active' | 'past_due' | 'canceled' | ...`
   mis à jour par le webhook Stripe (`functions/index.js`)
 - `stripeCustomerId`, `stripeSubscriptionId` : identifiants Stripe associés au compte
+- `householdId` : identifiant du foyer partagé (`households/{householdId}`) auquel l'utilisateur
+  appartient, ou absent/`null` s'il n'en a pas. Voir section "Foyer partagé" ci-dessous
 
 ## Document `animals/{animalId}`
 
@@ -97,6 +99,30 @@ En plus des champs de profil existants (`nom`, `espece`, `race`, `sexe`, `dateNa
   alimentation, observations — sans budget ni documents). Le lien
   (`?share=<animalId>`) ouvre `SharedDossierView` sans authentification ; voir la règle
   Firestore `allow get` ci-dessous
+- `householdId` : copié depuis `settings/{userId}.householdId` à la création de l'animal (et
+  mis à jour si le propriétaire rejoint/quitte un foyer). Voir section "Foyer partagé"
+
+## Foyer partagé (`households/{householdId}`)
+
+Permet à plusieurs comptes (membres d'une même famille) de partager l'accès complet
+(lecture + écriture, comme le propriétaire) aux carnets de tous les animaux du foyer.
+
+- Document `households/{householdId}` : `{ members: [uid1, uid2, ...] }`
+- Carte "👨‍👩‍👧 Foyer partagé" dans Paramètres :
+  - **Créer un foyer** : crée le document `households`, fixe `settings/{uid}.householdId` et
+    `animals/{animalId}.householdId` (pour les animaux du créateur) sur le nouvel id
+  - **Inviter** : lien/QR `?join=<householdId>` (composant `ShareQRCode`, comme la fiche de
+    garde). Ouvrir ce lien (connecté) affiche `JoinHouseholdBanner` proposant de rejoindre —
+    accepter ajoute l'utilisateur à `members`, met à jour son `householdId` et celui de ses
+    propres animaux (s'il appartenait déjà à un autre foyer, il le quitte d'abord)
+  - **Quitter le foyer** : retire l'utilisateur de `members` et remet `householdId` à `null`
+    sur son `settings` et ses propres animaux (les animaux des autres membres ne sont pas
+    affectés)
+- Chargement des animaux : si l'utilisateur a un `householdId`, la requête se fait sur
+  `where('householdId','==',householdId)` (tous les animaux du foyer) ; sinon
+  `where('userId','==',uid)` (comportement inchangé)
+- La liste des membres affichée dans Paramètres lit `settings` filtrés par `householdId`
+  (nom/prénom de chaque membre)
 
 ## Règles Firestore (à jour)
 
@@ -110,6 +136,12 @@ service cloud.firestore {
     match /animals/{animalId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      // Foyer partagé : un membre du même foyer (households/{householdId}.members) a un accès
+      // complet (comme le propriétaire) à tous les animaux du foyer
+      allow read, update, delete: if request.auth != null
+        && resource.data.householdId != null
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
       // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
       // aux actes médicaux (pas le profil, le budget, les documents ou les partages)
@@ -127,6 +159,31 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      // Foyer partagé : un membre du même foyer peut lire les settings (nom/prénom) des
+      // autres membres pour afficher la liste des membres du foyer
+      allow read: if request.auth != null
+        && resource.data.householdId != null
+        && resource.data.householdId == get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.householdId;
+    }
+    match /households/{householdId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.members;
+
+      // Création : l'utilisateur crée son foyer en étant son seul membre initial
+      allow create: if request.auth != null
+        && request.resource.data.members == [request.auth.uid];
+
+      // Rejoindre (ajout de soi-même) ou quitter (retrait de soi-même) le foyer
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && (
+          (request.resource.data.members.size() == resource.data.members.size() + 1
+            && request.auth.uid in request.resource.data.members
+            && !(request.auth.uid in resource.data.members))
+          || (request.resource.data.members.size() == resource.data.members.size() - 1
+            && !(request.auth.uid in request.resource.data.members)
+            && request.auth.uid in resource.data.members)
+        );
     }
   }
 }
