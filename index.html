@@ -4002,11 +4002,11 @@
 
         // Tabs available to veterinarians for an animal record
         const VET_TABS = [
-            { id: 'vaccins', label: '💉 Vaccins' },
-            { id: 'medicaments', label: '💊 Médicaments' },
-            { id: 'chirurgies', label: '🔪 Chirurgies' },
-            { id: 'notes', label: '📋 Observations' },
-            { id: 'poids', label: '⚖️ Poids' },
+            { id: 'vaccins', icon: '💉', label: 'Vaccins' },
+            { id: 'medicaments', icon: '💊', label: 'Médicaments' },
+            { id: 'chirurgies', icon: '🔪', label: 'Chirurgies' },
+            { id: 'notes', icon: '📋', label: 'Observations' },
+            { id: 'poids', icon: '⚖️', label: 'Poids' },
         ];
 
         // Pro space for veterinarians: requires an active subscription, then search an animal by its identifiant and add medical acts
@@ -4024,11 +4024,14 @@
             const [error, setError] = React.useState('');
             const [searching, setSearching] = React.useState(false);
             const [activeTab, setActiveTab] = React.useState('vaccins');
+            const [vetProfile, setVetProfile] = React.useState({ nom: '', prenom: '' });
 
             // Live subscription status, kept in sync with the Stripe webhook
             React.useEffect(() => {
                 const unsub = onSnapshot(doc(db, 'settings', user.uid), (snap) => {
-                    setSubStatus(snap.exists() ? (snap.data().subscriptionStatus || 'inactive') : 'inactive');
+                    const data = snap.exists() ? snap.data() : {};
+                    setSubStatus(data.subscriptionStatus || 'inactive');
+                    setVetProfile({ nom: data.nom || '', prenom: data.prenom || '' });
                 }, (err) => {
                     console.error('Erreur abonnement:', err);
                     setSubStatus('inactive');
@@ -4193,19 +4196,28 @@
 
                     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
                         {billingError && <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px' }}>{billingError}</p>}
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>🔍 Rechercher un animal</h2>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                                <button onClick={() => { setSearchMode('identifiant'); setError(''); setAnimal(null); setSearchResults([]); }}
-                                    style={{ padding: '8px 14px', background: searchMode === 'identifiant' ? '#10b981' : '#f3f4f6', color: searchMode === 'identifiant' ? 'white' : '#1f2937', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
-                                    Par identifiant
-                                </button>
-                                <button onClick={() => { setSearchMode('nom'); setError(''); setAnimal(null); setSearchResults([]); }}
-                                    style={{ padding: '8px 14px', background: searchMode === 'nom' ? '#10b981' : '#f3f4f6', color: searchMode === 'nom' ? 'white' : '#1f2937', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
-                                    Par nom de l'animal et du propriétaire
-                                </button>
-                            </div>
 
+                        <div style={{ marginBottom: '20px' }}>
+                            <h1 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>👋 Bonjour{vetProfile.nom ? `, Dr. ${vetProfile.nom}` : ''}</h1>
+                            <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Que souhaitez-vous faire ?</p>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                            <div onClick={() => { setSearchMode('identifiant'); setError(''); setAnimal(null); setSearchResults([]); }}
+                                style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', cursor: 'pointer', border: searchMode === 'identifiant' ? '2px solid #10b981' : '2px solid transparent', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', background: '#d1fae5', color: '#059669' }}>🔍</div>
+                                <div style={{ fontWeight: '700', fontSize: '15px' }}>Rechercher par identifiant</div>
+                                <div style={{ fontSize: '12px', color: '#6b7280' }}>Numéro de puce électronique de l'animal</div>
+                            </div>
+                            <div onClick={() => { setSearchMode('nom'); setError(''); setAnimal(null); setSearchResults([]); }}
+                                style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', cursor: 'pointer', border: searchMode === 'nom' ? '2px solid #10b981' : '2px solid transparent', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', background: '#dbeafe', color: '#2563eb' }}>👤</div>
+                                <div style={{ fontWeight: '700', fontSize: '15px' }}>Rechercher par nom</div>
+                                <div style={{ fontSize: '12px', color: '#6b7280' }}>Nom de l'animal et de son propriétaire</div>
+                            </div>
+                        </div>
+
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
                             {searchMode === 'identifiant' ? (
                                 <div>
                                     <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez l'identifiant vétérinaire (puce électronique…) renseigné par le propriétaire dans le profil de l'animal.</p>
@@ -4259,20 +4271,28 @@
 
                         {animal && (
                             <div>
-                                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                                    <h3 style={{ fontSize: '18px', fontWeight: '700' }}><AnimalAvatar animal={animal} /> {animal.nom}</h3>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>
+                                <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '24px', textAlign: 'center', marginBottom: '16px' }}>
+                                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 10px' }}>
+                                        <AnimalAvatar animal={animal} size={32} />
+                                    </div>
+                                    <h2 style={{ fontSize: '20px', fontWeight: '800', margin: '0 0 4px' }}>{animal.nom}</h2>
+                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 10px' }}>
                                         {animal.espece}{animal.race ? ` • ${animal.race}` : ''}{animal.sexe ? ` • ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}` : ''}
                                     </p>
-                                    {animal.dateNaissance && <p style={{ color: '#6b7280', fontSize: '14px' }}>Né(e) le : {formatDate(animal.dateNaissance)}</p>}
+                                    {animal.dateNaissance && (
+                                        <span style={{ display: 'inline-block', background: '#d1fae5', color: '#047857', fontSize: '12px', fontWeight: '700', padding: '5px 14px', borderRadius: '999px' }}>
+                                            Né(e) le {formatDate(animal.dateNaissance)}
+                                        </span>
+                                    )}
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', marginBottom: '20px' }}>
                                     {VET_TABS.map(t => (
-                                        <button key={t.id} onClick={() => setActiveTab(t.id)}
-                                            style={{ padding: '10px 16px', background: activeTab === t.id ? '#10b981' : 'white', color: activeTab === t.id ? 'white' : '#1f2937', border: '1px solid #e5e7eb', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
-                                            {t.label}
-                                        </button>
+                                        <div key={t.id} onClick={() => setActiveTab(t.id)}
+                                            style={{ background: activeTab === t.id ? '#f0fdf4' : 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', padding: '14px 10px', textAlign: 'center', cursor: 'pointer', border: activeTab === t.id ? '2px solid #10b981' : '2px solid transparent' }}>
+                                            <div style={{ fontSize: '22px', marginBottom: '6px' }}>{t.icon}</div>
+                                            <div style={{ fontSize: '12px', fontWeight: '700', color: activeTab === t.id ? '#047857' : '#374151' }}>{t.label}</div>
+                                        </div>
                                     ))}
                                 </div>
 
