@@ -1871,7 +1871,7 @@
                     <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
                         <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</p>
-                        <button onClick={() => openDossierReport(animal)} style={{ width: '100%', marginBottom: '8px', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos et audio)</button>
+                        <button onClick={() => openDossierReport(animal)} style={{ width: '100%', marginBottom: '8px', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos)</button>
                         {(animal.partages && animal.partages.length > 0) ? (
                             animal.partages.map(p => (
                                 <div key={p.id} style={{ fontSize: '13px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3482,7 +3482,7 @@
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚠️ Rappels</h2>
 
-                    {reminders.length > 0 ? (
+                    {reminders.length > 0 && (
                         <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #f59e0b', marginBottom: '24px' }}>
                             <h3 style={{ color: '#d97706', marginBottom: '16px' }}>À faire urgemment ({reminders.length})</h3>
                             {reminders.map((r, i) => (
@@ -3500,10 +3500,6 @@
                                     </button>
                                 </div>
                             ))}
-                        </div>
-                    ) : (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', textAlign: 'center', color: '#6b7280', marginBottom: '24px' }}>
-                            ✅ Aucun rappel pour le moment
                         </div>
                     )}
 
