@@ -336,6 +336,17 @@
             return { background: '#f3f4f6', color: '#374151' };
         };
 
+        // Icon + label + color for each type of reminder, used by the compact Rappels list
+        const REMINDER_TYPE_INFO = {
+            vaccin: { emoji: '💉', label: 'Vaccin', color: '#10b981' },
+            medicament: { emoji: '💊', label: 'Médicament', color: '#ec4899' },
+            antiparasitaire: { emoji: '🦟', label: 'Antiparasitaire', color: '#f59e0b' },
+            vermifuge: { emoji: '🪱', label: 'Vermifuge', color: '#0891b2' },
+        };
+
+        // Shared style helper for the small colored icon-square used in section headers (Paramètres)
+        const sectionIconStyle = (bg, color) => ({ width: '34px', height: '34px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, background: bg, color });
+
         // Compute the status text and indicator icon shown on a Dossier card for a given section
         const getDossierCardStatus = (animal, cardId, videoCount) => {
             const todayStr = new Date().toISOString().split('T')[0];
@@ -3463,7 +3474,7 @@
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🏥 Vétérinaires</h2>
 
                     <div style={{ marginBottom: '20px' }}>
-                        <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
+                        <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ width: '100%', padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
                             {geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trouver les vétérinaires autour de moi'}
                         </button>
                         {geoStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {geoError}</p>}
@@ -3473,34 +3484,42 @@
                         {geoStatus === 'done' && vetsStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ {vetsError}</p>}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-                        {vets.map(vet => (
-                            <div key={vet.id} style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #2563eb' }}>
-                                <h3 style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</h3>
-                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📍 {vet.distanceKm != null ? `≈ ${vet.distanceKm.toFixed(1)} km de votre position` : vet.distance}</p>
-                                {vet.adresse && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🏠 {vet.adresse}</p>}
-                                {vet.telephone && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>📞 {vet.telephone}</p>}
-                                {vet.horaires && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>🕐 {vet.horaires}</p>}
-                                {(vet.rating || vet.specialites) && <p style={{ fontSize: '12px', color: '#6b7280', margin: '6px 0' }}>⭐ {vet.rating} • {vet.specialites.join(', ')}</p>}
-                                <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
-                                    <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
-                                        target="_blank" rel="noopener noreferrer"
-                                        style={{ flex: 1, padding: '10px 12px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textAlign: 'center', textDecoration: 'none', display: 'inline-block' }}
-                                    >
-                                        🔍 Voir sur Google
-                                    </a>
-                                    {vet.telephone && (
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 8px' }}>À proximité</p>
+                    <div style={{ background: 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                        {vets.map((vet, i) => {
+                            const distanceText = vet.distanceKm != null ? `${vet.distanceKm.toFixed(1)} km` : vet.distance;
+                            const subtitleParts = [];
+                            if (vet.horaires) subtitleParts.push(vet.horaires);
+                            if (vet.rating || vet.specialites) subtitleParts.push(`⭐ ${vet.rating || '?'}${vet.specialites ? ' • ' + vet.specialites.join(', ') : ''}`);
+                            if (subtitleParts.length === 0 && vet.adresse) subtitleParts.push(vet.adresse);
+                            return (
+                                <div key={vet.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', borderBottom: i < vets.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, background: '#dbeafe', color: '#2563eb' }}>🏥</div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: '700', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{vet.nom}</div>
+                                        {subtitleParts.length > 0 && <div style={{ fontSize: '12px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitleParts.join(' • ')}</div>}
+                                    </div>
+                                    {distanceText && <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', background: '#f3f4f6', color: '#374151', flexShrink: 0 }}>{distanceText}</span>}
+                                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                                         <a
-                                            href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
-                                            style={{ flex: 1, padding: '10px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', textAlign: 'center', textDecoration: 'none', display: 'inline-block' }}
+                                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            style={{ width: '32px', height: '32px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', textDecoration: 'none' }}
                                         >
-                                            📞 Appeler
+                                            🗺️
                                         </a>
-                                    )}
+                                        {vet.telephone && (
+                                            <a
+                                                href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
+                                                style={{ width: '32px', height: '32px', background: '#d1fae5', color: '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', textDecoration: 'none' }}
+                                            >
+                                                📞
+                                            </a>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             );
@@ -3511,71 +3530,83 @@
                 const items = [];
                 (animal.vaccins || []).forEach(v => {
                     const c = getCountdown(v.rappel || v.date);
-                    if (c) items.push({ type: '💉 Vaccin', nom: v.nom, ...c });
+                    if (c) items.push({ type: 'vaccin', nom: v.nom, ...c });
                 });
                 (animal.medicaments || []).forEach(m => {
                     const c = getCountdown(m.dateFin);
-                    if (c) items.push({ type: '💊 Médicament', nom: m.nom, ...c });
+                    if (c) items.push({ type: 'medicament', nom: m.nom, ...c });
                 });
                 (animal.antiparasitaires || []).forEach(t => {
                     const c = getCountdown(t.prochainTraitement);
-                    if (c) items.push({ type: '🦟 Antiparasitaire', nom: t.nom || 'Antiparasitaire', ...c });
+                    if (c) items.push({ type: 'antiparasitaire', nom: t.nom || 'Antiparasitaire', ...c });
                 });
                 (animal.vermifuges || []).forEach(t => {
                     const c = getCountdown(t.prochainTraitement);
-                    if (c) items.push({ type: '🪱 Vermifuge', nom: t.nom || 'Vermifuge', ...c });
+                    if (c) items.push({ type: 'vermifuge', nom: t.nom || 'Vermifuge', ...c });
                 });
                 return items.sort((a, b) => a.days - b.days);
             };
+
+            const groupHeaderStyle = { fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '18px 4px 8px' };
+            const groupBoxStyle = { background: 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' };
+            const rowStyle = (i, n) => ({ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', borderBottom: i < n - 1 ? '1px solid #f3f4f6' : 'none' });
+            const iconStyle = (color) => ({ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, background: `${color}1a`, color });
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚠️ Rappels</h2>
 
                     {reminders.length > 0 && (
-                        <div style={{ background: '#fef3c7', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #f59e0b', marginBottom: '24px' }}>
-                            <h3 style={{ color: '#d97706', marginBottom: '16px' }}>À faire urgemment ({reminders.length})</h3>
-                            {reminders.map((r, i) => (
-                                <div key={i} style={{ padding: '12px', background: 'white', marginBottom: '8px', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: r.urgent ? '2px solid #ef4444' : '1px solid #fcd34d' }}>
-                                    <div>
-                                        <p style={{ fontWeight: '600' }}>
-                                            {r.nom}
-                                            {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>URGENT</span>}
-                                        </p>
-                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Animal: {r.animal}</p>
-                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>⏰ {formatReminderDelay(r.daysUntil)}</p>
-                                    </div>
-                                    <button onClick={() => sendEmailReminder(r)} style={{ padding: '8px 14px', background: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                                        📧 Rappel email
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                        <>
+                            <p style={{ ...groupHeaderStyle, margin: '0 4px 8px' }}>À faire urgemment ({reminders.length})</p>
+                            <div style={groupBoxStyle}>
+                                {reminders.map((r, i) => {
+                                    const info = REMINDER_TYPE_INFO[r.type] || { emoji: '⏰', color: '#6b7280' };
+                                    return (
+                                        <div key={i} style={rowStyle(i, reminders.length)}>
+                                            <div style={iconStyle(info.color)}>{info.emoji}</div>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: '700', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {r.nom}
+                                                    {r.urgent && <span style={{ marginLeft: '8px', background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>URGENT</span>}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.animal} • {formatReminderDelay(r.daysUntil)}</div>
+                                            </div>
+                                            <button onClick={() => sendEmailReminder(r)} style={{ width: '32px', height: '32px', background: '#fef3c7', color: '#d97706', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>📧</button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
                     )}
 
-                    <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>📅 Échéances par animal</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {(animals || []).map(animal => {
-                            const echeances = buildEcheances(animal);
-                            return (
-                                <div key={animal.id} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b' }}>
-                                    <h4 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}><AnimalAvatar animal={animal} /> {animal.nom}</h4>
-                                    {echeances.length > 0 ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {echeances.map((e, i) => (
-                                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px' }}>
-                                                    <span style={{ fontSize: '14px' }}>{e.type} - {e.nom}</span>
-                                                    <span style={{ fontSize: '13px', fontWeight: '700', color: e.color, background: `${e.color}1a`, padding: '2px 10px', borderRadius: '12px' }}>{e.label}</span>
+                    {(animals || []).map((animal, animalIndex) => {
+                        const echeances = buildEcheances(animal);
+                        return (
+                            <React.Fragment key={animal.id}>
+                                <p style={reminders.length > 0 || animalIndex > 0 ? groupHeaderStyle : { ...groupHeaderStyle, margin: '0 4px 8px' }}>📅 {animal.nom}</p>
+                                <div style={groupBoxStyle}>
+                                    {echeances.length > 0 ? echeances.map((e, i) => {
+                                        const info = REMINDER_TYPE_INFO[e.type] || { emoji: '⏰', label: '', color: '#6b7280' };
+                                        return (
+                                            <div key={i} style={rowStyle(i, echeances.length)}>
+                                                <div style={iconStyle(info.color)}>{info.emoji}</div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: '700', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nom}</div>
+                                                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{info.label}</div>
                                                 </div>
-                                            ))}
+                                                <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', color: e.color, background: `${e.color}1a` }}>{e.label}</span>
+                                            </div>
+                                        );
+                                    }) : (
+                                        <div style={{ padding: '13px 14px' }}>
+                                            <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>Aucune échéance enregistrée</p>
                                         </div>
-                                    ) : (
-                                        <p style={{ color: '#6b7280', fontSize: '14px' }}>Aucune échéance enregistrée</p>
                                     )}
                                 </div>
-                            );
-                        })}
-                    </div>
+                            </React.Fragment>
+                        );
+                    })}
                 </div>
             );
         }
@@ -3723,7 +3754,9 @@
 
                     {/* ── Owner profile ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>👤 Mon profil</h3>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#e0e7ff', '#6366f1')}>👤</span> Mon profil
+                        </h3>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                             <div>
@@ -3753,7 +3786,9 @@
                     </div>
 
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Délais de rappels (en jours)</h3>
+                        <h3 style={{ marginBottom: '16px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#fef3c7', '#f59e0b')}>⏰</span> Délais de rappels (en jours)
+                        </h3>
 
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Vaccins</label>
@@ -3806,7 +3841,9 @@
 
                     {/* ── Notifications ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>🔔 Notifications</h3>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#fce7f3', '#ec4899')}>🔔</span> Notifications
+                        </h3>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>Recevez une notification sur votre téléphone quand un vaccin, traitement ou médicament arrive à échéance.</p>
                         {notifPermission === 'granted' && (
                             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
@@ -3829,7 +3866,9 @@
 
                     {/* ── Foyer partagé ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>👨‍👩‍👧 Foyer partagé</h3>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#d1fae5', '#10b981')}>👨‍👩‍👧</span> Foyer partagé
+                        </h3>
                         {householdId ? (
                             <>
                                 <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>
@@ -3868,7 +3907,9 @@
 
                     {/* ── Export / Import ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>📦 Sauvegarde & restauration</h3>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#cffafe', '#0891b2')}>📦</span> Sauvegarde & restauration
+                        </h3>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Exportez vos données pour les sauvegarder ou les transférer. Le fichier JSON peut ensuite être réimporté.</p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -3900,7 +3941,9 @@
 
                     {/* ── Share app ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px', textAlign: 'center' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>📱 Partager l'application</h3>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#e0e7ff', '#6366f1')}>📱</span> Partager l'application
+                        </h3>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Faites scanner ce code pour ouvrir Carnet Santé PRO sur un autre téléphone.</p>
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
                             <ShareQRCode size={140} />
@@ -3914,7 +3957,9 @@
 
                     {/* ── Suggestions ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600' }}>💡 Suggestions</h3>
+                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={sectionIconStyle('#fef3c7', '#f59e0b')}>💡</span> Suggestions
+                        </h3>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>Une idée pour améliorer l'application ? Un bug à signaler ? Écrivez-nous !</p>
                         <textarea
                             value={suggestion}
