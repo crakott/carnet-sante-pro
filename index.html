@@ -310,14 +310,14 @@
             return h.includes('24/7') || h.includes('24h') || h.includes('24 h');
         };
 
-        // Big red button: geolocates the user and finds the nearest 24h/emergency vet,
-        // with a one-tap call button
+        // Big red button: geolocates the user and lists the nearest 24h/emergency vets,
+        // each with a one-tap call button and a directions link
         function EmergencyVetButton() {
             const [status, setStatus] = React.useState('idle'); // idle | loading | done | none | error
             const [error, setError] = React.useState('');
-            const [vet, setVet] = React.useState(null);
+            const [vets, setVets] = React.useState([]);
 
-            const findEmergencyVet = () => {
+            const findEmergencyVets = () => {
                 if (!navigator.geolocation) {
                     setStatus('error');
                     setError("La géolocalisation n'est pas disponible sur cet appareil.");
@@ -325,7 +325,7 @@
                 }
                 setStatus('loading');
                 setError('');
-                setVet(null);
+                setVets([]);
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
                         const { latitude: lat, longitude: lng } = pos.coords;
@@ -341,9 +341,10 @@
                         }
                         candidates = candidates
                             .map(v => ({ ...v, distanceKm: getDistanceKm(lat, lng, v.lat, v.lng) }))
-                            .sort((a, b) => a.distanceKm - b.distanceKm);
+                            .sort((a, b) => a.distanceKm - b.distanceKm)
+                            .slice(0, 5);
                         if (candidates.length > 0) {
-                            setVet(candidates[0]);
+                            setVets(candidates);
                             setStatus('done');
                         } else {
                             setStatus('none');
@@ -359,42 +360,50 @@
                 );
             };
 
-            if (status === 'done' && vet) {
+            if (status === 'done' && vets.length > 0) {
                 return (
-                    <div style={{ background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>🚨 Urgence vétérinaire la plus proche</p>
-                        <p style={{ fontWeight: '700', fontSize: '16px' }}>{vet.nom}</p>
-                        {vet.adresse && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🏠 {vet.adresse}</p>}
-                        {vet.horaires && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🕐 {vet.horaires}</p>}
-                        <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>📍 à {vet.distanceKm.toFixed(1)} km</p>
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                            {vet.telephone ? (
-                                <a href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
-                                    style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#dc2626', color: 'white' }}>
-                                    📞 Appeler
-                                </a>
-                            ) : (
-                                <p style={{ color: '#9ca3af', fontSize: '13px', flex: 1, margin: 0 }}>Numéro non disponible</p>
-                            )}
-                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
-                                target="_blank" rel="noopener noreferrer"
-                                style={{ padding: '12px 16px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#fee2e2', color: '#dc2626' }}>
-                                🗺️ Itinéraire
-                            </a>
+                    <div style={{ marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>🚨 Urgences vétérinaires à proximité</p>
+                            <button onClick={() => setStatus('idle')} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Fermer</button>
                         </div>
-                        <button onClick={() => setStatus('idle')} style={{ marginTop: '10px', background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Annuler</button>
+                        <div style={{ display: 'grid', gap: '10px' }}>
+                            {vets.map(vet => (
+                                <div key={vet.id} style={{ background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '10px', padding: '14px' }}>
+                                    <p style={{ fontWeight: '700', fontSize: '15px' }}>{vet.nom}</p>
+                                    {vet.adresse && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🏠 {vet.adresse}</p>}
+                                    {vet.horaires && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🕐 {vet.horaires}</p>}
+                                    <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>📍 à {vet.distanceKm.toFixed(1)} km</p>
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                        {vet.telephone ? (
+                                            <a href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
+                                                style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#dc2626', color: 'white' }}>
+                                                📞 {vet.telephone}
+                                            </a>
+                                        ) : (
+                                            <p style={{ color: '#9ca3af', fontSize: '13px', flex: 1, margin: 0, display: 'flex', alignItems: 'center' }}>Numéro non disponible</p>
+                                        )}
+                                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
+                                            target="_blank" rel="noopener noreferrer"
+                                            style={{ padding: '12px 16px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#fee2e2', color: '#dc2626' }}>
+                                            🗺️ Itinéraire
+                                        </a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 );
             }
 
             return (
                 <div style={{ marginBottom: '20px' }}>
-                    <button onClick={findEmergencyVet} disabled={status === 'loading'}
+                    <button onClick={findEmergencyVets} disabled={status === 'loading'}
                         style={{ width: '100%', padding: '14px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '10px', cursor: status === 'loading' ? 'default' : 'pointer', fontWeight: '700', fontSize: '15px', opacity: status === 'loading' ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                         {status === 'loading' ? '📍 Recherche en cours…' : '🚨 Urgences vétérinaires à proximité'}
                     </button>
                     {status === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {error}</p>}
-                    {status === 'none' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire d'urgence référencé près de chez vous. Consultez l'onglet "🏥 Vétérinaires" pour la liste complète.</p>}
+                    {status === 'none' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire d'urgence référencé près de chez vous. Consultez la liste ci-dessous pour les vétérinaires à proximité.</p>}
                 </div>
             );
         }
@@ -1768,8 +1777,6 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
-
-                    <EmergencyVetButton />
 
                     {/* Animals List */}
                     {animals.length > 0 && (
@@ -3701,6 +3708,8 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>🏥 Vétérinaires</h2>
+
+                    <EmergencyVetButton />
 
                     <div style={{ marginBottom: '20px' }}>
                         <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ width: '100%', padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
