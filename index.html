@@ -252,6 +252,90 @@
         };
         const MAX_FILE_SIZE = 700 * 1024;
 
+        // FAQ shown in Paramètres, grouped by section, with collapsible Q/A
+        const FAQ_DATA = [
+            {
+                section: '🐾 Vaccins',
+                items: [
+                    { q: 'Quand dois-je faire vacciner mon animal ?', a: "Les premiers vaccins sont généralement réalisés dès les premières semaines de vie, puis des rappels réguliers sont nécessaires selon l'âge, l'espèce et le mode de vie de l'animal." },
+                    { q: 'Les vaccins sont-ils obligatoires ?', a: "Certains vaccins sont fortement recommandés. D'autres peuvent être exigés pour les voyages ou certaines pensions." },
+                    { q: 'Mon animal est en retard pour son vaccin, est-ce grave ?', a: "Un retard ne signifie pas forcément que tout est à recommencer, mais il est préférable de contacter votre vétérinaire pour vérifier le protocole adapté." },
+                ]
+            },
+            {
+                section: '🪱 Vermifuges et parasites',
+                items: [
+                    { q: 'À quelle fréquence vermifuger mon animal ?', a: "La fréquence dépend de l'âge, du mode de vie et de l'environnement. Les jeunes animaux nécessitent généralement des traitements plus fréquents." },
+                    { q: 'Mon animal a des puces, que faire ?', a: "Traitez l'animal avec un produit adapté et pensez également à traiter son environnement." },
+                    { q: 'Comment retirer une tique ?', a: "Utilisez un crochet à tique adapté et retirez-la délicatement sans l'écraser." },
+                ]
+            },
+            {
+                section: '🍖 Alimentation',
+                items: [
+                    { q: 'Quelle quantité de nourriture donner ?', a: "La quantité dépend du poids, de l'âge, de l'activité physique et du type d'alimentation." },
+                    { q: 'Quels aliments sont toxiques ?', a: "Parmi les aliments connus pour être dangereux :\n• chocolat\n• raisin\n• oignon\n• ail\n• avocat\n• alcool\n• café\n• xylitol (édulcorant)" },
+                    { q: 'Mon animal refuse de manger, dois-je m\'inquiéter ?', a: "Une perte d'appétit persistante mérite une surveillance attentive et peut justifier une consultation." },
+                ]
+            },
+            {
+                section: '🤒 Symptômes courants',
+                items: [
+                    { q: 'Mon chien ou mon chat vomit.', a: "Un vomissement isolé n'est pas toujours inquiétant. En revanche, des vomissements répétés ou associés à d'autres symptômes nécessitent un avis vétérinaire." },
+                    { q: 'Mon animal a la diarrhée.', a: "Une diarrhée légère peut parfois disparaître rapidement. Si elle persiste ou s'accompagne d'autres symptômes, consultez un professionnel." },
+                    { q: 'Mon animal boit beaucoup plus que d\'habitude.', a: "Une augmentation importante de la consommation d'eau peut révéler un problème de santé et mérite une surveillance." },
+                    { q: 'Mon animal est très fatigué.', a: "Une baisse d'énergie inhabituelle ou prolongée doit être prise au sérieux." },
+                ]
+            },
+            {
+                section: '🐾 Comportement',
+                items: [
+                    { q: 'Pourquoi mon chien aboie-t-il autant ?', a: "L'aboiement peut être lié à l'ennui, la peur, l'excitation ou un besoin d'attention." },
+                    { q: 'Pourquoi mon chat urine-t-il en dehors de sa litière ?', a: "Cela peut être lié à un problème médical, du stress ou un changement d'environnement." },
+                    { q: 'Mon animal détruit des objets.', a: "Les causes fréquentes sont l'ennui, le manque d'exercice ou l'anxiété." },
+                ]
+            },
+            {
+                section: '❤️ Poids et suivi',
+                items: [
+                    { q: 'Mon animal est-il en surpoids ?', a: "Le surpoids est fréquent chez les animaux domestiques. Un suivi régulier du poids aide à détecter rapidement les variations." },
+                    { q: 'Pourquoi suivre le poids ?', a: "Les changements de poids peuvent être un indicateur précoce de nombreux problèmes de santé." },
+                ]
+            },
+            {
+                section: '🚨 Urgences',
+                items: [
+                    { q: 'Mon animal a mangé du chocolat.', a: "Le chocolat peut être toxique, d'autant plus s'il est noir ou riche en cacao. La gravité dépend de la quantité ingérée et du poids de l'animal. Contactez rapidement un vétérinaire et gardez l'emballage à portée de main pour préciser le type et la quantité." },
+                    { q: 'Mon animal a avalé un objet.', a: "Surveillez-le attentivement et consultez rapidement si des symptômes apparaissent." },
+                    { q: 'Mon animal ne mange plus depuis 24 heures.', a: "Une absence prolongée d'alimentation doit être prise au sérieux, particulièrement chez le chat." },
+                    { q: 'Quand consulter en urgence ?', a: "Consultez rapidement en cas de :\n• difficultés respiratoires\n• convulsions\n• saignements importants\n• perte de connaissance\n• suspicion d'intoxication\n• traumatisme important" },
+                ]
+            },
+            {
+                section: '🌡️ Coup de chaleur',
+                items: [
+                    { q: 'Comment reconnaître un coup de chaleur ?', a: "Les signes fréquents sont un halètement intense, une bave épaisse, un abattement, une démarche titubante, parfois des vomissements ou une perte de connaissance. C'est une urgence vitale." },
+                    { q: 'Que faire en cas de coup de chaleur ?', a: "Placez l'animal à l'ombre dans un endroit frais, rafraîchissez-le progressivement avec de l'eau tempérée (jamais glacée) et contactez immédiatement un vétérinaire. Ne laissez jamais un animal seul dans une voiture, même quelques minutes et même à l'ombre." },
+                ]
+            },
+            {
+                section: '🌿 Plantes et produits dangereux',
+                items: [
+                    { q: 'Quelles plantes sont dangereuses ?', a: "Plusieurs plantes courantes sont toxiques. Le lys (ou lis) est particulièrement dangereux pour le chat : même une petite quantité, le pollen ou l'eau du vase peuvent provoquer une atteinte grave. En cas de doute, éloignez la plante et contactez un vétérinaire." },
+                    { q: 'Quels produits ménagers présentent un risque ?', a: "L'antigel, les produits d'entretien, les médicaments humains et certains insecticides sont toxiques. L'antigel est particulièrement traître : son goût sucré attire les animaux. Rangez ces produits hors de portée et consultez en urgence en cas d'ingestion." },
+                    { q: 'Mon animal a ingéré une plante ou un produit toxique.', a: "Ne tentez pas de le faire vomir sans avis professionnel. Notez ce qu'il a ingéré et en quelle quantité, gardez l'emballage si possible, et contactez rapidement un vétérinaire ou un centre antipoison vétérinaire." },
+                ]
+            },
+            {
+                section: '🏥 Vie quotidienne',
+                items: [
+                    { q: 'Quand stériliser mon animal ?', a: "L'âge recommandé varie selon l'espèce, la race et la situation de l'animal." },
+                    { q: 'Pourquoi identifier mon animal ?', a: "L'identification permet de retrouver plus facilement un animal perdu et est obligatoire dans plusieurs situations." },
+                    { q: 'Puis-je voyager avec mon animal ?', a: "Les conditions varient selon la destination. Vérifiez toujours les exigences sanitaires avant le départ." },
+                ]
+            },
+        ];
+
         // Distance in km between two lat/lng points (Haversine formula)
         const getDistanceKm = (lat1, lng1, lat2, lng2) => {
             const toRad = (deg) => deg * Math.PI / 180;
@@ -3880,6 +3964,46 @@
             );
         }
 
+        // Collapsible FAQ shown in Paramètres, grouped by section
+        function FAQSection() {
+            const [openKey, setOpenKey] = React.useState(null);
+            return (
+                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+                    <h3 style={{ marginBottom: '12px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={sectionIconStyle('#ede9fe', '#7c3aed')}>❓</span> FAQ
+                    </h3>
+                    <p style={{ fontSize: '13px', color: '#92400e', background: '#fef3c7', padding: '10px 12px', borderRadius: '6px', marginBottom: '16px' }}>
+                        ⚠️ Les informations de cette FAQ sont fournies à titre indicatif et ne remplacent en aucun cas une consultation vétérinaire. En cas de doute ou d'urgence, contactez toujours un professionnel.
+                    </p>
+                    {FAQ_DATA.map((section, si) => (
+                        <div key={si} style={{ marginBottom: '16px' }}>
+                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 8px' }}>{section.section}</p>
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                                {section.items.map((item, ii) => {
+                                    const key = `${si}-${ii}`;
+                                    const isOpen = openKey === key;
+                                    return (
+                                        <div key={key} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <button onClick={() => setOpenKey(isOpen ? null : key)}
+                                                style={{ width: '100%', textAlign: 'left', padding: '12px 14px', background: isOpen ? '#f9fafb' : 'white', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '14px' }}>
+                                                <span>{item.q}</span>
+                                                <span style={{ color: '#9ca3af', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
+                                            </button>
+                                            {isOpen && (
+                                                <div style={{ padding: '0 14px 14px', fontSize: '13px', color: '#6b7280', whiteSpace: 'pre-line' }}>
+                                                    {item.a}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
         function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth, userProfile, saveUserProfile, householdId, createHousehold, leaveHousehold }) {
             const [importing, setImporting] = React.useState(false);
             const [importMsg, setImportMsg] = React.useState('');
@@ -4223,6 +4347,8 @@
                     </div>
 
                     <h2 style={{ fontSize: '20px', fontWeight: '700', marginTop: '32px', marginBottom: '16px' }}>ℹ️ À propos</h2>
+
+                    <FAQSection />
 
                     {/* ── Suggestions ── */}
                     <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
