@@ -3964,14 +3964,27 @@
             );
         }
 
+        // Generic collapsible card used for each Paramètres section ("volet déroulant")
+        function CollapsibleSection({ icon, iconBg, iconColor, title, defaultOpen = false, center, style, children }) {
+            const [open, setOpen] = React.useState(defaultOpen);
+            return (
+                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px', ...style }}>
+                    <button onClick={() => setOpen(!open)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', marginBottom: open ? '16px' : 0 }}>
+                        <h3 style={{ fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                            <span style={sectionIconStyle(iconBg, iconColor)}>{icon}</span> {title}
+                        </h3>
+                        <span style={{ color: '#9ca3af', flexShrink: 0, fontSize: '14px' }}>{open ? '▲' : '▼'}</span>
+                    </button>
+                    {open && (center ? <div style={{ textAlign: 'center' }}>{children}</div> : children)}
+                </div>
+            );
+        }
+
         // Collapsible FAQ shown in Paramètres, grouped by section
         function FAQSection() {
             const [openKey, setOpenKey] = React.useState(null);
             return (
-                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                    <h3 style={{ marginBottom: '12px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={sectionIconStyle('#ede9fe', '#7c3aed')}>❓</span> FAQ
-                    </h3>
+                <CollapsibleSection icon="❓" iconBg="#ede9fe" iconColor="#7c3aed" title="FAQ">
                     <p style={{ fontSize: '13px', color: '#92400e', background: '#fef3c7', padding: '10px 12px', borderRadius: '6px', marginBottom: '16px' }}>
                         ⚠️ Les informations de cette FAQ sont fournies à titre indicatif et ne remplacent en aucun cas une consultation vétérinaire. En cas de doute ou d'urgence, contactez toujours un professionnel.
                     </p>
@@ -4000,7 +4013,7 @@
                             </div>
                         </div>
                     ))}
-                </div>
+                </CollapsibleSection>
             );
         }
 
@@ -4146,11 +4159,7 @@
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>⚙️ Paramètres</h2>
 
                     {/* ── Owner profile ── */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#e0e7ff', '#6366f1')}>👤</span> Mon profil
-                        </h3>
-
+                    <CollapsibleSection icon="👤" iconBg="#e0e7ff" iconColor="#6366f1" title="Mon profil">
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Prénom</label>
@@ -4176,13 +4185,9 @@
                             💾 Enregistrer
                         </button>
                         {profileMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: profileMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{profileMsg}</p>}
-                    </div>
+                    </CollapsibleSection>
 
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '16px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#fef3c7', '#f59e0b')}>⏰</span> Délais de rappels (en jours)
-                        </h3>
-
+                    <CollapsibleSection icon="⏰" iconBg="#fef3c7" iconColor="#f59e0b" title="Délais de rappels (en jours)">
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Vaccins</label>
                             <input
@@ -4230,13 +4235,10 @@
                         <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                             💾 Sauvegarder
                         </button>
-                    </div>
+                    </CollapsibleSection>
 
                     {/* ── Notifications ── */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#fce7f3', '#ec4899')}>🔔</span> Notifications
-                        </h3>
+                    <CollapsibleSection icon="🔔" iconBg="#fce7f3" iconColor="#ec4899" title="Notifications">
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>Recevez une notification sur votre téléphone quand un vaccin, traitement ou médicament arrive à échéance.</p>
                         {notifPermission === 'granted' && (
                             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
@@ -4255,13 +4257,10 @@
                         {notifPermission === 'unsupported' && (
                             <p style={{ fontSize: '13px', color: '#6b7280' }}>Les notifications ne sont pas prises en charge par ce navigateur.</p>
                         )}
-                    </div>
+                    </CollapsibleSection>
 
                     {/* ── Foyer partagé ── */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#d1fae5', '#10b981')}>👨‍👩‍👧</span> Foyer partagé
-                        </h3>
+                    <CollapsibleSection icon="👨‍👩‍👧" iconBg="#d1fae5" iconColor="#10b981" title="Foyer partagé">
                         {householdId ? (
                             <>
                                 <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>
@@ -4296,13 +4295,10 @@
                                 </button>
                             </>
                         )}
-                    </div>
+                    </CollapsibleSection>
 
                     {/* ── Export / Import ── */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#cffafe', '#0891b2')}>📦</span> Sauvegarde & restauration
-                        </h3>
+                    <CollapsibleSection icon="📦" iconBg="#cffafe" iconColor="#0891b2" title="Sauvegarde & restauration">
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Exportez vos données pour les sauvegarder ou les transférer. Le fichier JSON peut ensuite être réimporté.</p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
@@ -4330,13 +4326,10 @@
                             </label>
                             {importMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: importMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{importMsg}</p>}
                         </div>
-                    </div>
+                    </CollapsibleSection>
 
                     {/* ── Share app ── */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginTop: '24px', textAlign: 'center' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#e0e7ff', '#6366f1')}>📱</span> Partager l'application
-                        </h3>
+                    <CollapsibleSection icon="📱" iconBg="#e0e7ff" iconColor="#6366f1" title="Partager l'application" center>
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Faites scanner ce code pour ouvrir Carnet Santé PRO sur un autre téléphone.</p>
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
                             <ShareQRCode size={140} />
@@ -4344,17 +4337,14 @@
                         <button onClick={copyAppLink} style={{ padding: '10px 16px', background: linkCopied ? '#d1fae5' : '#f3f4f6', color: linkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
                             {linkCopied ? '✅ Lien copié !' : '🔗 Copier le lien'}
                         </button>
-                    </div>
+                    </CollapsibleSection>
 
                     <h2 style={{ fontSize: '20px', fontWeight: '700', marginTop: '32px', marginBottom: '16px' }}>ℹ️ À propos</h2>
 
                     <FAQSection />
 
                     {/* ── Suggestions ── */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ marginBottom: '6px', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={sectionIconStyle('#fef3c7', '#f59e0b')}>💡</span> Suggestions
-                        </h3>
+                    <CollapsibleSection icon="💡" iconBg="#fef3c7" iconColor="#f59e0b" title="Suggestions">
                         <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>Une idée pour améliorer l'application ? Un bug à signaler ? Écrivez-nous !</p>
                         <textarea
                             value={suggestion}
@@ -4370,7 +4360,7 @@
                         >
                             📧 Envoyer la suggestion
                         </button>
-                    </div>
+                    </CollapsibleSection>
 
                     <button
                         onClick={() => signOut(auth)}
