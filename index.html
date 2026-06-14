@@ -288,6 +288,7 @@
                                 telephone: tags.phone || tags['contact:phone'] || null,
                                 horaires: tags.opening_hours || null,
                                 adresse: adresse || null,
+                                emergency: tags.emergency === 'yes',
                                 lat: vLat,
                                 lng: vLng,
                             };
@@ -299,6 +300,104 @@
             }
             throw lastError || new Error('Service de recherche indisponible');
         };
+
+        // A vet is considered "urgence" if tagged emergency=yes on OSM, has a "Urgences"
+        // specialty (fallback list), or has 24/7 opening hours
+        const isEmergencyVet = (vet) => {
+            if (vet.emergency) return true;
+            if (vet.specialites && vet.specialites.includes('Urgences')) return true;
+            const h = (vet.horaires || '').toLowerCase();
+            return h.includes('24/7') || h.includes('24h') || h.includes('24 h');
+        };
+
+        // Big red button: geolocates the user and finds the nearest 24h/emergency vet,
+        // with a one-tap call button
+        function EmergencyVetButton() {
+            const [status, setStatus] = React.useState('idle'); // idle | loading | done | none | error
+            const [error, setError] = React.useState('');
+            const [vet, setVet] = React.useState(null);
+
+            const findEmergencyVet = () => {
+                if (!navigator.geolocation) {
+                    setStatus('error');
+                    setError("La géolocalisation n'est pas disponible sur cet appareil.");
+                    return;
+                }
+                setStatus('loading');
+                setError('');
+                setVet(null);
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const { latitude: lat, longitude: lng } = pos.coords;
+                        let candidates = [];
+                        try {
+                            const found = await fetchNearbyVets(lat, lng);
+                            candidates = found.filter(isEmergencyVet);
+                        } catch (err) {
+                            console.error('Erreur recherche urgences vétérinaires:', err);
+                        }
+                        if (candidates.length === 0) {
+                            candidates = VETERINAIRES.filter(isEmergencyVet);
+                        }
+                        candidates = candidates
+                            .map(v => ({ ...v, distanceKm: getDistanceKm(lat, lng, v.lat, v.lng) }))
+                            .sort((a, b) => a.distanceKm - b.distanceKm);
+                        if (candidates.length > 0) {
+                            setVet(candidates[0]);
+                            setStatus('done');
+                        } else {
+                            setStatus('none');
+                        }
+                    },
+                    (err) => {
+                        setStatus('error');
+                        setError(err.code === err.PERMISSION_DENIED
+                            ? "Localisation refusée : activez la géolocalisation de votre appareil (paramètres de localisation/GPS du téléphone) et autorisez ce site à accéder à votre position, puis réessayez."
+                            : "Impossible de récupérer votre position pour le moment. Vérifiez que la géolocalisation est activée sur votre appareil.");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            };
+
+            if (status === 'done' && vet) {
+                return (
+                    <div style={{ background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>🚨 Urgence vétérinaire la plus proche</p>
+                        <p style={{ fontWeight: '700', fontSize: '16px' }}>{vet.nom}</p>
+                        {vet.adresse && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🏠 {vet.adresse}</p>}
+                        {vet.horaires && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🕐 {vet.horaires}</p>}
+                        <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>📍 à {vet.distanceKm.toFixed(1)} km</p>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            {vet.telephone ? (
+                                <a href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
+                                    style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#dc2626', color: 'white' }}>
+                                    📞 Appeler
+                                </a>
+                            ) : (
+                                <p style={{ color: '#9ca3af', fontSize: '13px', flex: 1, margin: 0 }}>Numéro non disponible</p>
+                            )}
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
+                                target="_blank" rel="noopener noreferrer"
+                                style={{ padding: '12px 16px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#fee2e2', color: '#dc2626' }}>
+                                🗺️ Itinéraire
+                            </a>
+                        </div>
+                        <button onClick={() => setStatus('idle')} style={{ marginTop: '10px', background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Annuler</button>
+                    </div>
+                );
+            }
+
+            return (
+                <div style={{ marginBottom: '20px' }}>
+                    <button onClick={findEmergencyVet} disabled={status === 'loading'}
+                        style={{ width: '100%', padding: '14px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '10px', cursor: status === 'loading' ? 'default' : 'pointer', fontWeight: '700', fontSize: '15px', opacity: status === 'loading' ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        {status === 'loading' ? '📍 Recherche en cours…' : '🚨 Urgences vétérinaires à proximité'}
+                    </button>
+                    {status === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {error}</p>}
+                    {status === 'none' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire d'urgence référencé près de chez vous. Consultez l'onglet "🏥 Vétérinaires" pour la liste complète.</p>}
+                </div>
+            );
+        }
 
         // Build a clear summary of an animal's record: vaccine names, current weight,
         // ongoing medications and the kinds of observations logged
@@ -1669,6 +1768,8 @@
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
+
+                    <EmergencyVetButton />
 
                     {/* Animals List */}
                     {animals.length > 0 && (
