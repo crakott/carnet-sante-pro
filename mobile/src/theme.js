@@ -27,6 +27,10 @@ export const colors = {
   pillGreenBg: '#d1fae5',
   pillGreenText: '#047857',
   pillRedText: '#dc2626',
+  rose: '#be123c',
+  roseLight: '#ffe4e6',
+  violet: '#8b5cf6',
+  violetLight: '#ede9fe',
 };
 
 export const radius = {

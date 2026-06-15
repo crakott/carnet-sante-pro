@@ -23,6 +23,7 @@ export const DOSSIER_GROUPS = ['Santé', 'Quotidien', 'Administratif'];
 export const DOSSIER_CARDS = [
   { id: 'Vaccins', emoji: '💉', label: 'Vaccins', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
   { id: 'Medicaments', emoji: '💊', label: 'Médicaments', color: colors.pink, bg: colors.pinkLight, group: 'Santé' },
+  { id: 'Chirurgies', emoji: '🔪', label: 'Chirurgies', color: colors.rose, bg: colors.roseLight, group: 'Santé' },
   { id: 'Poids', emoji: '⚖️', label: 'Poids', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
   { id: 'Aliment', emoji: '🍎', label: 'Alimentation', color: colors.yellow, bg: colors.yellowLight, group: 'Quotidien' },
   { id: 'Notes', emoji: '📋', label: 'Observations', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
@@ -53,6 +54,10 @@ export const getDossierCardStatus = (animal, cardId) => {
       const enCours = meds.filter((m) => m.dateDebut && m.dateFin && todayIso >= m.dateDebut && todayIso <= m.dateFin);
       if (enCours.length > 0) return { text: `${enCours.length} en cours`, iconColor: colors.pink };
       return meds.length > 0 ? { text: `${meds.length} enregistré(s)`, ...none } : { text: 'Aucun', ...none };
+    }
+    case 'Chirurgies': {
+      const n = (animal.chirurgies || []).length;
+      return n > 0 ? { text: `${n} enregistrée(s)`, ...ok } : { text: 'Aucune', ...none };
     }
     case 'Poids': {
       const lastWeight = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0];

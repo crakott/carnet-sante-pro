@@ -77,6 +77,12 @@ export function AnimalsProvider({ children }) {
     return saveAnimal(updated);
   };
 
+  // Merge updates into a single item of an animal's array field by id
+  const updateAnimalItem = (animal, type, itemId, updates) => {
+    const updated = { ...animal, [type]: (animal[type] || []).map((i) => (i.id === itemId ? { ...i, ...updates } : i)) };
+    return saveAnimal(updated);
+  };
+
   // Merge field updates (e.g. assigned vétérinaire) into an animal
   const updateAnimalFields = (animal, updates) => saveAnimal({ ...animal, ...updates });
 
@@ -107,6 +113,7 @@ export function AnimalsProvider({ children }) {
         deleteAnimal,
         addAnimalItem,
         deleteAnimalItem,
+        updateAnimalItem,
         updateAnimalFields,
         budgetFilter,
         setBudgetFilter,

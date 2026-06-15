@@ -8,6 +8,7 @@ import AccueilScreen from '../screens/owner/AccueilScreen';
 import DossierScreen from '../screens/owner/DossierScreen';
 import VaccinsScreen from '../screens/owner/VaccinsScreen';
 import MedicamentsScreen from '../screens/owner/MedicamentsScreen';
+import ChirurgiesScreen from '../screens/owner/ChirurgiesScreen';
 import AlimentScreen from '../screens/owner/AlimentScreen';
 import NotesScreen from '../screens/owner/NotesScreen';
 import PoidsScreen from '../screens/owner/PoidsScreen';
@@ -52,6 +53,7 @@ export default function OwnerNavigator() {
       <Drawer.Screen name="Dossier" component={DossierScreen} options={{ title: '📁 Dossier', drawerLabel: '📁 Dossier' }} />
       <Drawer.Screen name="Vaccins" component={VaccinsScreen} options={{ title: '💉 Vaccins', drawerLabel: '💉 Vaccins' }} />
       <Drawer.Screen name="Medicaments" component={MedicamentsScreen} options={{ title: '💊 Médication', drawerLabel: '💊 Médication' }} />
+      <Drawer.Screen name="Chirurgies" component={ChirurgiesScreen} options={{ title: '🔪 Chirurgies', drawerLabel: '🔪 Chirurgies' }} />
       <Drawer.Screen name="Aliment" component={AlimentScreen} options={{ title: '🍎 Alimentation', drawerLabel: '🍎 Alimentation' }} />
       <Drawer.Screen name="Notes" component={NotesScreen} options={{ title: '📋 Observations', drawerLabel: '📋 Observations' }} />
       <Drawer.Screen name="Poids" component={PoidsScreen} options={{ title: '⚖️ Poids', drawerLabel: '⚖️ Poids' }} />
