@@ -24,6 +24,9 @@ export const colors = {
   cyan: '#0891b2',
   indigo: '#6366f1',
   darkBlue: '#2563eb',
+  pillGreenBg: '#d1fae5',
+  pillGreenText: '#047857',
+  pillRedText: '#dc2626',
 };
 
 export const radius = {

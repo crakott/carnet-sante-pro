@@ -1,9 +1,79 @@
 import { getAnimalDossier } from './reminders';
 import { formatDate } from './dates';
 import { EMOJIS_ESPECE, TYPE_LABELS } from '../constants';
+import { colors } from '../theme';
 
 // Escape text before injecting it into the printable HTML report
 const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Number of whole days between today and a given date (negative if in the past)
+const daysUntil = (dateStr) => {
+  if (!dateStr) return null;
+  const target = new Date(dateStr);
+  if (isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / (1000 * 60 * 60 * 24));
+};
+
+// Cards shown on the "Dossier" overview, each linking to its corresponding screen
+// (a subset of the web app's DOSSIER_CARDS, limited to the sections available on mobile)
+export const DOSSIER_GROUPS = ['Santé', 'Quotidien', 'Administratif'];
+export const DOSSIER_CARDS = [
+  { id: 'Vaccins', emoji: '💉', label: 'Vaccins', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
+  { id: 'Medicaments', emoji: '💊', label: 'Médicaments', color: colors.pink, bg: colors.pinkLight, group: 'Santé' },
+  { id: 'Poids', emoji: '⚖️', label: 'Poids', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
+  { id: 'Aliment', emoji: '🍎', label: 'Alimentation', color: colors.yellow, bg: colors.yellowLight, group: 'Quotidien' },
+  { id: 'Notes', emoji: '📋', label: 'Observations', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
+  { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
+];
+
+// Style of the status pill shown next to a Dossier card (mirrors getDossierStatusPillStyle)
+export const getDossierStatusPillStyle = (status) => {
+  if (status.iconColor === colors.primary) return { bg: colors.pillGreenBg, color: colors.pillGreenText };
+  if (status.iconColor === colors.red) return { bg: colors.redLight, color: colors.pillRedText };
+  return { bg: colors.background, color: colors.textMuted };
+};
+
+// Status text + indicator color shown on a Dossier card for a given section (mirrors getDossierCardStatus)
+export const getDossierCardStatus = (animal, cardId) => {
+  const todayIso = new Date().toISOString().split('T')[0];
+  const ok = { iconColor: colors.primary };
+  const none = { iconColor: colors.inputBorder };
+  switch (cardId) {
+    case 'Vaccins': {
+      const vaccins = animal.vaccins || [];
+      if (vaccins.length === 0) return { text: 'Aucun vaccin enregistré', ...none };
+      const aJour = vaccins.every((v) => { const d = daysUntil(v.rappel || v.date); return d === null || d >= 0; });
+      return aJour ? { text: 'À jour', ...ok } : { text: 'À renouveler', iconColor: colors.red };
+    }
+    case 'Medicaments': {
+      const meds = animal.medicaments || [];
+      const enCours = meds.filter((m) => m.dateDebut && m.dateFin && todayIso >= m.dateDebut && todayIso <= m.dateFin);
+      if (enCours.length > 0) return { text: `${enCours.length} en cours`, iconColor: colors.pink };
+      return meds.length > 0 ? { text: `${meds.length} enregistré(s)`, ...none } : { text: 'Aucun', ...none };
+    }
+    case 'Poids': {
+      const lastWeight = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+      return lastWeight ? { text: `${lastWeight.valeur} kg (${formatDate(lastWeight.date)})`, ...ok } : { text: 'Non renseigné', ...none };
+    }
+    case 'Aliment': {
+      const n = (animal.aliments || []).length;
+      return n > 0 ? { text: `${n} repas enregistré(s)`, ...ok } : { text: 'Aucun', ...none };
+    }
+    case 'Notes': {
+      const n = (animal.observations || []).length;
+      return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+    }
+    case 'Budget': {
+      const total = (animal.budget || []).reduce((s, b) => s + b.montant, 0);
+      return { text: `${total.toFixed(0)} €`, iconColor: colors.yellow };
+    }
+    default:
+      return { text: '', ...none };
+  }
+};
 
 // Format an animal's record as plain text, ready to be sent by email to a vétérinaire
 // (mirrors buildDossierEmailBody in the web app)

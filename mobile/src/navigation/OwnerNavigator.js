@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { colors, spacing } from '../theme';
 
 import AccueilScreen from '../screens/owner/AccueilScreen';
-import SanteScreen from '../screens/owner/SanteScreen';
+import DossierScreen from '../screens/owner/DossierScreen';
 import VaccinsScreen from '../screens/owner/VaccinsScreen';
 import MedicamentsScreen from '../screens/owner/MedicamentsScreen';
 import AlimentScreen from '../screens/owner/AlimentScreen';
@@ -49,7 +49,7 @@ export default function OwnerNavigator() {
   return (
     <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} />} screenOptions={screenOptions}>
       <Drawer.Screen name="Accueil" component={AccueilScreen} options={{ title: '🏠 Accueil', drawerLabel: '🏠 Accueil' }} />
-      <Drawer.Screen name="Sante" component={SanteScreen} options={{ title: '💪 Santé', drawerLabel: '💪 Santé' }} />
+      <Drawer.Screen name="Dossier" component={DossierScreen} options={{ title: '📁 Dossier', drawerLabel: '📁 Dossier' }} />
       <Drawer.Screen name="Vaccins" component={VaccinsScreen} options={{ title: '💉 Vaccins', drawerLabel: '💉 Vaccins' }} />
       <Drawer.Screen name="Medicaments" component={MedicamentsScreen} options={{ title: '💊 Médication', drawerLabel: '💊 Médication' }} />
       <Drawer.Screen name="Aliment" component={AlimentScreen} options={{ title: '🍎 Alimentation', drawerLabel: '🍎 Alimentation' }} />

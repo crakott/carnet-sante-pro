@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
-import { Screen, ScreenTitle, Card, Button, Field, Input, Select, IconButton, ModalSheet } from '../../components/ui';
+import { Screen, ScreenTitle, Card, Button, Field, Input, Select, IconButton, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
 import { ESPECES, EMOJIS_ESPECE } from '../../constants';
 import { getReminders } from '../../utils/reminders';
+import { computeAge } from '../../utils/dates';
 
-const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '' };
+const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' };
 
 export default function AccueilScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal } = useAnimals();
@@ -60,61 +62,35 @@ export default function AccueilScreen() {
         </Card>
       )}
 
-      {animals.map((animal) => (
-        <TouchableOpacity
-          key={animal.id}
-          activeOpacity={0.8}
-          onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Sante'); }}
-        >
-          <Card selected={selectedAnimal === animal.id}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.animalName}>
-                  {EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}
-                </Text>
-                <Text style={styles.animalMeta}>{animal.espece}</Text>
-                {animal.race ? <Text style={styles.animalMeta}>Race: {animal.race}</Text> : null}
-              </View>
-              <View style={styles.cardActions}>
-                <IconButton title="✏️" color={colors.blue} bg={colors.blueLight} onPress={() => setEditingAnimal({ ...animal })} />
-                <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => confirmDelete(animal)} />
-              </View>
-            </View>
-
-            {animal.sexe ? (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoText}>Sexe: <Text style={styles.infoBold}>{animal.sexe === 'male' ? '♂️ Mâle' : '♀️ Femelle'}</Text></Text>
-                <Text style={styles.infoText}>Stérilisé: <Text style={styles.infoBold}>{animal.sterilise ? '✅ Oui' : '❌ Non'}</Text></Text>
-              </View>
-            ) : null}
-
-            <View style={styles.statsRow}>
-              <View style={[styles.statBox, { backgroundColor: colors.greenLight }]}>
-                <Text style={styles.statLabel}>💉 Vaccins</Text>
-                <Text style={styles.statValue}>{(animal.vaccins || []).length}</Text>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: colors.greenLighter }]}>
-                <Text style={styles.statLabel}>💊 Médicaments</Text>
-                <Text style={styles.statValue}>{(animal.medicaments || []).length}</Text>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: colors.yellowLight }]}>
-                <Text style={styles.statLabel}>💰 Budget</Text>
-                <Text style={[styles.statValue, { color: colors.yellow }]}>
-                  {(animal.budget || []).reduce((s, b) => s + b.montant, 0).toFixed(0)}€
-                </Text>
-              </View>
-            </View>
-
-            {animal.identifiant ? (
-              <View style={styles.identifiantRow}>
-                <Text style={styles.identifiantText}>
-                  🩺 ID vétérinaire: <Text style={styles.infoBold}>{animal.identifiant}</Text>
-                </Text>
-              </View>
-            ) : null}
-          </Card>
-        </TouchableOpacity>
-      ))}
+      {animals.length > 0 && (
+        <ListGroup>
+          {animals.map((animal, i) => {
+            const age = computeAge(animal.dateNaissance);
+            const subtitle = [animal.race, age].filter(Boolean).join(' — ');
+            const animalReminders = reminders.filter((r) => r.animal === animal.nom);
+            const pill = animalReminders.length > 0
+              ? { text: `${animalReminders.length} rappel${animalReminders.length > 1 ? 's' : ''}`, bg: colors.redLight, color: colors.pillRedText }
+              : { text: 'À jour', bg: colors.pillGreenBg, color: colors.pillGreenText };
+            return (
+              <ListRow
+                key={animal.id}
+                last={i === animals.length - 1}
+                left={<Avatar animal={animal} size={44} />}
+                title={animal.nom}
+                subtitle={subtitle}
+                pill={pill}
+                onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Dossier'); }}
+                actions={
+                  <View style={styles.cardActions}>
+                    <IconButton title="✏️" color={colors.blue} bg={colors.blueLight} onPress={() => setEditingAnimal({ ...animal })} />
+                    <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => confirmDelete(animal)} />
+                  </View>
+                }
+              />
+            );
+          })}
+        </ListGroup>
+      )}
 
       <Button title="➕ Ajouter un animal" onPress={() => setShowAdd(true)} />
 
@@ -144,8 +120,34 @@ export default function AccueilScreen() {
 }
 
 function AnimalForm({ animal, setAnimal }) {
+  const [photoError, setPhotoError] = useState('');
+
+  const pickPhoto = async () => {
+    setPhotoError('');
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { setPhotoError("Permission d'accès aux photos refusée."); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      base64: true,
+      quality: 0.5,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (!result.canceled && result.assets?.[0]?.base64) {
+      setAnimal({ ...animal, photo: `data:image/jpeg;base64,${result.assets[0].base64}` });
+    }
+  };
+
   return (
     <>
+      <Field label="📷 Photo (optionnel)">
+        <View style={styles.photoRow}>
+          <Avatar animal={animal} size={48} />
+          <Button title={animal.photo ? 'Changer la photo' : 'Choisir une photo'} onPress={pickPhoto} color={colors.blueLight} textColor={colors.blue} style={{ flex: 1 }} />
+          {animal.photo ? <IconButton title="✕" color={colors.red} bg={colors.redLight} onPress={() => setAnimal({ ...animal, photo: '' })} /> : null}
+        </View>
+        {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
+      </Field>
       <Field label="Nom">
         <Input value={animal.nom} onChangeText={(v) => setAnimal({ ...animal, nom: v })} placeholder="Nom" />
       </Field>
@@ -206,71 +208,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: spacing.xs,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  animalName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  animalMeta: {
-    color: colors.textLight,
-    fontSize: 14,
-    marginTop: 2,
-  },
   cardActions: {
     flexDirection: 'row',
     gap: spacing.xs,
   },
-  infoRow: {
+  photoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  infoText: {
-    fontSize: 12,
-    color: colors.textLight,
-  },
-  infoBold: {
-    fontWeight: '700',
-    color: colors.text,
-  },
-  statsRow: {
-    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
   },
-  statBox: {
-    flex: 1,
-    borderRadius: 8,
-    padding: 10,
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 10,
-    color: colors.textLight,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginTop: 2,
-  },
-  identifiantRow: {
-    marginTop: spacing.md,
-    padding: spacing.sm,
-    backgroundColor: colors.background,
-    borderRadius: 8,
-  },
-  identifiantText: {
+  error: {
+    color: colors.red,
     fontSize: 12,
-    color: colors.textLight,
+    marginTop: spacing.xs,
   },
   modalTitle: {
     fontSize: 18,
