@@ -32,6 +32,23 @@ export const TYPE_LABELS = {
   blessure: '🩹 Blessure', maladie: '🤒 Maladie', autres: '➕ Autres',
 };
 
+export const DOCUMENT_TYPES = {
+  vaccin: '💉 Carnet de vaccination',
+  ordonnance: '📝 Ordonnance',
+  certificat: '📜 Certificat / Attestation',
+  'compte-rendu': '🗒️ Compte-rendu de consultation',
+  analyse: '🔬 Analyse / Résultat',
+  facture: '🧾 Facture',
+  assurance: '🛡️ Assurance / Mutuelle',
+  icad: '🪪 I-CAD (identification)',
+  adoption: "🏠 Document d'adoption",
+  photo: '📷 Photo importante',
+  autres: '📄 Autre document',
+};
+
+// 700 Ko, pour rester bien sous la limite de 1 Mo par document Firestore
+export const MAX_DOCUMENT_PDF_SIZE = 700 * 1024;
+
 export const CATEGORIES_BUDGET = ['Vétérinaire', 'Alimentation', 'Médicaments', 'Toilettage', 'Jouets', 'Accessoires', 'Autres'];
 
 export const CATEGORY_EMOJIS = {

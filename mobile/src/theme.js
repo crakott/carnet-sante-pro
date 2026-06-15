@@ -23,6 +23,7 @@ export const colors = {
   brown: '#b45309',
   cyan: '#0891b2',
   indigo: '#6366f1',
+  indigoLight: '#e0e7ff',
   darkBlue: '#2563eb',
   pillGreenBg: '#d1fae5',
   pillGreenText: '#047857',

@@ -28,6 +28,7 @@ export const DOSSIER_CARDS = [
   { id: 'Aliment', emoji: '🍎', label: 'Alimentation', color: colors.yellow, bg: colors.yellowLight, group: 'Quotidien' },
   { id: 'Notes', emoji: '📋', label: 'Observations', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
   { id: 'Journal', emoji: '📖', label: 'Journal de vie', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
+  { id: 'Documents', emoji: '📄', label: 'Documents', color: colors.indigo, bg: colors.indigoLight, group: 'Quotidien' },
   { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
 ];
@@ -72,6 +73,10 @@ export const getDossierCardStatus = (animal, cardId) => {
     case 'Notes': {
       const n = (animal.observations || []).length;
       return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+    }
+    case 'Documents': {
+      const n = (animal.documents || []).length;
+      return n > 0 ? { text: `${n} fichier(s)`, ...ok } : { text: 'Aucun document', ...none };
     }
     case 'Journal': {
       const n = (animal.vaccins || []).length + (animal.chirurgies || []).length
