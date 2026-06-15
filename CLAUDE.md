@@ -6,7 +6,7 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 
 - [ ] **Slots AdSense** : remplacer les 5 occurrences de `xxxxxxxxxx` dans `index.html` par les vrais IDs de slot depuis le tableau de bord AdSense
 - [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
-- [ ] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
+- [x] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
   Console > Firestore Database > Règles (la recherche vétérinaire par nom, le nouvel onglet
   Chirurgies, la "Fiche de garde" partagée par QR code, le "Foyer partagé", les ordonnances
   émises par le vétérinaire et la messagerie sécurisée nécessitent les nouvelles règles
