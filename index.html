@@ -521,7 +521,7 @@
         // Cards shown on the per-animal "Dossier" overview, each linking to its corresponding tab
         const DOSSIER_CARDS = [
             { id: 'vaccins', label: '💉 Vaccins', color: '#10b981', group: 'Santé' },
-            { id: 'medicaments', label: '💊 Médicaments', color: '#ec4899', group: 'Santé' },
+            { id: 'medicaments', label: '💊 Traitements', color: '#ec4899', group: 'Santé' },
             { id: 'chirurgies', label: '🔪 Chirurgies', color: '#6366f1', group: 'Santé' },
             { id: 'poids', label: '⚖️ Poids', color: '#10b981', group: 'Santé' },
             { id: 'aliment', label: '🍎 Alimentation', color: '#f59e0b', group: 'Quotidien' },
@@ -743,7 +743,7 @@
                     <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
                     <h2>⚖️ Poids actuel</h2>
                     <p>${lastWeight ? `${escapeHtml(lastWeight.valeur)} kg (mesuré le ${escapeHtml(lastWeight.date)})` : 'Non renseigné'}</p>
-                    <h2>💊 Médicaments en cours</h2>
+                    <h2>💊 Traitements en cours</h2>
                     <p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
                     <h2>📋 Observations</h2>
                     ${obsHtml}
@@ -1473,10 +1473,10 @@
                             )) : <Empty text="Aucun vaccin enregistré" />}
                         </Section>
 
-                        <Section title="💊 Médicaments">
+                        <Section title="💊 Traitements">
                             {(animal.medicaments && animal.medicaments.length > 0) ? animal.medicaments.map(m => (
                                 <p key={m.id} style={{ fontSize: '14px', color: '#374151', marginBottom: '4px' }}>{m.nom} — {m.dosage} {m.unite}, {m.frequence}, du {formatDate(m.dateDebut)} au {formatDate(m.dateFin)}</p>
-                            )) : <Empty text="Aucun médicament enregistré" />}
+                            )) : <Empty text="Aucun traitement enregistré" />}
                         </Section>
 
                         <Section title="🦟 Antiparasitaires / 🪱 Vermifuges">
@@ -1550,7 +1550,7 @@
             { id: 'dossier', label: '📁 Dossier' },
             { id: 'vaccins', label: '💉 Vaccins' },
             { id: 'aliment', label: '🍎 Alimentation' },
-            { id: 'medicaments', label: '💊 Médication' },
+            { id: 'medicaments', label: '💊 Traitements' },
             { id: 'chirurgies', label: '🔪 Chirurgies' },
             { id: 'notes', label: '📋 Observations' },
             { id: 'messages', label: '💬 Messagerie' },
@@ -4225,7 +4225,7 @@
                         </div>
 
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Médicaments</label>
+                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Traitements</label>
                             <input
                                 type="number"
                                 value={reminderSettings.medicament}
@@ -4403,7 +4403,7 @@
         // Tabs available to veterinarians for an animal record
         const VET_TABS = [
             { id: 'vaccins', icon: '💉', label: 'Vaccins' },
-            { id: 'medicaments', icon: '💊', label: 'Médicaments' },
+            { id: 'medicaments', icon: '💊', label: 'Traitements' },
             { id: 'chirurgies', icon: '🔪', label: 'Chirurgies' },
             { id: 'notes', icon: '📋', label: 'Observations' },
             { id: 'poids', icon: '⚖️', label: 'Poids' },
