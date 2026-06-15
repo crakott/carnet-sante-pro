@@ -1,3 +1,6 @@
+// Base URL of the web app, used to build the public "fiche de garde" share link
+export const APP_URL = 'https://carnet-sante-pro.web.app';
+
 export const ESPECES = ['Chien', 'Chat', 'Lapin', 'Hamster', 'Gerbille', 'Cheval', 'Oiseau', 'Tortue'];
 
 export const EMOJIS_ESPECE = {

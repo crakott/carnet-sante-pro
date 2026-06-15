@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import * as Print from 'expo-print';
+import * as Clipboard from 'expo-clipboard';
+import QRCode from 'react-native-qrcode-svg';
 import { useNavigation } from '@react-navigation/native';
 import { Screen, EmptyState, Card, Button, Input, Avatar, ListGroup, ListRow, GroupLabel } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
 import { getAnimalDossier } from '../../utils/reminders';
 import { buildDossierEmailBody, buildDossierHtml, DOSSIER_GROUPS, DOSSIER_CARDS, getDossierCardStatus, getDossierStatusPillStyle } from '../../utils/dossier';
 import { computeAge } from '../../utils/dates';
+import { APP_URL } from '../../constants';
 import { colors, spacing } from '../../theme';
 
 export default function DossierScreen() {
-  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem } = useAnimals();
+  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, saveAnimal } = useAnimals();
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
+  const [shareLinkCopied, setShareLinkCopied] = useState(false);
 
   if (animals.length === 0) {
     return (
@@ -44,6 +48,15 @@ export default function DossierScreen() {
     } catch (err) {
       Alert.alert('Erreur', "Impossible d'ouvrir le dossier.");
     }
+  };
+
+  const toggleShare = () => saveAnimal({ ...animal, shareEnabled: !animal.shareEnabled });
+
+  const shareUrl = `${APP_URL}/?share=${animal.id}`;
+  const copyShareLink = async () => {
+    await Clipboard.setStringAsync(shareUrl);
+    setShareLinkCopied(true);
+    setTimeout(() => setShareLinkCopied(false), 2000);
   };
 
   return (
@@ -123,6 +136,31 @@ export default function DossierScreen() {
           <Button title="📧 Partager" onPress={handleShare} style={{ marginLeft: spacing.sm }} />
         </View>
       </Card>
+
+      <Card style={styles.shareBlock}>
+        <Text style={styles.shareTitle}>🔗 Fiche de garde</Text>
+        <Text style={styles.shareHint}>
+          Générez un lien (ou QR code) en lecture seule avec les infos essentielles de {animal.nom} (vaccins, traitements, poids, alimentation…), à partager avec un pet-sitter, un proche ou un vétérinaire — sans connexion requise.
+        </Text>
+        <Button
+          title={animal.shareEnabled ? '🔒 Désactiver le partage' : '🔗 Activer le partage'}
+          onPress={toggleShare}
+          color={animal.shareEnabled ? colors.redLight : colors.primary}
+          textColor={animal.shareEnabled ? colors.red : colors.white}
+        />
+        {animal.shareEnabled ? (
+          <View style={styles.qrBlock}>
+            <QRCode value={shareUrl} size={140} color={colors.text} backgroundColor={colors.white} />
+            <Button
+              title={shareLinkCopied ? '✅ Lien copié !' : '🔗 Copier le lien'}
+              onPress={copyShareLink}
+              color={shareLinkCopied ? colors.pillGreenBg : colors.background}
+              textColor={shareLinkCopied ? colors.primary : colors.text}
+              style={{ marginTop: spacing.md }}
+            />
+          </View>
+        ) : null}
+      </Card>
     </Screen>
   );
 }
@@ -190,4 +228,5 @@ const styles = StyleSheet.create({
   partageDelete: { fontSize: 12, color: colors.red, paddingHorizontal: 6 },
   noPartage: { fontSize: 11, color: colors.textMuted },
   shareRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+  qrBlock: { alignItems: 'center', marginTop: spacing.md },
 });
