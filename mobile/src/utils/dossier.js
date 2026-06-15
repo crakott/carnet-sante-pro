@@ -27,6 +27,7 @@ export const DOSSIER_CARDS = [
   { id: 'Poids', emoji: '⚖️', label: 'Poids', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
   { id: 'Aliment', emoji: '🍎', label: 'Alimentation', color: colors.yellow, bg: colors.yellowLight, group: 'Quotidien' },
   { id: 'Notes', emoji: '📋', label: 'Observations', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
+  { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
 ];
 
@@ -70,6 +71,13 @@ export const getDossierCardStatus = (animal, cardId) => {
     case 'Notes': {
       const n = (animal.observations || []).length;
       return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+    }
+    case 'Planning': {
+      const rdvs = animal.rdvs || [];
+      const now = new Date();
+      const upcoming = rdvs.filter((r) => new Date(`${r.date}T${r.heure || '00:00'}`) >= now)
+        .sort((a, b) => `${a.date}T${a.heure || '00:00'}`.localeCompare(`${b.date}T${b.heure || '00:00'}`));
+      return upcoming.length > 0 ? { text: `Prochain : ${formatDate(upcoming[0].date)}`, iconColor: colors.violet } : { text: 'Aucun RDV programmé', ...none };
     }
     case 'Budget': {
       const total = (animal.budget || []).reduce((s, b) => s + b.montant, 0);

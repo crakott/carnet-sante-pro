@@ -1,3 +1,5 @@
+import { colors } from '../theme';
+
 export const todayStr = () => new Date().toISOString().split('T')[0];
 
 // Convert YYYY-MM-DD to DD/MM/YYYY for display
@@ -17,6 +19,32 @@ export const addMonths = (dateStr, months) => {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + parseInt(months || 1, 10));
   return d.toISOString().split('T')[0];
+};
+
+// Number of days remaining until a date, with a display label and color (mirrors getCountdown in the web app)
+export const getCountdown = (dateStr) => {
+  if (!dateStr) return null;
+  const target = new Date(dateStr);
+  if (isNaN(target.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  const days = Math.round((target - today) / (1000 * 60 * 60 * 24));
+  let label, color;
+  if (days < 0) {
+    label = `En retard de ${Math.abs(days)} j`;
+    color = colors.red;
+  } else if (days === 0) {
+    label = `Aujourd'hui`;
+    color = colors.red;
+  } else if (days <= 7) {
+    label = `Dans ${days} j`;
+    color = colors.yellow;
+  } else {
+    label = `Dans ${days} j`;
+    color = colors.primary;
+  }
+  return { days, label, color };
 };
 
 // Human-readable age from a birth date, e.g. "2 ans 3 mois" (mirrors computeAge in the web app)
