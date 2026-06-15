@@ -157,6 +157,17 @@
             reader.readAsDataURL(file);
         };
 
+        // Read a file (e.g. a PDF exported from a vet software) as a data-URL, rejecting files above maxBytes
+        const MAX_DOCUMENT_PDF_SIZE = 700 * 1024; // 700 Ko, to stay well under Firestore's 1 Mo document limit
+        const readFileAsDataUrl = (file, maxBytes, onResult, onError) => {
+            if (!file) return;
+            if (file.size > maxBytes) { onError && onError(); return; }
+            const reader = new FileReader();
+            reader.onload = (e) => onResult(e.target.result);
+            reader.onerror = () => onError && onError();
+            reader.readAsDataURL(file);
+        };
+
         // Local-only video storage (IndexedDB) — videos never leave this device, no Firestore/cloud sync
         const VIDEO_DB_NAME = 'carnet-sante-videos';
         const VIDEO_STORE = 'videos';
@@ -2950,7 +2961,15 @@
 
             const handlePhoto = (file) => {
                 setFileError('');
-                readImageAsResizedDataUrl(file, 1600, 0.82, setPhotoBase64, () => setFileError('Impossible de lire ce fichier.'));
+                if (!file) return;
+                if (file.type === 'application/pdf') {
+                    readFileAsDataUrl(file, MAX_DOCUMENT_PDF_SIZE, setPhotoBase64,
+                        () => setFileError(`PDF trop volumineux (max ${Math.round(MAX_DOCUMENT_PDF_SIZE / 1024)} Ko). Essayez de le compresser ou de photographier les pages.`));
+                } else if (file.type.startsWith('image/')) {
+                    readImageAsResizedDataUrl(file, 1600, 0.82, setPhotoBase64, () => setFileError('Impossible de lire ce fichier.'));
+                } else {
+                    setFileError('Format non supporté : choisissez une image ou un PDF.');
+                }
             };
 
             const resetForm = () => {
@@ -2986,9 +3005,9 @@
                                 <input type="text" placeholder="Description (optionnel)" value={nom} onChange={(e) => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Scanner / choisir une photo</label>
-                                    <input type="file" accept="image/*" capture="environment" onChange={(e) => handlePhoto(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
-                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Document sélectionné (compressé automatiquement)</p>}
+                                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Scanner une photo ou 📄 importer un PDF (export depuis le logiciel de votre vétérinaire, max {Math.round(MAX_DOCUMENT_PDF_SIZE / 1024)} Ko)</label>
+                                    <input type="file" accept="image/*,application/pdf" onChange={(e) => handlePhoto(e.target.files[0])} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {photoBase64 && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>✓ Document sélectionné{photoBase64.startsWith('data:application/pdf') ? '' : ' (compressé automatiquement)'}</p>}
                                 </div>
                                 {fileError && <p style={{ color: '#ef4444', fontSize: '13px' }}>{fileError}</p>}
                             </div>
@@ -3007,7 +3026,11 @@
                         {documents.length > 0 ? (
                             documents.map((d, i) => (
                                 <div key={d.id || i} style={{ background: 'white', padding: '12px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #6366f1' }}>
-                                    {d.photo && <img src={d.photo} alt={d.nom || 'Document'} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />}
+                                    {d.photo && (d.photo.startsWith('data:application/pdf')
+                                        ? <a href={d.photo} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', height: '160px', background: '#f3f4f6', borderRadius: '6px', marginBottom: '8px', textDecoration: 'none', color: '#6366f1', fontWeight: '600', fontSize: '13px' }}>
+                                            <span style={{ fontSize: '40px' }}>📄</span> Ouvrir le PDF
+                                        </a>
+                                        : <img src={d.photo} alt={d.nom || 'Document'} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />)}
                                     <EditableRow
                                         item={d}
                                         color="#6366f1"
