@@ -58,6 +58,23 @@ Champs :
 - `subscriptionStatus` (vétérinaires uniquement) : `'inactive' | 'active' | 'past_due' | 'canceled' | ...`
   mis à jour par le webhook Stripe (`functions/index.js`)
 - `stripeCustomerId`, `stripeSubscriptionId` : identifiants Stripe associés au compte
+- `householdId` (app mobile) : identifiant du foyer partagé (voir section "Foyer partagé"
+  ci-dessous), absent/`null` si l'utilisateur n'a pas rejoint de foyer
+
+## Foyer partagé (app mobile)
+
+Fonctionnalité disponible uniquement dans l'app mobile (`mobile/`). Permet à plusieurs comptes
+(ex : les membres d'un même foyer) de partager l'accès complet (lecture/écriture) à leurs
+animaux.
+
+- Collection `households/{householdId}` : `{ members: [uid, ...], createdAt }`. L'identifiant
+  (aléatoire) du document sert de **code d'invitation** : un utilisateur le saisit dans
+  "Paramètres > Foyer partagé > Rejoindre un foyer" pour devenir membre.
+- `settings/{uid}.householdId` : foyer auquel l'utilisateur appartient (le cas échéant).
+- `animals/{id}.householdId` : si renseigné, l'animal est visible et modifiable par tous les
+  membres du foyer correspondant (en plus de son propriétaire).
+- Créer un foyer ou en rejoindre un partage automatiquement tous les animaux du compte avec ce
+  foyer ; quitter un foyer retire le partage des animaux possédés par le compte.
 
 ## Règles Firestore (à jour)
 
@@ -69,7 +86,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /animals/{animalId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId
+
+        // Foyer partagé (mobile) : les membres du même foyer ont un accès complet
+        // aux animaux partagés avec ce foyer (champ householdId)
+        || (resource.data.householdId is string && resource.data.householdId != ''
+            && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members)
+      );
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
 
       // Vétérinaires "pro" abonnés : lecture de tout animal ayant un identifiant, écriture limitée
@@ -85,6 +109,25 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Foyer partagé (mobile) : un foyer est un groupe de comptes ("members") qui partagent
+    // l'accès aux animaux ayant le même householdId. L'identifiant (aléatoire) du document
+    // sert de code d'invitation : tout utilisateur connecté qui le connaît peut le lire pour
+    // rejoindre le foyer.
+    match /households/{householdId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.members == [request.auth.uid];
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && (
+          // un membre existant peut modifier la liste (ex : retirer un membre)
+          request.auth.uid in resource.data.members
+          // ou un nouveau membre peut s'ajouter lui-même (rejoindre via un code)
+          || (request.resource.data.members.size() == resource.data.members.size() + 1
+              && request.resource.data.members.hasAll(resource.data.members)
+              && request.auth.uid in request.resource.data.members)
+        );
     }
   }
 }

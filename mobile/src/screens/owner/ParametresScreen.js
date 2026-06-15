@@ -1,19 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Clipboard from 'expo-clipboard';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import { Screen, ScreenTitle, Card, Field, Input, Button } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useAnimals } from '../../context/AnimalsContext';
 import { colors, spacing } from '../../theme';
 
 export default function ParametresScreen() {
-  const { reminderSettings, saveReminderSettings } = useAuth();
-  const { animals, saveAnimal } = useAnimals();
+  const { reminderSettings, saveReminderSettings, householdId } = useAuth();
+  const { animals, saveAnimal, createHousehold, joinHousehold, leaveHousehold } = useAnimals();
   const [settings, setSettings] = useState(reminderSettings);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState('');
+
+  const [householdMembers, setHouseholdMembers] = useState(null);
+  const [householdCode, setHouseholdCode] = useState('');
+  const [householdBusy, setHouseholdBusy] = useState(false);
+  const [householdError, setHouseholdError] = useState('');
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  useEffect(() => {
+    if (!householdId) { setHouseholdMembers(null); return; }
+    getDoc(doc(db, 'households', householdId))
+      .then((snap) => setHouseholdMembers(snap.exists() ? (snap.data().members || []).length : null))
+      .catch(() => setHouseholdMembers(null));
+  }, [householdId]);
+
+  const handleCreateHousehold = async () => {
+    setHouseholdBusy(true);
+    setHouseholdError('');
+    try {
+      await createHousehold();
+    } catch (err) {
+      setHouseholdError("Impossible de créer le foyer.");
+    }
+    setHouseholdBusy(false);
+  };
+
+  const handleJoinHousehold = async () => {
+    setHouseholdBusy(true);
+    setHouseholdError('');
+    try {
+      await joinHousehold(householdCode);
+      setHouseholdCode('');
+    } catch (err) {
+      setHouseholdError(err.message || "Impossible de rejoindre ce foyer.");
+    }
+    setHouseholdBusy(false);
+  };
+
+  const handleLeaveHousehold = () => {
+    Alert.alert(
+      'Quitter le foyer',
+      'Vos animaux ne seront plus partagés avec les autres membres de ce foyer. Continuer ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Quitter',
+          style: 'destructive',
+          onPress: async () => {
+            setHouseholdBusy(true);
+            setHouseholdError('');
+            try {
+              await leaveHousehold();
+            } catch (err) {
+              setHouseholdError('Impossible de quitter le foyer.');
+            }
+            setHouseholdBusy(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const copyHouseholdCode = async () => {
+    await Clipboard.setStringAsync(householdId);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
   const update = (key, value) => setSettings({ ...settings, [key]: parseInt(value, 10) || 0 });
 
@@ -113,6 +182,44 @@ export default function ParametresScreen() {
         </Field>
 
         <Button title="💾 Sauvegarder" onPress={handleSave} />
+      </Card>
+
+      <Card>
+        <Text style={styles.cardTitle}>🏠 Foyer partagé</Text>
+
+        {householdId ? (
+          <>
+            <Text style={styles.hint}>
+              Vos animaux sont partagés avec {householdMembers ? `${householdMembers} membre${householdMembers > 1 ? 's' : ''}` : 'votre foyer'} (vous inclus(e)). Chaque membre peut consulter et compléter le carnet de santé des animaux du foyer.
+            </Text>
+
+            <Field label="Code du foyer (à partager avec un proche)">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Input value={householdId} editable={false} style={{ flex: 1 }} />
+                <Button title={codeCopied ? '✅' : '📋 Copier'} onPress={copyHouseholdCode} color={colors.background} textColor={colors.text} />
+              </View>
+            </Field>
+
+            <Button title="🚪 Quitter le foyer" onPress={handleLeaveHousehold} color={colors.redLight} textColor={colors.red} disabled={householdBusy} />
+          </>
+        ) : (
+          <>
+            <Text style={styles.hint}>
+              Créez un foyer pour partager vos animaux (vaccins, rendez-vous, observations…) avec un proche, ou rejoignez le foyer d'un proche grâce à son code.
+            </Text>
+
+            <Button title="➕ Créer un foyer" onPress={handleCreateHousehold} disabled={householdBusy} style={{ marginTop: spacing.md, marginBottom: spacing.md }} />
+
+            <View style={styles.divider} />
+
+            <Field label="Rejoindre un foyer existant">
+              <Input value={householdCode} onChangeText={setHouseholdCode} placeholder="Code du foyer" autoCapitalize="none" />
+            </Field>
+            <Button title="🔗 Rejoindre" onPress={handleJoinHousehold} disabled={householdBusy || !householdCode.trim()} color={colors.cyan} />
+          </>
+        )}
+
+        {householdError ? <Text style={[styles.importMsg, { color: colors.red }]}>{householdError}</Text> : null}
       </Card>
 
       <Card>

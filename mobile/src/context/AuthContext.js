@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
   const [userRole, setUserRole] = useState(null);
   const [reminderSettings, setReminderSettings] = useState(DEFAULT_REMINDERS);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [householdId, setHouseholdId] = useState(null);
 
   const loadSettings = async (uid) => {
     try {
@@ -44,9 +45,11 @@ export function AuthProvider({ children }) {
         });
         setUserRole(settings.role || 'proprietaire');
         setSubscriptionStatus(settings.subscriptionStatus ?? null);
+        setHouseholdId(settings.householdId || null);
       } else {
         await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: DEFAULT_REMINDERS });
         setUserRole('proprietaire');
+        setHouseholdId(null);
       }
     } catch (error) {
       console.error('Erreur loading settings:', error);
@@ -94,6 +97,9 @@ export function AuthProvider({ children }) {
     await setDoc(doc(db, 'settings', user.uid), { userId: user.uid, reminders: settings }, { merge: true });
   };
 
+  // Re-read settings/{uid} (e.g. after joining/leaving a foyer partagé)
+  const reloadSettings = () => user && loadSettings(user.uid);
+
   return (
     <AuthContext.Provider
       value={{
@@ -102,6 +108,8 @@ export function AuthProvider({ children }) {
         userRole,
         reminderSettings,
         subscriptionStatus,
+        householdId,
+        reloadSettings,
         signup,
         login,
         logout,
