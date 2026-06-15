@@ -50,8 +50,9 @@ l'app standard.
 - **Accès une fois abonné** : le vétérinaire recherche un animal soit via son `identifiant` (ex :
   numéro de puce électronique, champ optionnel renseigné par le propriétaire dans le profil de
   l'animal et affiché avec un bouton "Copier" sur la fiche), soit par le **nom de l'animal +
-  nom (et prénom optionnel) du propriétaire**. Cette seconde recherche fonctionne pour tout
-  animal (pas seulement ceux ayant un `identifiant`).
+  nom (et prénom et date de naissance optionnels) du propriétaire**. Cette seconde recherche
+  fonctionne pour tout animal (pas seulement ceux ayant un `identifiant`) ; le prénom et la date
+  de naissance permettent d'affiner la recherche en cas d'homonymie.
 - **Permissions** : lecture complète du dossier + ajout de vaccins, médicaments, chirurgies/petites
   interventions, antiparasitaires, vermifuges, observations et pesées. Pas d'accès au profil de
   base (nom, race, sexe…), au budget, ni aux partages — ces champs restent réservés au
@@ -84,9 +85,10 @@ ancien document (`userId == uid` mais ID aléatoire) est automatiquement migré 
 Champs :
 - `userId` : uid du propriétaire du document
 - `role` : `'proprietaire'` ou `'veterinaire'`
-- `nom`, `prenom`, `dateNaissance` : identité de l'utilisateur, saisis à l'inscription. `nom`
-  et `prenom` sont recopiés (dénormalisés) sur chaque animal créé (`proprietaireNom`,
-  `proprietairePrenom`) pour permettre la recherche vétérinaire par nom de propriétaire
+- `nom`, `prenom`, `dateNaissance` : identité de l'utilisateur, saisis à l'inscription. Ces trois
+  champs sont recopiés (dénormalisés) sur chaque animal créé (`proprietaireNom`,
+  `proprietairePrenom`, `proprietaireDateNaissance`) pour permettre la recherche vétérinaire par
+  nom de propriétaire
 - `reminders` : préférences de rappels (`vaccin`, `medicament`, `antiparasitaire`, `vermifuge`)
 - `subscriptionStatus` (vétérinaires uniquement) : `'inactive' | 'active' | 'past_due' | 'canceled' | ...`
   mis à jour par le webhook Stripe (`functions/index.js`)
@@ -99,9 +101,10 @@ Champs :
 En plus des champs de profil existants (`nom`, `espece`, `race`, `sexe`, `dateNaissance`,
 `identifiant`, `photo`…) et des tableaux d'actes médicaux (`vaccins`, `medicaments`,
 `antiparasitaires`, `vermifuges`, `observations`, `poids`) :
-- `proprietaireNom`, `proprietairePrenom` : copie du nom/prénom du propriétaire
-  (`settings/{userId}`) au moment de la création de l'animal, utilisée par la recherche
-  vétérinaire par nom
+- `proprietaireNom`, `proprietairePrenom`, `proprietaireDateNaissance` : copie du nom, prénom et
+  date de naissance du propriétaire (`settings/{userId}`) au moment de la création de l'animal,
+  utilisée par la recherche vétérinaire par nom (la date de naissance, optionnelle côté
+  recherche, permet de départager les homonymes)
 - `validePar` (optionnel, sur chaque élément des tableaux `vaccins`, `medicaments`,
   `chirurgies`, `antiparasitaires`, `vermifuges`, `observations`, `poids`) : `{ nom, prenom,
   date }` du vétérinaire abonné ayant ajouté ou modifié cet élément depuis l'espace pro.
