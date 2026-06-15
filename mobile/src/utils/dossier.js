@@ -30,6 +30,7 @@ export const DOSSIER_CARDS = [
   { id: 'Messages', emoji: '💬', label: 'Messagerie vétérinaire', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
   { id: 'Journal', emoji: '📖', label: 'Journal de vie', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Documents', emoji: '📄', label: 'Documents', color: colors.indigo, bg: colors.indigoLight, group: 'Quotidien' },
+  { id: 'Videos', emoji: '🎥', label: 'Vidéos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
 ];
@@ -42,7 +43,7 @@ export const getDossierStatusPillStyle = (status) => {
 };
 
 // Status text + indicator color shown on a Dossier card for a given section (mirrors getDossierCardStatus)
-export const getDossierCardStatus = (animal, cardId) => {
+export const getDossierCardStatus = (animal, cardId, videoCount = 0) => {
   const todayIso = new Date().toISOString().split('T')[0];
   const ok = { iconColor: colors.primary };
   const none = { iconColor: colors.inputBorder };
@@ -75,6 +76,8 @@ export const getDossierCardStatus = (animal, cardId) => {
       const n = (animal.observations || []).length;
       return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
     }
+    case 'Videos':
+      return videoCount > 0 ? { text: `${videoCount} vidéo(s)`, ...ok } : { text: 'Aucune vidéo', ...none };
     case 'Documents': {
       const n = (animal.documents || []).length;
       return n > 0 ? { text: `${n} fichier(s)`, ...ok } : { text: 'Aucun document', ...none };

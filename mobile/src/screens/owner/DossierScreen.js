@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import * as Print from 'expo-print';
 import * as Clipboard from 'expo-clipboard';
@@ -9,6 +9,7 @@ import { useAnimals } from '../../context/AnimalsContext';
 import { getAnimalDossier } from '../../utils/reminders';
 import { buildDossierEmailBody, buildDossierHtml, DOSSIER_GROUPS, DOSSIER_CARDS, getDossierCardStatus, getDossierStatusPillStyle } from '../../utils/dossier';
 import { computeAge } from '../../utils/dates';
+import { getVideosForAnimal } from '../../utils/videos';
 import { APP_URL } from '../../constants';
 import { colors, spacing } from '../../theme';
 
@@ -17,6 +18,14 @@ export default function DossierScreen() {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [videoCount, setVideoCount] = useState(0);
+
+  const animal = animals.find((a) => a.id === selectedAnimal) || animals[0];
+
+  useEffect(() => {
+    if (!animal) return;
+    getVideosForAnimal(animal.id).then((list) => setVideoCount(list.length)).catch(() => setVideoCount(0));
+  }, [animal?.id]);
 
   if (animals.length === 0) {
     return (
@@ -26,7 +35,6 @@ export default function DossierScreen() {
     );
   }
 
-  const animal = animals.find((a) => a.id === selectedAnimal) || animals[0];
   const dossier = getAnimalDossier(animal);
   const age = computeAge(animal.dateNaissance);
   const subtitle = [animal.race, age].filter(Boolean).join(' — ');
@@ -92,7 +100,7 @@ export default function DossierScreen() {
             <GroupLabel>{group}</GroupLabel>
             <ListGroup>
               {cards.map((card, i) => {
-                const status = getDossierCardStatus(animal, card.id);
+                const status = getDossierCardStatus(animal, card.id, videoCount);
                 const pillStyle = getDossierStatusPillStyle(status);
                 return (
                   <ListRow

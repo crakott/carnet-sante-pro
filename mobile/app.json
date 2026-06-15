@@ -37,7 +37,8 @@
         {
           "photosPermission": "Carnet Santé PRO a besoin d'accéder à vos photos pour illustrer les observations de vos animaux."
         }
-      ]
+      ],
+      "expo-video"
     ]
   }
 }

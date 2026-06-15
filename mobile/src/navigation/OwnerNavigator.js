@@ -13,6 +13,7 @@ import AlimentScreen from '../screens/owner/AlimentScreen';
 import NotesScreen from '../screens/owner/NotesScreen';
 import JournalScreen from '../screens/owner/JournalScreen';
 import DocumentsScreen from '../screens/owner/DocumentsScreen';
+import VideosScreen from '../screens/owner/VideosScreen';
 import MessagesScreen from '../screens/owner/MessagesScreen';
 import PoidsScreen from '../screens/owner/PoidsScreen';
 import PlanningScreen from '../screens/owner/PlanningScreen';
@@ -63,6 +64,7 @@ export default function OwnerNavigator() {
       <Drawer.Screen name="Messages" component={MessagesScreen} options={{ title: '💬 Messagerie vétérinaire', drawerLabel: '💬 Messagerie' }} />
       <Drawer.Screen name="Journal" component={JournalScreen} options={{ title: '📖 Journal de vie', drawerLabel: '📖 Journal de vie' }} />
       <Drawer.Screen name="Documents" component={DocumentsScreen} options={{ title: '📄 Documents', drawerLabel: '📄 Documents' }} />
+      <Drawer.Screen name="Videos" component={VideosScreen} options={{ title: '🎥 Vidéos', drawerLabel: '🎥 Vidéos' }} />
       <Drawer.Screen name="Poids" component={PoidsScreen} options={{ title: '⚖️ Poids', drawerLabel: '⚖️ Poids' }} />
       <Drawer.Screen name="Planning" component={PlanningScreen} options={{ title: '📅 Rendez-vous', drawerLabel: '📅 Rendez-vous' }} />
       <Drawer.Screen name="Budget" component={BudgetScreen} options={{ title: '💰 Budget', drawerLabel: '💰 Budget' }} />
