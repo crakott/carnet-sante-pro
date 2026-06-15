@@ -27,6 +27,7 @@ export const DOSSIER_CARDS = [
   { id: 'Poids', emoji: '⚖️', label: 'Poids', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
   { id: 'Aliment', emoji: '🍎', label: 'Alimentation', color: colors.yellow, bg: colors.yellowLight, group: 'Quotidien' },
   { id: 'Notes', emoji: '📋', label: 'Observations', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
+  { id: 'Journal', emoji: '📖', label: 'Journal de vie', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
 ];
@@ -71,6 +72,11 @@ export const getDossierCardStatus = (animal, cardId) => {
     case 'Notes': {
       const n = (animal.observations || []).length;
       return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+    }
+    case 'Journal': {
+      const n = (animal.vaccins || []).length + (animal.chirurgies || []).length
+        + (animal.medicaments || []).length + (animal.poids || []).length + (animal.observations || []).length;
+      return n > 0 ? { text: `${n} souvenir(s)`, iconColor: colors.pink } : { text: 'Aucun souvenir', ...none };
     }
     case 'Planning': {
       const rdvs = animal.rdvs || [];
