@@ -135,6 +135,88 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
   res.json({ received: true });
 });
 
+// Scheduled daily at 8:00 AM Paris time: send FCM push notifications for upcoming
+// vaccine, treatment, antiparasitic and dewormer due dates, based on each user's
+// configured thresholds (settings/{uid}.reminders). Fires at threshold day (advance
+// warning), the day before, and the day of. Dedup via settings/{uid}.upcomingSentKeys.
+exports.sendUpcomingReminders = onSchedule({ schedule: 'every day 08:00', region: REGION, timeZone: 'Europe/Paris' }, async () => {
+  const db = admin.firestore();
+  const messaging = admin.messaging();
+
+  const now = new Date();
+  const parisDate = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  const [day, month, year] = parisDate.split('/');
+  const todayStr = `${year}-${month}-${day}`;
+  const todayMs = new Date(todayStr).getTime();
+
+  const settingsSnap = await db.collection('settings').where('fcmToken', '!=', null).get();
+
+  for (const settingDoc of settingsSnap.docs) {
+    const uid = settingDoc.id;
+    const { fcmToken, householdId, reminders = {}, lastUpcomingDate, upcomingSentKeys = [] } = settingDoc.data();
+    if (!fcmToken) continue;
+
+    const thresholds = {
+      vaccin: reminders.vaccin ?? 3,
+      medicament: reminders.medicament ?? 3,
+      antiparasitaire: reminders.antiparasitaire ?? 14,
+      vermifuge: reminders.vermifuge ?? 14,
+    };
+
+    const sentKeys = lastUpcomingDate === todayStr ? upcomingSentKeys : [];
+
+    const animalsQuery = householdId
+      ? db.collection('animals').where('householdId', '==', householdId)
+      : db.collection('animals').where('userId', '==', uid);
+    const animalsSnap = await animalsQuery.get();
+
+    const newKeys = [];
+
+    const checkAndSend = async (type, animalNom, nom, dateStr, threshold) => {
+      if (!dateStr) return;
+      const targetMs = new Date(dateStr).getTime();
+      if (isNaN(targetMs)) return;
+      const daysUntil = Math.ceil((targetMs - todayMs) / 86400000);
+      if (daysUntil < 0 || (daysUntil !== threshold && daysUntil !== 1 && daysUntil !== 0)) return;
+
+      const key = `${type}|${animalNom}|${nom}|${daysUntil}`;
+      if (sentKeys.includes(key) || newKeys.includes(key)) return;
+
+      const emoji = type === 'vaccin' ? '💉' : type === 'medicament' ? '💊' : type === 'antiparasitaire' ? '🦟' : '🪱';
+      const delay = daysUntil === 0 ? "aujourd'hui" : daysUntil === 1 ? 'demain' : `dans ${daysUntil} jours`;
+
+      try {
+        await messaging.send({
+          token: fcmToken,
+          notification: { title: `${emoji} ${animalNom} — ${nom}`, body: `Rappel ${delay}` },
+          android: { priority: 'high' },
+          apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+        });
+        newKeys.push(key);
+      } catch (err) {
+        if (err.code === 'messaging/registration-token-not-registered') {
+          await settingDoc.ref.set({ fcmToken: null }, { merge: true });
+        }
+      }
+    };
+
+    for (const animalDoc of animalsSnap.docs) {
+      const animal = animalDoc.data();
+      for (const v of (animal.vaccins || [])) await checkAndSend('vaccin', animal.nom, v.nom, v.rappel || v.date, thresholds.vaccin);
+      for (const m of (animal.medicaments || [])) await checkAndSend('medicament', animal.nom, m.nom, m.dateFin, thresholds.medicament);
+      for (const t of (animal.antiparasitaires || [])) await checkAndSend('antiparasitaire', animal.nom, t.nom || 'Antiparasitaire', t.prochainTraitement, thresholds.antiparasitaire);
+      for (const t of (animal.vermifuges || [])) await checkAndSend('vermifuge', animal.nom, t.nom || 'Vermifuge', t.prochainTraitement, thresholds.vermifuge);
+    }
+
+    if (newKeys.length > 0) {
+      await settingDoc.ref.set({
+        lastUpcomingDate: todayStr,
+        upcomingSentKeys: [...sentKeys, ...newKeys],
+      }, { merge: true });
+    }
+  }
+});
+
 // Scheduled every 30 minutes: send FCM push notifications for medication dose times
 // that fall within the current 30-minute window (Paris timezone).
 // Users receive a push notification even when their phone is locked, as long as

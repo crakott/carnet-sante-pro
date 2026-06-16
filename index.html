@@ -801,10 +801,8 @@
         }
 
         // Send local push notifications for due/overdue reminders via the service worker.
-        // Long-delay setTimeout in the SW is unreliable (the browser can kill the worker before
-        // it fires), so instead we notify immediately for anything due today, tomorrow or
-        // overdue, and re-check every time the app is opened — deduping per day via
-        // localStorage so the same reminder doesn't notify twice on the same day.
+        // Fires at the configured threshold day (advance warning) and again the day before + day of.
+        // Deduplication per day via localStorage so the same reminder doesn't fire twice on the same day.
         const scheduleReminders = async (reminders) => {
             if (!('Notification' in window) || !navigator.serviceWorker) return;
             if (Notification.permission !== 'granted') return;
@@ -815,14 +813,16 @@
             try { notified = JSON.parse(localStorage.getItem('notifiedReminders') || '{}'); } catch (e) { notified = {}; }
             notified = Object.fromEntries(Object.entries(notified).filter(([, d]) => d === today));
             reminders.forEach(r => {
-                if (r.daysUntil > 1) return;
+                // Fire at threshold day (advance warning), day before, and day of
+                if (r.daysUntil > 1 && r.daysUntil !== r.threshold) return;
+                if (r.daysUntil < 0) return;
                 const key = `${r.animal}|${r.type}|${r.nom}|${r.daysUntil}`;
                 if (notified[key] === today) return;
-                const label = r.type === 'vaccin' ? '💉' : r.type === 'medicament' ? '💊' : r.type === 'antiparasitaire' ? '🦟' : '🪱';
+                const emoji = r.type === 'vaccin' ? '💉' : r.type === 'medicament' ? '💊' : r.type === 'antiparasitaire' ? '🦟' : '🪱';
                 reg.active?.postMessage({
                     type: 'SCHEDULE_NOTIFICATION',
-                    title: `${label} Rappel — ${r.animal}`,
-                    body: `${r.nom} — ${formatReminderDelay(r.daysUntil)}`,
+                    title: `${emoji} ${r.animal} — ${r.nom}`,
+                    body: formatReminderDelay(r.daysUntil),
                 });
                 notified[key] = today;
             });
@@ -1059,7 +1059,7 @@
                     if (isNaN(target.getTime())) return;
                     const daysUntil = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
                     if (daysUntil <= threshold) {
-                        reminders.push({ type, animal: animalNom, nom, daysUntil, urgent: daysUntil <= 1 });
+                        reminders.push({ type, animal: animalNom, nom, daysUntil, threshold, urgent: daysUntil <= 1 });
                     }
                 };
 
@@ -4285,75 +4285,77 @@
                         {profileMsg && <p style={{ marginTop: '10px', fontSize: '14px', color: profileMsg.startsWith('✅') ? '#10b981' : '#ef4444' }}>{profileMsg}</p>}
                     </CollapsibleSection>
 
-                    <CollapsibleSection icon="⏰" iconBg="#fef3c7" iconColor="#f59e0b" title="Délais de rappels (en jours)">
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Vaccins</label>
-                            <input
-                                type="number"
-                                value={reminderSettings.vaccin}
-                                onChange={(e) => setReminderSettings({...reminderSettings, vaccin: parseInt(e.target.value)})}
-                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
-                            />
-                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant expiration</small>
-                        </div>
-
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Rappel Traitements</label>
-                            <input
-                                type="number"
-                                value={reminderSettings.medicament}
-                                onChange={(e) => setReminderSettings({...reminderSettings, medicament: parseInt(e.target.value)})}
-                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
-                            />
-                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant</small>
-                        </div>
-
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>🦟 Rappel Antiparasitaires</label>
-                            <input
-                                type="number"
-                                value={reminderSettings.antiparasitaire ?? 14}
-                                onChange={(e) => setReminderSettings({...reminderSettings, antiparasitaire: parseInt(e.target.value)})}
-                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
-                            />
-                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant le prochain traitement</small>
-                        </div>
-
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>🪱 Rappel Vermifuges</label>
-                            <input
-                                type="number"
-                                value={reminderSettings.vermifuge ?? 14}
-                                onChange={(e) => setReminderSettings({...reminderSettings, vermifuge: parseInt(e.target.value)})}
-                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}
-                            />
-                            <small style={{ color: '#6b7280' }}>Recevoir un rappel X jours avant le prochain traitement</small>
-                        </div>
-
-                        <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
-                            💾 Sauvegarder
-                        </button>
-                    </CollapsibleSection>
-
                     {/* ── Notifications ── */}
-                    <CollapsibleSection icon="🔔" iconBg="#fce7f3" iconColor="#ec4899" title="Notifications">
-                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>Recevez une notification sur votre téléphone quand un vaccin, traitement ou médicament arrive à échéance.</p>
-                        {notifPermission === 'granted' && (
-                            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                                <span style={{ fontSize: '14px', fontWeight: '600' }}>Recevoir les rappels sur cet appareil</span>
-                                <input type="checkbox" checked={notifEnabled} onChange={(e) => handleToggleNotifications(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
-                            </label>
-                        )}
-                        {notifPermission === 'denied' && (
-                            <p style={{ fontSize: '14px', color: '#ef4444' }}>🚫 Les notifications sont bloquées pour cette application. Réactivez-les dans les réglages de notifications de votre navigateur ou de votre téléphone.</p>
-                        )}
-                        {notifPermission === 'default' && (
-                            <button onClick={handleEnableNotifications} style={{ padding: '11px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
-                                🔔 Activer les rappels
-                            </button>
-                        )}
+                    <CollapsibleSection icon="🔔" iconBg="#fce7f3" iconColor="#ec4899" title="Notifications push">
                         {notifPermission === 'unsupported' && (
                             <p style={{ fontSize: '13px', color: '#6b7280' }}>Les notifications ne sont pas prises en charge par ce navigateur.</p>
+                        )}
+                        {notifPermission === 'denied' && (
+                            <p style={{ fontSize: '14px', color: '#ef4444' }}>🚫 Les notifications sont bloquées. Réactivez-les dans les réglages de notifications de votre navigateur ou téléphone.</p>
+                        )}
+                        {notifPermission === 'default' && (
+                            <div>
+                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '14px' }}>Activez les notifications pour être prévenu avant les échéances : vaccins, traitements, antiparasitaires et vermifuges.</p>
+                                <button onClick={handleEnableNotifications} style={{ padding: '11px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                    🔔 Activer les notifications
+                                </button>
+                            </div>
+                        )}
+                        {notifPermission === 'granted' && (
+                            <>
+                                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', marginBottom: notifEnabled ? '20px' : '0' }}>
+                                    <span style={{ fontSize: '14px', fontWeight: '600' }}>Recevoir les rappels sur cet appareil</span>
+                                    <input type="checkbox" checked={notifEnabled} onChange={(e) => handleToggleNotifications(e.target.checked)} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
+                                </label>
+                                {notifEnabled && (
+                                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                                        <p style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '14px' }}>
+                                            Être prévenu combien de jours avant :
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>💉 Vaccins</label>
+                                                <input type="number" min="1" max="90"
+                                                    value={reminderSettings.vaccin}
+                                                    onChange={(e) => setReminderSettings({...reminderSettings, vaccin: Math.max(1, parseInt(e.target.value) || 1)})}
+                                                    style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', fontSize: '15px' }}
+                                                />
+                                                <small style={{ color: '#6b7280', fontSize: '11px' }}>jours avant</small>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>💊 Traitements</label>
+                                                <input type="number" min="1" max="90"
+                                                    value={reminderSettings.medicament}
+                                                    onChange={(e) => setReminderSettings({...reminderSettings, medicament: Math.max(1, parseInt(e.target.value) || 1)})}
+                                                    style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', fontSize: '15px' }}
+                                                />
+                                                <small style={{ color: '#6b7280', fontSize: '11px' }}>jours avant</small>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>🦟 Antiparasitaires</label>
+                                                <input type="number" min="1" max="90"
+                                                    value={reminderSettings.antiparasitaire ?? 14}
+                                                    onChange={(e) => setReminderSettings({...reminderSettings, antiparasitaire: Math.max(1, parseInt(e.target.value) || 1)})}
+                                                    style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', fontSize: '15px' }}
+                                                />
+                                                <small style={{ color: '#6b7280', fontSize: '11px' }}>jours avant</small>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px' }}>🪱 Vermifuges</label>
+                                                <input type="number" min="1" max="90"
+                                                    value={reminderSettings.vermifuge ?? 14}
+                                                    onChange={(e) => setReminderSettings({...reminderSettings, vermifuge: Math.max(1, parseInt(e.target.value) || 1)})}
+                                                    style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', fontSize: '15px' }}
+                                                />
+                                                <small style={{ color: '#6b7280', fontSize: '11px' }}>jours avant</small>
+                                            </div>
+                                        </div>
+                                        <button onClick={saveSettings} style={{ width: '100%', padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                                            💾 Sauvegarder
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </CollapsibleSection>
 
