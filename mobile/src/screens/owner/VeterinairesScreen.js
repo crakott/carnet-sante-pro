@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { Screen, ScreenTitle, EmptyState, Card, Button } from '../../components/ui';
 import AnimalPicker from '../../components/AnimalPicker';
@@ -66,11 +66,13 @@ export default function VeterinairesScreen() {
   }
 
   const usingRealVets = nearbyVets !== null && nearbyVets.length > 0;
-  const vets = usingRealVets
-    ? nearbyVets
-    : (userPos
-        ? VETERINAIRES.map((v) => ({ ...v, distanceKm: getDistanceKm(userPos.lat, userPos.lng, v.lat, v.lng) })).sort((a, b) => a.distanceKm - b.distanceKm)
-        : VETERINAIRES);
+  // Only show fallback example vets before geolocation (idle state); after geo, show Maps link instead
+  const showFallback = geoStatus === 'idle';
+  const vets = usingRealVets ? nearbyVets : (showFallback ? VETERINAIRES : []);
+  const mapsUrl = userPos
+    ? `https://www.google.com/maps/search/vétérinaire/@${userPos.lat},${userPos.lng},13z`
+    : null;
+  const showMapsLink = userPos && !usingRealVets && (vetsStatus === 'error' || vetsStatus === 'done');
 
   return (
     <Screen>
@@ -91,8 +93,17 @@ export default function VeterinairesScreen() {
       {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets ? (
         <Text style={styles.successText}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité</Text>
       ) : null}
-      {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets ? <Text style={styles.warnText}>⚠️ Aucun vétérinaire référencé sur OpenStreetMap dans un rayon de 25 km autour de votre position. Voici une sélection d'exemple en attendant.</Text> : null}
+      {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets ? <Text style={styles.warnText}>⚠️ Aucun vétérinaire trouvé sur OpenStreetMap dans un rayon de 25 km.</Text> : null}
       {geoStatus === 'done' && vetsStatus === 'error' ? <Text style={styles.warnText}>⚠️ {vetsError}</Text> : null}
+
+      {showMapsLink ? (
+        <Button
+          title="🗺️ Chercher un vétérinaire sur Google Maps"
+          onPress={() => Linking.openURL(mapsUrl)}
+          color={colors.darkBlue}
+          style={{ marginBottom: spacing.md }}
+        />
+      ) : null}
 
       {vetsStatus !== 'loading' && vets.map((vet) => (
         <Card key={vet.id}>
