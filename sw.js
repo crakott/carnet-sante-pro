@@ -1,4 +1,34 @@
-const CACHE = 'carnet-sante-v15';
+// Firebase Messaging compat — must be imported before any other code so the
+// FCM SDK can intercept push events and display background notifications
+// even when the app is closed or the phone is locked.
+importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDZ_dc_HfSmXL1pjeKwT7uD1xX2lbr48c0",
+  authDomain: "carnet-sante-pro.firebaseapp.com",
+  projectId: "carnet-sante-pro",
+  storageBucket: "carnet-sante-pro.firebasestorage.app",
+  messagingSenderId: "1059301417055",
+  appId: "1:1059301417055:web:8f5f81e0b075063ad4fbea"
+});
+
+const fcmMessaging = firebase.messaging();
+
+// Display FCM push notifications received while the app is in the background
+fcmMessaging.onBackgroundMessage((payload) => {
+  const { title, body } = payload.notification || {};
+  if (!title) return;
+  self.registration.showNotification(title, {
+    body: body || '',
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: 'dose-reminder',
+  });
+});
+
+const CACHE = 'carnet-sante-v16';
 const PRECACHE = [
   './',
   'manifest.json',

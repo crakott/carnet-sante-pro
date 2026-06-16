@@ -79,6 +79,7 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
         import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
         import { getFunctions, httpsCallable } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/functions/+esm";
+        import { getMessaging, getToken } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/messaging/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
         const formatDate = (dateStr) => {
@@ -232,6 +233,23 @@
             db = getFirestore(app);
         }
         const functions = getFunctions(app, 'europe-west1');
+
+        // Firebase Cloud Messaging — push notifications even when phone is locked.
+        // VAPID key: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates > Generate key pair
+        const VAPID_KEY = 'VOTRE_CLE_VAPID_ICI';
+        let fcmMessaging = null;
+        try { fcmMessaging = getMessaging(app); } catch (e) { /* FCM not available in this browser */ }
+
+        // Register this device for FCM push and store the token in Firestore.
+        // Called after notification permission is granted or on app load if already granted.
+        const initFCM = async (uid) => {
+            if (!fcmMessaging || !uid || VAPID_KEY === 'VOTRE_CLE_VAPID_ICI') return;
+            try {
+                const swReg = await navigator.serviceWorker.ready;
+                const token = await getToken(fcmMessaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+                if (token) await setDoc(doc(db, 'settings', uid), { fcmToken: token }, { merge: true });
+            } catch (e) { /* Permission denied or FCM unavailable */ }
+        };
 
         // Reference data for animal profiles, vaccines, medications and vets
         const ESPECES = ['Chien', 'Chat', 'Lapin', 'Hamster', 'Gerbille', 'Cheval', 'Oiseau', 'Tortue'];
@@ -809,6 +827,10 @@
                     if (currentUser) {
                         const hId = await loadSettings(currentUser.uid);
                         loadAnimalsFromFirestore(currentUser.uid, hId);
+                        // Auto-register FCM token if notification permission already granted
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            initFCM(currentUser.uid);
+                        }
                     } else {
                         setUserRole(null);
                     }
@@ -2449,19 +2471,28 @@
             );
         }
 
+        // Default dose times for common frequencies (used to pre-fill the time pickers)
+        const defaultHeuresPrise = (n) => {
+            const f = Math.min(6, Math.max(1, Math.round(parseFloat(n) || 1)));
+            const slots = { 1: ['08:00'], 2: ['08:00', '20:00'], 3: ['08:00', '14:00', '20:00'], 4: ['07:00', '11:00', '15:00', '19:00'], 5: ['07:00', '10:00', '13:00', '16:00', '19:00'], 6: ['07:00', '09:00', '11:00', '13:00', '17:00', '21:00'] };
+            return slots[f] || ['08:00'];
+        };
+
         function MedicamentsTab({ animal, animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
             if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
             const [newMed, setNewMed] = React.useState({ nom: '', dosage: '', unite: 'mg', frequence: '', duree: '', dateDebut: todayStr });
+            const [medHeures, setMedHeures] = React.useState(['08:00']);
 
             const handleAddMed = () => {
                 const { nom, dosage, unite, frequence, duree, dateDebut } = newMed;
                 if (nom && dosage && frequence && duree) {
                     const dateFin = new Date(new Date(dateDebut).getTime() + parseInt(duree) * 86400000).toISOString().split('T')[0];
-                    addAnimalItem(animal, 'medicaments', { nom, dosage, unite, frequence: `${frequence}x/jour`, duree, dateDebut, dateFin });
+                    addAnimalItem(animal, 'medicaments', { nom, dosage, unite, frequence: `${frequence}x/jour`, duree, dateDebut, dateFin, heures: medHeures });
                     setNewMed({ nom: '', dosage: '', unite: 'mg', frequence: '', duree: '', dateDebut: todayStr });
+                    setMedHeures(['08:00']);
                     setShowForm(false);
                 }
             };
@@ -2488,7 +2519,21 @@
                                         <option>g</option><option>mg</option><option>ml</option><option>UI</option>
                                     </select>
                                 </div>
-                                <input type="number" placeholder="Fréquence (x/jour)" min="0.5" step="0.5" value={newMed.frequence} onChange={(e) => setNewMed({ ...newMed, frequence: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="number" placeholder="Fréquence (x/jour)" min="1" step="1" value={newMed.frequence}
+                                    onChange={(e) => { setNewMed({ ...newMed, frequence: e.target.value }); setMedHeures(defaultHeuresPrise(e.target.value)); }}
+                                    style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                {medHeures.length > 0 && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>⏰ Heures de prise (pour les rappels sur téléphone verrouillé)</label>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            {medHeures.map((h, i) => (
+                                                <input key={i} type="time" value={h}
+                                                    onChange={(e) => { const u = [...medHeures]; u[i] = e.target.value; setMedHeures(u); }}
+                                                    style={{ padding: '8px', border: '1px solid #ec4899', borderRadius: '6px', fontSize: '15px', fontWeight: '600', color: '#ec4899' }} />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 <input type="number" placeholder="Durée (jours)" value={newMed.duree} onChange={(e) => setNewMed({ ...newMed, duree: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({ ...newMed, dateDebut: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                             </div>
@@ -2527,6 +2572,9 @@
                                             <p style={{ fontWeight: '600' }}>{m.nom}</p>
                                             {m.dosage && <p style={{ color: '#6b7280', fontSize: '14px' }}>💊 {m.dosage} {m.unite} • {m.frequence}</p>}
                                             <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {formatDate(m.dateDebut)}{m.dateFin ? ` → ${formatDate(m.dateFin)}` : ''}</p>
+                                            {m.heures && m.heures.length > 0 && isActive && (
+                                                <p style={{ color: '#ec4899', fontSize: '13px', fontWeight: '600', marginTop: '4px' }}>⏰ {m.heures.join(' · ')}</p>
+                                            )}
                                             {m.dateFin && (
                                                 <span style={{ display: 'inline-block', fontSize: '11px', padding: '3px 8px', borderRadius: '4px', background: isActive ? '#fce7f3' : '#f3f4f6', color: isActive ? '#be185d' : '#6b7280', fontWeight: '600', marginTop: '4px' }}>
                                                     {isActive ? '✅ En cours' : '⏱️ Fini'}
@@ -4096,6 +4144,7 @@
                 await Notification.requestPermission();
                 setNotifPermission(Notification.permission);
                 localStorage.removeItem('notifPromptDismissed');
+                if (Notification.permission === 'granted') initFCM(user?.uid);
             };
 
             const handleToggleNotifications = (checked) => {
