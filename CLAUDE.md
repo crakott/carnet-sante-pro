@@ -12,6 +12,13 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
   émises par le vétérinaire et la messagerie sécurisée nécessitent les nouvelles règles
   ci-dessous)
 - [ ] **Mettre en place l'abonnement Stripe** (espace vétérinaire à 49,99 €/mois) — voir section dédiée ci-dessous, ÉTAPES MANUELLES OBLIGATOIRES avant que le paiement fonctionne
+- [ ] **Clé VAPID (notifications push téléphone verrouillé)** : pour que les rappels de traitements
+  arrivent même quand le téléphone est verrouillé, remplacer `VOTRE_CLE_VAPID_ICI` dans `index.html`
+  par la vraie clé VAPID :
+  1. Firebase Console → projet `carnet-sante-pro` → ⚙️ Paramètres → onglet **Cloud Messaging**
+  2. Section **"Web Push certificates"** → **"Generate key pair"** → copier la clé
+  3. Dans `index.html`, chercher `VOTRE_CLE_VAPID_ICI` et remplacer par la clé copiée
+  4. `firebase deploy --only hosting,functions`
 - [ ] **AdSense — repo `crakott.github.io` (hors périmètre de cet agent)** : la page de
   redirection `index.html` de ce repo contient encore le mauvais ID éditeur
   (`ca-pub-2220007213028900`) à corriger en `ca-pub-2220007721302800`. Il manque aussi le
