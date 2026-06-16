@@ -60,7 +60,7 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
       if (!trigger || trigger <= now) continue;
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: `💊 Fin de traitement — ${animal.nom}`,
+          title: `💊 Traitement à venir — ${animal.nom}`,
           body: `${m.nom} se termine dans ${medDays} jour${medDays > 1 ? 's' : ''}`,
           sound: true,
           data: { type: 'medicament', animalId: animal.id },
