@@ -20,6 +20,8 @@ export function AuthProvider({ children }) {
   const [reminderSettings, setReminderSettings] = useState(DEFAULT_REMINDERS);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [householdId, setHouseholdId] = useState(null);
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
 
   const loadSettings = async (uid) => {
     try {
@@ -46,10 +48,14 @@ export function AuthProvider({ children }) {
         setUserRole(settings.role || 'proprietaire');
         setSubscriptionStatus(settings.subscriptionStatus ?? null);
         setHouseholdId(settings.householdId || null);
+        setNom(settings.nom || '');
+        setPrenom(settings.prenom || '');
       } else {
         await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: DEFAULT_REMINDERS });
         setUserRole('proprietaire');
         setHouseholdId(null);
+        setNom('');
+        setPrenom('');
       }
     } catch (error) {
       console.error('Erreur loading settings:', error);
@@ -71,15 +77,15 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  const createSettingsDoc = async (uid, role) => {
-    const data = { userId: uid, role, reminders: DEFAULT_REMINDERS };
+  const createSettingsDoc = async (uid, role, profile = {}) => {
+    const data = { userId: uid, role, reminders: DEFAULT_REMINDERS, ...profile };
     if (role === 'veterinaire') data.subscriptionStatus = 'inactive';
     await setDoc(doc(db, 'settings', uid), data, { merge: true });
   };
 
-  const signup = async (email, password, isVet) => {
+  const signup = async (email, password, isVet, profile = {}) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await createSettingsDoc(cred.user.uid, isVet ? 'veterinaire' : 'proprietaire');
+    await createSettingsDoc(cred.user.uid, isVet ? 'veterinaire' : 'proprietaire', profile);
   };
 
   const login = async (email, password) => {
@@ -109,6 +115,8 @@ export function AuthProvider({ children }) {
         reminderSettings,
         subscriptionStatus,
         householdId,
+        nom,
+        prenom,
         reloadSettings,
         signup,
         login,

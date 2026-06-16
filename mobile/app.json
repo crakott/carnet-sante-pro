@@ -27,6 +27,13 @@
     "plugins": [
       "expo-audio",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#10b981"
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Carnet Santé PRO utilise votre position pour trouver les vétérinaires à proximité."

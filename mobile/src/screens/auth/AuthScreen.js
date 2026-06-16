@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Input, Button, Field, Screen } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateInput, displayToIso } from '../../utils/dates';
 import { colors, radius, spacing } from '../../theme';
 
 export default function AuthScreen() {
   const { signup, login, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nom, setNom] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [dateNaissance, setDateNaissance] = useState('');
   const [isSignup, setIsSignup] = useState(false);
   const [isVet, setIsVet] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +24,8 @@ export default function AuthScreen() {
     setSubmitting(true);
     try {
       if (isSignup) {
-        await signup(email, password, isVet);
+        const profile = { nom: nom.trim(), prenom: prenom.trim(), dateNaissance: displayToIso(dateNaissance) };
+        await signup(email, password, isVet, profile);
       } else {
         await login(email, password);
       }
@@ -62,6 +67,28 @@ export default function AuthScreen() {
             </View>
             <Text style={styles.vetCheckboxLabel}>🩺 Je suis vétérinaire / professionnel de santé animale (espace pro)</Text>
           </TouchableOpacity>
+        )}
+
+        {isSignup && (
+          <>
+            <View style={styles.nameRow}>
+              <Field label="Prénom" style={{ flex: 1 }}>
+                <Input value={prenom} onChangeText={setPrenom} placeholder="Prénom" autoCapitalize="words" />
+              </Field>
+              <Field label="Nom" style={{ flex: 1 }}>
+                <Input value={nom} onChangeText={setNom} placeholder="Nom" autoCapitalize="words" />
+              </Field>
+            </View>
+            <Field label="Date de naissance">
+              <Input
+                value={dateNaissance}
+                onChangeText={(v) => setDateNaissance(formatDateInput(v))}
+                placeholder="JJ/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
+              />
+            </Field>
+          </>
         )}
 
         <Field label="Email">
@@ -131,6 +158,10 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     fontSize: 14,
     marginTop: spacing.xs,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   vetCheckbox: {
     flexDirection: 'row',

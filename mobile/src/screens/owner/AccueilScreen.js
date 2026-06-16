@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
 import { ESPECES, EMOJIS_ESPECE } from '../../constants';
 import { getReminders } from '../../utils/reminders';
-import { computeAge } from '../../utils/dates';
+import { computeAge, isoToDisplay, displayToIso, formatDateInput } from '../../utils/dates';
 
 const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' };
 
@@ -35,7 +35,7 @@ export default function AccueilScreen() {
 
   const handleAddAnimal = async () => {
     if (newAnimal.nom && newAnimal.espece) {
-      await saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
+      await saveAnimal({ ...newAnimal, dateNaissance: displayToIso(newAnimal.dateNaissance), vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
       setNewAnimal(emptyAnimal);
       setShowAdd(false);
     }
@@ -43,7 +43,7 @@ export default function AccueilScreen() {
 
   const handleEditAnimal = async () => {
     if (editingAnimal && editingAnimal.nom && editingAnimal.espece) {
-      await saveAnimal(editingAnimal);
+      await saveAnimal({ ...editingAnimal, dateNaissance: displayToIso(editingAnimal.dateNaissance) });
       setEditingAnimal(null);
     }
   };
@@ -93,7 +93,7 @@ export default function AccueilScreen() {
                 onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Dossier'); }}
                 actions={
                   <View style={styles.cardActions}>
-                    <IconButton title="✏️" color={colors.blue} bg={colors.blueLight} onPress={() => setEditingAnimal({ ...animal })} />
+                    <IconButton title="✏️" color={colors.blue} bg={colors.blueLight} onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} />
                     <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => confirmDelete(animal)} />
                   </View>
                 }
@@ -182,7 +182,13 @@ function AnimalForm({ animal, setAnimal }) {
         />
       </Field>
       <Field label="Date de naissance">
-        <Input value={animal.dateNaissance || ''} onChangeText={(v) => setAnimal({ ...animal, dateNaissance: v })} placeholder="AAAA-MM-JJ" />
+        <Input
+          value={animal.dateNaissance || ''}
+          onChangeText={(v) => setAnimal({ ...animal, dateNaissance: formatDateInput(v) })}
+          placeholder="JJ/MM/AAAA"
+          keyboardType="numeric"
+          maxLength={10}
+        />
       </Field>
       <TouchableOpacity style={styles.checkboxRow} onPress={() => setAnimal({ ...animal, sterilise: !animal.sterilise })} activeOpacity={0.7}>
         <View style={[styles.checkbox, animal.sterilise ? styles.checkboxChecked : null]}>

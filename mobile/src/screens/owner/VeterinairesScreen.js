@@ -94,7 +94,7 @@ export default function VeterinairesScreen() {
       {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets ? <Text style={styles.warnText}>⚠️ Aucun vétérinaire référencé sur OpenStreetMap dans un rayon de 25 km autour de votre position. Voici une sélection d'exemple en attendant.</Text> : null}
       {geoStatus === 'done' && vetsStatus === 'error' ? <Text style={styles.warnText}>⚠️ {vetsError}</Text> : null}
 
-      {vets.map((vet) => (
+      {vetsStatus !== 'loading' && vets.map((vet) => (
         <Card key={vet.id}>
           <Text style={styles.vetName}>{vet.nom}</Text>
           <Text style={styles.vetLine}>📍 {vet.distanceKm != null ? `≈ ${vet.distanceKm.toFixed(1)} km de votre position` : vet.distance}</Text>

@@ -47,6 +47,28 @@ export const getCountdown = (dateStr) => {
   return { days, label, color };
 };
 
+// Convert YYYY-MM-DD to DD/MM/YYYY for text input (display format)
+export const isoToDisplay = (iso) => {
+  if (!iso || iso.length !== 10) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+// Convert DD/MM/YYYY to YYYY-MM-DD for Firestore storage
+export const displayToIso = (display) => {
+  if (!display || display.replace(/\D/g, '').length < 8) return '';
+  const [d, m, y] = display.split('/');
+  return `${y}-${m}-${d}`;
+};
+
+// Auto-insert '/' as user types a date: "0101" → "01/01", "010120" → "01/01/20"
+export const formatDateInput = (text) => {
+  const digits = text.replace(/\D/g, '').slice(0, 8);
+  if (digits.length > 4) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
+};
+
 // Human-readable age from a birth date, e.g. "2 ans 3 mois" (mirrors computeAge in the web app)
 export const computeAge = (dateNaissance) => {
   if (!dateNaissance) return null;

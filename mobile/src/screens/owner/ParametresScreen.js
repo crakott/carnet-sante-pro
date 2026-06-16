@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, Share, Linking } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, Share, Linking, Switch } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
@@ -126,7 +127,7 @@ function FAQItem({ item, last }) {
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function ParametresScreen() {
-  const { reminderSettings, saveReminderSettings, householdId, user, logout } = useAuth();
+  const { reminderSettings, saveReminderSettings, householdId, user, logout, nom, prenom } = useAuth();
   const { animals, saveAnimal, createHousehold, joinHousehold, leaveHousehold } = useAnimals();
 
   const [expanded, setExpanded] = useState(null);
@@ -134,6 +135,8 @@ export default function ParametresScreen() {
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState('');
   const [suggestion, setSuggestion] = useState('');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
 
   // Household section states
   const [householdMembers, setHouseholdMembers] = useState(null);
@@ -141,6 +144,10 @@ export default function ParametresScreen() {
   const [householdBusy, setHouseholdBusy] = useState(false);
   const [householdError, setHouseholdError] = useState('');
   const [codeCopied, setCodeCopied] = useState(false);
+
+  useEffect(() => {
+    Notifications.getPermissionsAsync().then(({ status }) => setNotificationsEnabled(status === 'granted'));
+  }, []);
 
   useEffect(() => {
     if (!householdId) { setHouseholdMembers(null); return; }
@@ -241,6 +248,24 @@ export default function ParametresScreen() {
     } catch (err) { setImportMsg('❌ Erreur : ' + err.message); }
   };
 
+  // ── Notifications ──────────────────────────────────────────────────────────
+  const toggleNotifications = async () => {
+    setNotifLoading(true);
+    if (!notificationsEnabled) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status === 'granted') {
+        setNotificationsEnabled(true);
+        await setDoc(doc(db, 'settings', user.uid), { notificationsEnabled: true }, { merge: true });
+      } else {
+        Alert.alert('Permission refusée', "Activez les notifications dans les réglages de votre appareil puis réessayez.");
+      }
+    } else {
+      setNotificationsEnabled(false);
+      await setDoc(doc(db, 'settings', user.uid), { notificationsEnabled: false }, { merge: true });
+    }
+    setNotifLoading(false);
+  };
+
   // ── Suggestions ────────────────────────────────────────────────────────────
   const handleSendSuggestion = async () => {
     if (!suggestion.trim()) return;
@@ -254,6 +279,12 @@ export default function ParametresScreen() {
     <Screen>
       {/* ── Mon profil ──────────────────────────────────────────────── */}
       <AccordionCard id="profil" icon="👤" iconBg={colors.blueLight} title="Mon profil" expanded={expanded} onToggle={setExpanded}>
+        {(prenom || nom) ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <Text style={styles.profileLabel}>Nom complet</Text>
+            <Text style={styles.profileValue}>{[prenom, nom].filter(Boolean).join(' ')}</Text>
+          </View>
+        ) : null}
         <Text style={styles.profileLabel}>Adresse e-mail</Text>
         <Text style={styles.profileValue}>{user?.email || '—'}</Text>
       </AccordionCard>
@@ -277,7 +308,19 @@ export default function ParametresScreen() {
 
       {/* ── Notifications ───────────────────────────────────────────── */}
       <AccordionCard id="notifications" icon="🔔" iconBg={colors.pinkLight} title="Notifications" expanded={expanded} onToggle={setExpanded}>
-        <Text style={styles.hint}>Les notifications push seront disponibles dans une prochaine mise à jour. En attendant, consultez l'onglet Rappels pour voir les soins à venir.</Text>
+        <View style={styles.toggleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.toggleLabel}>Activer les notifications push</Text>
+            <Text style={styles.hint}>Recevez des alertes pour les soins à venir de vos animaux.</Text>
+          </View>
+          <Switch
+            value={notificationsEnabled}
+            onValueChange={toggleNotifications}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.white}
+            disabled={notifLoading}
+          />
+        </View>
       </AccordionCard>
 
       {/* ── Foyer partagé ───────────────────────────────────────────── */}
@@ -353,18 +396,16 @@ export default function ParametresScreen() {
       </AccordionCard>
 
       <AccordionCard id="suggestions" icon="💡" iconBg={colors.yellowLight} title="Suggestions" expanded={expanded} onToggle={setExpanded}>
-        <Text style={styles.hint}>Une idée pour améliorer l'application ? Envoyez-nous vos suggestions !</Text>
-        <Field label="Votre suggestion">
-          <Input
-            value={suggestion}
-            onChangeText={setSuggestion}
-            placeholder="Décrivez votre idée…"
-            multiline
-            numberOfLines={4}
-            style={{ minHeight: 90, textAlignVertical: 'top' }}
-          />
-        </Field>
-        <Button title="📩 Envoyer" onPress={handleSendSuggestion} disabled={!suggestion.trim()} color={colors.yellow} textColor={colors.white} />
+        <Text style={styles.hint}>Une idée pour améliorer l'application ? Un bug à signaler ? Écrivez-nous !</Text>
+        <Input
+          value={suggestion}
+          onChangeText={setSuggestion}
+          placeholder="Votre suggestion..."
+          multiline
+          numberOfLines={4}
+          style={{ minHeight: 100, textAlignVertical: 'top', marginBottom: spacing.md }}
+        />
+        <Button title="📧 Envoyer la suggestion" onPress={handleSendSuggestion} disabled={!suggestion.trim()} color={colors.primary} />
       </AccordionCard>
 
       {/* ── Déconnexion & confidentialité ───────────────────────────── */}
@@ -442,6 +483,17 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     marginBottom: spacing.sm,
     lineHeight: 18,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 2,
   },
   divider: {
     borderTopWidth: 1,
