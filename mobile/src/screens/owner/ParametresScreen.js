@@ -34,12 +34,38 @@ function AccordionCard({ id, icon, iconBg, title, expanded, onToggle, children }
 
 // ─── FAQ items ───────────────────────────────────────────────────────────────
 const FAQ = [
-  { q: 'Comment ajouter un animal ?', a: 'Appuyez sur le bouton vert « + » en bas de l\'écran depuis n\'importe quel onglet.' },
-  { q: 'Comment enregistrer un vaccin ?', a: 'Allez dans l\'onglet Dossier → Vaccins, puis appuyez sur « Ajouter ».' },
-  { q: 'Comment partager le dossier avec mon vétérinaire ?', a: 'Dans le Dossier de votre animal, faites défiler jusqu\'à « Partage Vétérinaire » pour envoyer le dossier par e-mail.' },
-  { q: 'L\'application fonctionne-t-elle hors ligne ?', a: 'Oui, les données sont disponibles hors connexion et synchronisées automatiquement au retour du réseau.' },
-  { q: 'Comment exporter mes données ?', a: 'Dans Paramètres → Sauvegarde & restauration, choisissez « Exporter ».' },
-  { q: 'Comment rejoindre un foyer partagé ?', a: 'Dans Paramètres → Foyer partagé, saisissez le code fourni par un membre de votre foyer.' },
+  // Prise en main
+  { q: 'Comment ajouter un animal ?', a: 'Appuyez sur le bouton vert « + » en bas de l\'écran depuis n\'importe quel onglet. Renseignez le nom, l\'espèce et les informations de votre animal, puis appuyez sur « Ajouter ».' },
+  { q: 'Comment modifier ou supprimer un animal ?', a: 'Dans l\'onglet Accueil, appuyez sur ✏️ pour modifier les informations de base, ou sur 🗑️ pour supprimer l\'animal et tout son dossier.' },
+  { q: 'Comment ajouter une photo de mon animal ?', a: 'Lors de l\'ajout ou de la modification d\'un animal (✏️), appuyez sur « Choisir une photo » pour sélectionner une image depuis votre galerie.' },
+
+  // Dossier santé
+  { q: 'Comment enregistrer un vaccin ?', a: 'Dans l\'onglet Dossier, appuyez sur « Vaccins » puis « Ajouter un vaccin ». Renseignez le nom du vaccin et la date de rappel pour recevoir une alerte à temps.' },
+  { q: 'Comment enregistrer un médicament ?', a: 'Dans Dossier → Médicaments, appuyez sur « Ajouter ». Indiquez le nom, le dosage, la fréquence et les dates de début/fin de traitement.' },
+  { q: 'Comment enregistrer une chirurgie ?', a: 'Dans Dossier → Chirurgies, appuyez sur « Ajouter » et renseignez le type d\'opération, la date et les éventuelles notes.' },
+  { q: 'Comment suivre le poids de mon animal ?', a: 'Dans Dossier → Poids, ajoutez une pesée avec la date. L\'historique des pesées s\'affiche sous forme de liste pour suivre l\'évolution.' },
+  { q: 'Comment ajouter une observation ou un symptôme ?', a: 'Dans Dossier → Observations, appuyez sur « Ajouter ». Vous pouvez joindre une photo ou un enregistrement audio pour illustrer l\'observation.' },
+  { q: 'À quoi sert le Journal de vie ?', a: 'Le Journal de vie rassemble automatiquement tous les événements importants (vaccins, chirurgies, pesées, observations…) en une chronologie lisible, sans saisie supplémentaire.' },
+
+  // Rendez-vous & rappels
+  { q: 'Comment programmer un rendez-vous vétérinaire ?', a: 'Dans Dossier → Rendez-vous, appuyez sur « Ajouter » et renseignez le motif, la date et l\'heure. Le prochain RDV s\'affiche sur le Dossier.' },
+  { q: 'Comment fonctionnent les rappels ?', a: 'L\'application compare les dates de rappels de vos vaccins, médicaments et traitements avec la date du jour. Si un soin approche, il apparaît dans l\'onglet Rappels et sur la bannière de l\'Accueil. Ajustez les délais dans Paramètres → Délais de rappels.' },
+
+  // Partage & vétérinaire
+  { q: 'Comment envoyer le dossier à mon vétérinaire ?', a: 'Dans le Dossier de votre animal, faites défiler jusqu\'à « Partage Vétérinaire ». Saisissez l\'e-mail du vétérinaire et appuyez sur « Partager » pour envoyer un résumé complet.' },
+  { q: 'Comment générer la fiche de garde ?', a: 'Dans le Dossier, faites défiler jusqu\'à « Fiche de garde ». Activez le partage pour obtenir un QR code et un lien — utile pour un pet-sitter ou en cas d\'urgence.' },
+  { q: 'Comment chercher un vétérinaire à proximité ?', a: 'Dans l\'onglet Vétérinaires, l\'application utilise votre position GPS pour trouver et afficher les cliniques vétérinaires proches de vous.' },
+  { q: 'Comment échanger des messages avec mon vétérinaire ?', a: 'Dans Dossier → Messagerie, vous pouvez envoyer des messages texte et des photos à votre vétérinaire. Celui-ci répond depuis l\'interface web.' },
+
+  // Documents & vidéos
+  { q: 'Quels types de documents puis-je stocker ?', a: 'Ordonnances, certificats, analyses, comptes-rendus, factures, contrat d\'adoption, photos… Dans Dossier → Documents, ajoutez des images ou des PDF (max 700 Ko par fichier).' },
+  { q: 'Les vidéos sont-elles synchronisées dans le cloud ?', a: 'Non, les vidéos sont stockées uniquement sur cet appareil pour éviter d\'utiliser trop d\'espace de stockage cloud. Si vous changez d\'appareil ou désinstallez l\'app, elles seront perdues — pensez à les sauvegarder manuellement.' },
+
+  // Foyer partagé & données
+  { q: 'L\'application fonctionne-t-elle hors ligne ?', a: 'Oui. Vos données sont disponibles hors connexion et toutes les modifications sont synchronisées automatiquement dès le retour du réseau.' },
+  { q: 'Comment partager l\'accès avec un membre de ma famille ?', a: 'Dans Paramètres → Foyer partagé, créez un foyer et partagez le code affiché. Votre proche saisit ce code dans ses Paramètres → Foyer partagé → Rejoindre, et vos animaux sont alors accessibles des deux côtés.' },
+  { q: 'Comment sauvegarder mes données ?', a: 'Dans Paramètres → Sauvegarde & restauration, exportez un fichier JSON contenant tous vos animaux et leur dossier. Conservez ce fichier en lieu sûr pour le réimporter sur un nouvel appareil.' },
+  { q: 'Comment changer de mot de passe ?', a: 'Sur l\'écran de connexion, appuyez sur « Mot de passe oublié » et saisissez votre e-mail. Vous recevrez un lien de réinitialisation.' },
 ];
 
 function FAQItem({ item }) {
