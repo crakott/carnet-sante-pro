@@ -22,6 +22,7 @@ export function AuthProvider({ children }) {
   const [householdId, setHouseholdId] = useState(null);
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const loadSettings = async (uid) => {
     try {
@@ -50,12 +51,14 @@ export function AuthProvider({ children }) {
         setHouseholdId(settings.householdId || null);
         setNom(settings.nom || '');
         setPrenom(settings.prenom || '');
+        setNotificationsEnabled(settings.notificationsEnabled ?? false);
       } else {
         await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: DEFAULT_REMINDERS });
         setUserRole('proprietaire');
         setHouseholdId(null);
         setNom('');
         setPrenom('');
+        setNotificationsEnabled(false);
       }
     } catch (error) {
       console.error('Erreur loading settings:', error);
@@ -117,6 +120,7 @@ export function AuthProvider({ children }) {
         householdId,
         nom,
         prenom,
+        notificationsEnabled,
         reloadSettings,
         signup,
         login,

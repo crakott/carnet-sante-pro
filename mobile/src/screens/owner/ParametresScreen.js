@@ -9,6 +9,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Screen, Field, Input, Button } from '../../components/ui';
+import { scheduleAnimalNotifications, cancelAllNotifications } from '../../utils/notifications';
 import { useAuth } from '../../context/AuthContext';
 import { useAnimals } from '../../context/AnimalsContext';
 import { colors, spacing, radius, shadow } from '../../theme';
@@ -127,7 +128,7 @@ function FAQItem({ item, last }) {
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function ParametresScreen() {
-  const { reminderSettings, saveReminderSettings, householdId, user, logout, nom, prenom } = useAuth();
+  const { reminderSettings, saveReminderSettings, householdId, user, logout, nom, prenom, notificationsEnabled: savedNotifEnabled } = useAuth();
   const { animals, saveAnimal, createHousehold, joinHousehold, leaveHousehold } = useAnimals();
 
   const [expanded, setExpanded] = useState(null);
@@ -137,6 +138,7 @@ export default function ParametresScreen() {
   const [suggestion, setSuggestion] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
 
   // Household section states
   const [householdMembers, setHouseholdMembers] = useState(null);
@@ -145,9 +147,12 @@ export default function ParametresScreen() {
   const [householdError, setHouseholdError] = useState('');
   const [codeCopied, setCodeCopied] = useState(false);
 
+  // Sync local toggle: only ON if both the saved pref and system permission are granted
   useEffect(() => {
-    Notifications.getPermissionsAsync().then(({ status }) => setNotificationsEnabled(status === 'granted'));
-  }, []);
+    Notifications.getPermissionsAsync().then(({ status }) => {
+      setNotificationsEnabled(savedNotifEnabled && status === 'granted');
+    });
+  }, [savedNotifEnabled]);
 
   useEffect(() => {
     if (!householdId) { setHouseholdMembers(null); return; }
@@ -256,14 +261,29 @@ export default function ParametresScreen() {
       if (status === 'granted') {
         setNotificationsEnabled(true);
         await setDoc(doc(db, 'settings', user.uid), { notificationsEnabled: true }, { merge: true });
+        const count = await scheduleAnimalNotifications(animals, settings);
+        Alert.alert('🔔 Notifications activées', `${count} rappel${count !== 1 ? 's' : ''} push programmé${count !== 1 ? 's' : ''}.`);
       } else {
         Alert.alert('Permission refusée', "Activez les notifications dans les réglages de votre appareil puis réessayez.");
       }
     } else {
       setNotificationsEnabled(false);
       await setDoc(doc(db, 'settings', user.uid), { notificationsEnabled: false }, { merge: true });
+      await cancelAllNotifications();
     }
     setNotifLoading(false);
+  };
+
+  const handleScheduleNotifications = async () => {
+    setScheduling(true);
+    try {
+      await saveReminderSettings(settings);
+      const count = await scheduleAnimalNotifications(animals, settings);
+      Alert.alert('✅ Rappels mis à jour', `${count} notification${count !== 1 ? 's' : ''} programmée${count !== 1 ? 's' : ''}.`);
+    } catch {
+      Alert.alert('Erreur', 'Impossible de planifier les notifications.');
+    }
+    setScheduling(false);
   };
 
   // ── Suggestions ────────────────────────────────────────────────────────────
@@ -321,6 +341,27 @@ export default function ParametresScreen() {
             disabled={notifLoading}
           />
         </View>
+        {notificationsEnabled && (
+          <>
+            <View style={styles.divider} />
+            <Text style={[styles.hint, { marginBottom: spacing.md }]}>Être prévenu X jours avant :</Text>
+            <Field label="💉 Vaccins">
+              <Input value={String(settings.vaccin)} onChangeText={(v) => update('vaccin', v)} keyboardType="numeric" />
+            </Field>
+            <Field label="🦟 Antiparasitaires">
+              <Input value={String(settings.antiparasitaire)} onChangeText={(v) => update('antiparasitaire', v)} keyboardType="numeric" />
+            </Field>
+            <Field label="🪱 Vermifuges">
+              <Input value={String(settings.vermifuge)} onChangeText={(v) => update('vermifuge', v)} keyboardType="numeric" />
+            </Field>
+            <Button
+              title={scheduling ? '⏳ Planification…' : '🔔 Planifier les rappels push'}
+              onPress={handleScheduleNotifications}
+              disabled={scheduling}
+              color={colors.primary}
+            />
+          </>
+        )}
       </AccordionCard>
 
       {/* ── Foyer partagé ───────────────────────────────────────────── */}
