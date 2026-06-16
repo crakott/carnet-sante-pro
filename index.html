@@ -79,7 +79,6 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
         import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
         import { getFunctions, httpsCallable } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/functions/+esm";
-        import { getMessaging, getToken } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/messaging/+esm";
 
         // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
         const formatDate = (dateStr) => {
@@ -237,18 +236,18 @@
         // Firebase Cloud Messaging — push notifications even when phone is locked.
         // VAPID key: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates > Generate key pair
         const VAPID_KEY = 'VOTRE_CLE_VAPID_ICI';
-        let fcmMessaging = null;
-        try { fcmMessaging = getMessaging(app); } catch (e) { /* FCM not available in this browser */ }
 
         // Register this device for FCM push and store the token in Firestore.
-        // Called after notification permission is granted or on app load if already granted.
+        // Uses a dynamic import so a CDN failure never blocks the rest of the app.
         const initFCM = async (uid) => {
-            if (!fcmMessaging || !uid || VAPID_KEY === 'VOTRE_CLE_VAPID_ICI') return;
+            if (!uid || VAPID_KEY === 'VOTRE_CLE_VAPID_ICI') return;
             try {
+                const { getMessaging, getToken } = await import("https://cdn.jsdelivr.net/npm/firebase@10.7.0/messaging/+esm");
+                const messaging = getMessaging(app);
                 const swReg = await navigator.serviceWorker.ready;
-                const token = await getToken(fcmMessaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+                const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
                 if (token) await setDoc(doc(db, 'settings', uid), { fcmToken: token }, { merge: true });
-            } catch (e) { /* Permission denied or FCM unavailable */ }
+            } catch (e) { /* Permission denied, CDN unavailable, or VAPID key not set */ }
         };
 
         // Reference data for animal profiles, vaccines, medications and vets
