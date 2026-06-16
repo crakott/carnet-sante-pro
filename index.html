@@ -73,8 +73,25 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
+    <div id="load-diag" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;z-index:99999;padding:30px;font-family:sans-serif;font-size:14px;overflow:auto">
+      <p style="font-size:18px;font-weight:bold">⚠️ Erreur de chargement</p>
+      <p id="diag-msg" style="color:#dc2626;word-break:break-all;margin-top:10px"></p>
+      <p style="margin-top:16px;color:#6b7280">Merci de copier ce message et de l'envoyer pour diagnostic.</p>
+    </div>
+    <script>
+      var diagShown = false;
+      function showDiag(msg) {
+        if (diagShown) return; diagShown = true;
+        document.getElementById('load-diag').style.display = 'block';
+        document.getElementById('diag-msg').textContent = msg;
+      }
+      window.addEventListener('error', function(e) { showDiag('JS: ' + e.message + ' — ' + e.filename + ':' + e.lineno); });
+      window.addEventListener('unhandledrejection', function(e) { showDiag('Promise: ' + (e.reason && (e.reason.message || String(e.reason)))); });
+      setTimeout(function() { if (!window.__APP_STARTED__) showDiag('Timeout: les scripts CDN (React/Babel/Firebase) n\'ont pas chargé en 12 secondes. Vérifiez votre connexion réseau.'); }, 12000);
+    </script>
 
     <script type="text/babel" data-type="module" data-presets="react">
+        window.__APP_STARTED__ = true;
         import { initializeApp } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/app/+esm";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/auth/+esm";
         import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from "https://cdn.jsdelivr.net/npm/firebase@10.7.0/firestore/+esm";
