@@ -348,6 +348,9 @@ export default function ParametresScreen() {
             <Field label="💉 Vaccins">
               <Input value={String(settings.vaccin)} onChangeText={(v) => update('vaccin', v)} keyboardType="numeric" />
             </Field>
+            <Field label="💊 Médicaments (fin de traitement)">
+              <Input value={String(settings.medicament)} onChangeText={(v) => update('medicament', v)} keyboardType="numeric" />
+            </Field>
             <Field label="🦟 Antiparasitaires">
               <Input value={String(settings.antiparasitaire)} onChangeText={(v) => update('antiparasitaire', v)} keyboardType="numeric" />
             </Field>

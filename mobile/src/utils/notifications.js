@@ -32,6 +32,7 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
 
   const now = new Date();
   const vaccinDays = settings.vaccin ?? 3;
+  const medDays = settings.medicament ?? 3;
   const antiDays = settings.antiparasitaire ?? 14;
   const vermDays = settings.vermifuge ?? 14;
   let count = 0;
@@ -47,6 +48,22 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
           body: `${v.nom} dans ${vaccinDays} jour${vaccinDays > 1 ? 's' : ''}`,
           sound: true,
           data: { type: 'vaccin', animalId: animal.id },
+        },
+        trigger: { date: trigger, channelId: CHANNEL_ID },
+      });
+      count++;
+    }
+
+    // Médicaments
+    for (const m of (animal.medicaments || [])) {
+      const trigger = buildTriggerDate(m.dateFin, medDays);
+      if (!trigger || trigger <= now) continue;
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `💊 Fin de traitement — ${animal.nom}`,
+          body: `${m.nom} se termine dans ${medDays} jour${medDays > 1 ? 's' : ''}`,
+          sound: true,
+          data: { type: 'medicament', animalId: animal.id },
         },
         trigger: { date: trigger, channelId: CHANNEL_ID },
       });
