@@ -85,10 +85,20 @@ const FAQ_SECTIONS = [
   {
     category: '🚨 Urgences',
     items: [
-      { q: 'Mon animal a mangé du chocolat.', a: 'Le chocolat peut être toxique. Contactez rapidement un vétérinaire pour obtenir des conseils adaptés.' },
+      { q: 'Mon animal a mangé du chocolat.', a: 'Le chocolat peut être toxique, d\'autant plus s\'il est noir ou riche en cacao. La gravité dépend de la quantité ingérée et du poids de l\'animal. Contactez rapidement un vétérinaire et gardez l\'emballage à portée de main pour préciser le type et la quantité.' },
       { q: 'Mon animal a avalé un objet.', a: 'Surveillez-le attentivement et consultez rapidement si des symptômes apparaissent.' },
       { q: 'Mon animal ne mange plus depuis 24 heures.', a: 'Une absence prolongée d\'alimentation doit être prise au sérieux, particulièrement chez le chat.' },
+      { q: 'Comment reconnaître un coup de chaleur ?', a: 'Les signes fréquents sont un halètement intense, une bave épaisse, un abattement, une démarche titubante, parfois des vomissements ou une perte de connaissance. C\'est une urgence vitale.' },
+      { q: 'Que faire en cas de coup de chaleur ?', a: 'Placez l\'animal à l\'ombre dans un endroit frais, rafraîchissez-le progressivement avec de l\'eau tempérée (jamais glacée) et contactez immédiatement un vétérinaire. Ne laissez jamais un animal seul dans une voiture, même quelques minutes et même à l\'ombre.' },
       { q: 'Quand consulter en urgence ?', a: 'Consultez rapidement en cas de :\n• difficultés respiratoires\n• convulsions\n• saignements importants\n• perte de connaissance\n• suspicion d\'intoxication\n• traumatisme important' },
+    ],
+  },
+  {
+    category: '🌿 Plantes et produits dangereux',
+    items: [
+      { q: 'Quelles plantes sont dangereuses ?', a: 'Plusieurs plantes courantes sont toxiques. Le lys (ou lis) est particulièrement dangereux pour le chat : même une petite quantité, le pollen ou l\'eau du vase peuvent provoquer une atteinte grave. En cas de doute, éloignez la plante et contactez un vétérinaire.' },
+      { q: 'Quels produits ménagers présentent un risque ?', a: 'L\'antigel, les produits d\'entretien, les médicaments humains et certains insecticides sont toxiques. L\'antigel est particulièrement traître : son goût sucré attire les animaux. Rangez ces produits hors de portée et consultez en urgence en cas d\'ingestion.' },
+      { q: 'Mon animal a ingéré une plante ou un produit toxique.', a: 'Ne tentez pas de le faire vomir sans avis professionnel. Notez ce qu\'il a ingéré et en quelle quantité, gardez l\'emballage si possible, et contactez rapidement un vétérinaire ou un centre antipoison vétérinaire.\n\nCentres antipoison animaux (France) :\n• CNITV Lyon : 04 78 87 10 40\n• CAPAE-Ouest Nantes : 02 40 68 77 40' },
     ],
   },
   {
@@ -331,6 +341,9 @@ export default function ParametresScreen() {
       <Text style={styles.sectionLabel}>À propos</Text>
 
       <AccordionCard id="faq" icon="❓" iconBg={colors.violetLight} title="FAQ" expanded={expanded} onToggle={setExpanded}>
+        <View style={styles.faqDisclaimer}>
+          <Text style={styles.faqDisclaimerText}>⚠️ Les informations de cette FAQ sont fournies à titre indicatif et ne remplacent en aucun cas une consultation vétérinaire. En cas de doute ou d'urgence, contactez toujours un professionnel.</Text>
+        </View>
         {FAQ_SECTIONS.map((section, si) => (
           <View key={si}>
             <Text style={styles.faqCategory}>{section.category}</Text>
@@ -438,6 +451,19 @@ const styles = StyleSheet.create({
   qrBlock: {
     alignItems: 'center',
     marginTop: spacing.sm,
+  },
+  faqDisclaimer: {
+    backgroundColor: colors.yellowLight,
+    borderWidth: 1,
+    borderColor: colors.yellowBorder,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  faqDisclaimerText: {
+    fontSize: 12,
+    color: colors.brown,
+    lineHeight: 17,
   },
   faqCategory: {
     fontSize: 13,
