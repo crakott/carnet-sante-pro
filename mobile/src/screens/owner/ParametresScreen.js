@@ -33,45 +33,78 @@ function AccordionCard({ id, icon, iconBg, title, expanded, onToggle, children }
 }
 
 // ─── FAQ items ───────────────────────────────────────────────────────────────
-const FAQ = [
-  // Prise en main
-  { q: 'Comment ajouter un animal ?', a: 'Appuyez sur le bouton vert « + » en bas de l\'écran depuis n\'importe quel onglet. Renseignez le nom, l\'espèce et les informations de votre animal, puis appuyez sur « Ajouter ».' },
-  { q: 'Comment modifier ou supprimer un animal ?', a: 'Dans l\'onglet Accueil, appuyez sur ✏️ pour modifier les informations de base, ou sur 🗑️ pour supprimer l\'animal et tout son dossier.' },
-  { q: 'Comment ajouter une photo de mon animal ?', a: 'Lors de l\'ajout ou de la modification d\'un animal (✏️), appuyez sur « Choisir une photo » pour sélectionner une image depuis votre galerie.' },
-
-  // Dossier santé
-  { q: 'Comment enregistrer un vaccin ?', a: 'Dans l\'onglet Dossier, appuyez sur « Vaccins » puis « Ajouter un vaccin ». Renseignez le nom du vaccin et la date de rappel pour recevoir une alerte à temps.' },
-  { q: 'Comment enregistrer un médicament ?', a: 'Dans Dossier → Médicaments, appuyez sur « Ajouter ». Indiquez le nom, le dosage, la fréquence et les dates de début/fin de traitement.' },
-  { q: 'Comment enregistrer une chirurgie ?', a: 'Dans Dossier → Chirurgies, appuyez sur « Ajouter » et renseignez le type d\'opération, la date et les éventuelles notes.' },
-  { q: 'Comment suivre le poids de mon animal ?', a: 'Dans Dossier → Poids, ajoutez une pesée avec la date. L\'historique des pesées s\'affiche sous forme de liste pour suivre l\'évolution.' },
-  { q: 'Comment ajouter une observation ou un symptôme ?', a: 'Dans Dossier → Observations, appuyez sur « Ajouter ». Vous pouvez joindre une photo ou un enregistrement audio pour illustrer l\'observation.' },
-  { q: 'À quoi sert le Journal de vie ?', a: 'Le Journal de vie rassemble automatiquement tous les événements importants (vaccins, chirurgies, pesées, observations…) en une chronologie lisible, sans saisie supplémentaire.' },
-
-  // Rendez-vous & rappels
-  { q: 'Comment programmer un rendez-vous vétérinaire ?', a: 'Dans Dossier → Rendez-vous, appuyez sur « Ajouter » et renseignez le motif, la date et l\'heure. Le prochain RDV s\'affiche sur le Dossier.' },
-  { q: 'Comment fonctionnent les rappels ?', a: 'L\'application compare les dates de rappels de vos vaccins, médicaments et traitements avec la date du jour. Si un soin approche, il apparaît dans l\'onglet Rappels et sur la bannière de l\'Accueil. Ajustez les délais dans Paramètres → Délais de rappels.' },
-
-  // Partage & vétérinaire
-  { q: 'Comment envoyer le dossier à mon vétérinaire ?', a: 'Dans le Dossier de votre animal, faites défiler jusqu\'à « Partage Vétérinaire ». Saisissez l\'e-mail du vétérinaire et appuyez sur « Partager » pour envoyer un résumé complet.' },
-  { q: 'Comment générer la fiche de garde ?', a: 'Dans le Dossier, faites défiler jusqu\'à « Fiche de garde ». Activez le partage pour obtenir un QR code et un lien — utile pour un pet-sitter ou en cas d\'urgence.' },
-  { q: 'Comment chercher un vétérinaire à proximité ?', a: 'Dans l\'onglet Vétérinaires, l\'application utilise votre position GPS pour trouver et afficher les cliniques vétérinaires proches de vous.' },
-  { q: 'Comment échanger des messages avec mon vétérinaire ?', a: 'Dans Dossier → Messagerie, vous pouvez envoyer des messages texte et des photos à votre vétérinaire. Celui-ci répond depuis l\'interface web.' },
-
-  // Documents & vidéos
-  { q: 'Quels types de documents puis-je stocker ?', a: 'Ordonnances, certificats, analyses, comptes-rendus, factures, contrat d\'adoption, photos… Dans Dossier → Documents, ajoutez des images ou des PDF (max 700 Ko par fichier).' },
-  { q: 'Les vidéos sont-elles synchronisées dans le cloud ?', a: 'Non, les vidéos sont stockées uniquement sur cet appareil pour éviter d\'utiliser trop d\'espace de stockage cloud. Si vous changez d\'appareil ou désinstallez l\'app, elles seront perdues — pensez à les sauvegarder manuellement.' },
-
-  // Foyer partagé & données
-  { q: 'L\'application fonctionne-t-elle hors ligne ?', a: 'Oui. Vos données sont disponibles hors connexion et toutes les modifications sont synchronisées automatiquement dès le retour du réseau.' },
-  { q: 'Comment partager l\'accès avec un membre de ma famille ?', a: 'Dans Paramètres → Foyer partagé, créez un foyer et partagez le code affiché. Votre proche saisit ce code dans ses Paramètres → Foyer partagé → Rejoindre, et vos animaux sont alors accessibles des deux côtés.' },
-  { q: 'Comment sauvegarder mes données ?', a: 'Dans Paramètres → Sauvegarde & restauration, exportez un fichier JSON contenant tous vos animaux et leur dossier. Conservez ce fichier en lieu sûr pour le réimporter sur un nouvel appareil.' },
-  { q: 'Comment changer de mot de passe ?', a: 'Sur l\'écran de connexion, appuyez sur « Mot de passe oublié » et saisissez votre e-mail. Vous recevrez un lien de réinitialisation.' },
+const FAQ_SECTIONS = [
+  {
+    category: '🐾 Vaccins',
+    items: [
+      { q: 'Quand dois-je faire vacciner mon animal ?', a: 'Les premiers vaccins sont généralement réalisés dès les premières semaines de vie, puis des rappels réguliers sont nécessaires selon l\'âge, l\'espèce et le mode de vie de l\'animal.' },
+      { q: 'Les vaccins sont-ils obligatoires ?', a: 'Certains vaccins sont fortement recommandés. D\'autres peuvent être exigés pour les voyages ou certaines pensions.' },
+      { q: 'Mon animal est en retard pour son vaccin, est-ce grave ?', a: 'Un retard ne signifie pas forcément que tout est à recommencer, mais il est préférable de contacter votre vétérinaire pour vérifier le protocole adapté.' },
+    ],
+  },
+  {
+    category: '🪱 Vermifuges et parasites',
+    items: [
+      { q: 'À quelle fréquence vermifuger mon animal ?', a: 'La fréquence dépend de l\'âge, du mode de vie et de l\'environnement. Les jeunes animaux nécessitent généralement des traitements plus fréquents.' },
+      { q: 'Mon animal a des puces, que faire ?', a: 'Traitez l\'animal avec un produit adapté et pensez également à traiter son environnement.' },
+      { q: 'Comment retirer une tique ?', a: 'Utilisez un crochet à tique adapté et retirez-la délicatement sans l\'écraser.' },
+    ],
+  },
+  {
+    category: '🍖 Alimentation',
+    items: [
+      { q: 'Quelle quantité de nourriture donner ?', a: 'La quantité dépend du poids, de l\'âge, de l\'activité physique et du type d\'alimentation.' },
+      { q: 'Quels aliments sont toxiques ?', a: 'Parmi les aliments connus pour être dangereux :\n• chocolat\n• raisin\n• oignon\n• ail\n• avocat\n• alcool\n• café\n• xylitol (édulcorant)' },
+      { q: 'Mon animal refuse de manger, dois-je m\'inquiéter ?', a: 'Une perte d\'appétit persistante mérite une surveillance attentive et peut justifier une consultation.' },
+    ],
+  },
+  {
+    category: '🤒 Symptômes courants',
+    items: [
+      { q: 'Mon chien ou mon chat vomit.', a: 'Un vomissement isolé n\'est pas toujours inquiétant. En revanche, des vomissements répétés ou associés à d\'autres symptômes nécessitent un avis vétérinaire.' },
+      { q: 'Mon animal a la diarrhée.', a: 'Une diarrhée légère peut parfois disparaître rapidement. Si elle persiste ou s\'accompagne d\'autres symptômes, consultez un professionnel.' },
+      { q: 'Mon animal boit beaucoup plus que d\'habitude.', a: 'Une augmentation importante de la consommation d\'eau peut révéler un problème de santé et mérite une surveillance.' },
+      { q: 'Mon animal est très fatigué.', a: 'Une baisse d\'énergie inhabituelle ou prolongée doit être prise au sérieux.' },
+    ],
+  },
+  {
+    category: '🐾 Comportement',
+    items: [
+      { q: 'Pourquoi mon chien aboie-t-il autant ?', a: 'L\'aboiement peut être lié à l\'ennui, la peur, l\'excitation ou un besoin d\'attention.' },
+      { q: 'Pourquoi mon chat urine-t-il en dehors de sa litière ?', a: 'Cela peut être lié à un problème médical, du stress ou un changement d\'environnement.' },
+      { q: 'Mon animal détruit des objets.', a: 'Les causes fréquentes sont l\'ennui, le manque d\'exercice ou l\'anxiété.' },
+    ],
+  },
+  {
+    category: '❤️ Poids et suivi',
+    items: [
+      { q: 'Mon animal est-il en surpoids ?', a: 'Le surpoids est fréquent chez les animaux domestiques. Un suivi régulier du poids aide à détecter rapidement les variations.' },
+      { q: 'Pourquoi suivre le poids ?', a: 'Les changements de poids peuvent être un indicateur précoce de nombreux problèmes de santé.' },
+    ],
+  },
+  {
+    category: '🚨 Urgences',
+    items: [
+      { q: 'Mon animal a mangé du chocolat.', a: 'Le chocolat peut être toxique. Contactez rapidement un vétérinaire pour obtenir des conseils adaptés.' },
+      { q: 'Mon animal a avalé un objet.', a: 'Surveillez-le attentivement et consultez rapidement si des symptômes apparaissent.' },
+      { q: 'Mon animal ne mange plus depuis 24 heures.', a: 'Une absence prolongée d\'alimentation doit être prise au sérieux, particulièrement chez le chat.' },
+      { q: 'Quand consulter en urgence ?', a: 'Consultez rapidement en cas de :\n• difficultés respiratoires\n• convulsions\n• saignements importants\n• perte de connaissance\n• suspicion d\'intoxication\n• traumatisme important' },
+    ],
+  },
+  {
+    category: '🏥 Vie quotidienne',
+    items: [
+      { q: 'Quand stériliser mon animal ?', a: 'L\'âge recommandé varie selon l\'espèce, la race et la situation de l\'animal.' },
+      { q: 'Pourquoi identifier mon animal ?', a: 'L\'identification permet de retrouver plus facilement un animal perdu et est obligatoire dans plusieurs situations.' },
+      { q: 'Puis-je voyager avec mon animal ?', a: 'Les conditions varient selon la destination. Vérifiez toujours les exigences sanitaires avant le départ.' },
+    ],
+  },
 ];
 
-function FAQItem({ item }) {
+function FAQItem({ item, last }) {
   const [open, setOpen] = useState(false);
   return (
-    <TouchableOpacity onPress={() => setOpen(!open)} activeOpacity={0.7} style={styles.faqItem}>
+    <TouchableOpacity onPress={() => setOpen(!open)} activeOpacity={0.7} style={[styles.faqItem, last && styles.faqItemLast]}>
       <View style={styles.faqHeader}>
         <Text style={styles.faqQ}>{item.q}</Text>
         <Text style={styles.faqArrow}>{open ? '▲' : '▼'}</Text>
@@ -298,7 +331,12 @@ export default function ParametresScreen() {
       <Text style={styles.sectionLabel}>À propos</Text>
 
       <AccordionCard id="faq" icon="❓" iconBg={colors.violetLight} title="FAQ" expanded={expanded} onToggle={setExpanded}>
-        {FAQ.map((item, i) => <FAQItem key={i} item={item} />)}
+        {FAQ_SECTIONS.map((section, si) => (
+          <View key={si}>
+            <Text style={styles.faqCategory}>{section.category}</Text>
+            {section.items.map((item, i) => <FAQItem key={i} item={item} last={i === section.items.length - 1} />)}
+          </View>
+        ))}
       </AccordionCard>
 
       <AccordionCard id="suggestions" icon="💡" iconBg={colors.yellowLight} title="Suggestions" expanded={expanded} onToggle={setExpanded}>
@@ -401,10 +439,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.sm,
   },
+  faqCategory: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
   faqItem: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  faqItemLast: {
+    borderBottomWidth: 0,
   },
   faqHeader: {
     flexDirection: 'row',
