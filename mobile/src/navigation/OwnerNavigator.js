@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
-import { useAuth } from '../context/AuthContext';
-import { colors, spacing } from '../theme';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../theme';
 
 import AccueilScreen from '../screens/owner/AccueilScreen';
 import DossierScreen from '../screens/owner/DossierScreen';
@@ -22,91 +23,199 @@ import VeterinairesScreen from '../screens/owner/VeterinairesScreen';
 import RappelsScreen from '../screens/owner/RappelsScreen';
 import ParametresScreen from '../screens/owner/ParametresScreen';
 
-const Drawer = createDrawerNavigator();
+const Tab = createBottomTabNavigator();
+const AccueilStackNav = createNativeStackNavigator();
+const DossierStackNav = createNativeStackNavigator();
+const VetStackNav = createNativeStackNavigator();
+const RappelsStackNav = createNativeStackNavigator();
 
-function CustomDrawerContent(props) {
-  const { logout, user } = useAuth();
-  return (
-    <DrawerContentScrollView {...props}>
-      <View style={styles.header}>
-        <Text style={styles.headerEmoji}>🐾</Text>
-        <Text style={styles.headerTitle}>Carnet Santé PRO</Text>
-        {user?.email ? <Text style={styles.headerEmail}>{user.email}</Text> : null}
-      </View>
-      <DrawerItemList {...props} />
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutText}>🚪 Déconnexion</Text>
-      </TouchableOpacity>
-    </DrawerContentScrollView>
-  );
-}
-
-const screenOptions = {
+const stackOptions = {
   headerStyle: { backgroundColor: colors.white },
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '700' },
-  drawerActiveBackgroundColor: colors.greenLight,
-  drawerActiveTintColor: colors.primaryDark,
-  drawerInactiveTintColor: colors.text,
-  drawerLabelStyle: { fontSize: 15 },
+  headerBackTitle: 'Retour',
 };
+
+function AccueilStack() {
+  return (
+    <AccueilStackNav.Navigator screenOptions={stackOptions}>
+      <AccueilStackNav.Screen
+        name="AccueilMain"
+        component={AccueilScreen}
+        options={({ navigation }) => ({
+          title: '🐾 Carnet Santé PRO',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Parametres')} hitSlop={12} style={{ marginRight: 4 }}>
+              <Text style={{ fontSize: 22 }}>⚙️</Text>
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <AccueilStackNav.Screen
+        name="Parametres"
+        component={ParametresScreen}
+        options={{ title: '⚙️ Paramètres' }}
+      />
+    </AccueilStackNav.Navigator>
+  );
+}
+
+function DossierStack() {
+  return (
+    <DossierStackNav.Navigator screenOptions={stackOptions}>
+      <DossierStackNav.Screen name="DossierMain" component={DossierScreen} options={{ title: '📁 Dossier' }} />
+      <DossierStackNav.Screen name="Vaccins" component={VaccinsScreen} options={{ title: '💉 Vaccins' }} />
+      <DossierStackNav.Screen name="Medicaments" component={MedicamentsScreen} options={{ title: '💊 Médicaments' }} />
+      <DossierStackNav.Screen name="Chirurgies" component={ChirurgiesScreen} options={{ title: '🔪 Chirurgies' }} />
+      <DossierStackNav.Screen name="Aliment" component={AlimentScreen} options={{ title: '🍎 Alimentation' }} />
+      <DossierStackNav.Screen name="Notes" component={NotesScreen} options={{ title: '📋 Observations' }} />
+      <DossierStackNav.Screen name="Messages" component={MessagesScreen} options={{ title: '💬 Messagerie' }} />
+      <DossierStackNav.Screen name="Journal" component={JournalScreen} options={{ title: '📖 Journal de vie' }} />
+      <DossierStackNav.Screen name="Documents" component={DocumentsScreen} options={{ title: '📄 Documents' }} />
+      <DossierStackNav.Screen name="Videos" component={VideosScreen} options={{ title: '🎥 Vidéos' }} />
+      <DossierStackNav.Screen name="Poids" component={PoidsScreen} options={{ title: '⚖️ Poids' }} />
+      <DossierStackNav.Screen name="Planning" component={PlanningScreen} options={{ title: '📅 Rendez-vous' }} />
+      <DossierStackNav.Screen name="Budget" component={BudgetScreen} options={{ title: '💰 Budget' }} />
+    </DossierStackNav.Navigator>
+  );
+}
+
+function VetStack() {
+  return (
+    <VetStackNav.Navigator screenOptions={stackOptions}>
+      <VetStackNav.Screen name="VeterinairesMain" component={VeterinairesScreen} options={{ title: '🏥 Vétérinaires' }} />
+    </VetStackNav.Navigator>
+  );
+}
+
+function RappelsStack() {
+  return (
+    <RappelsStackNav.Navigator screenOptions={stackOptions}>
+      <RappelsStackNav.Screen name="RappelsMain" component={RappelsScreen} options={{ title: '⚠️ Rappels' }} />
+    </RappelsStackNav.Navigator>
+  );
+}
+
+function EmptyScreen() { return null; }
+
+function CustomTabBar({ state, navigation }) {
+  const insets = useSafeAreaInsets();
+
+  const tabs = [
+    { name: 'Accueil', label: 'Accueil', icon: '🏠' },
+    { name: 'Dossier', label: 'Dossier', icon: '📋' },
+    null, // FAB center slot
+    { name: 'Veterinaires', label: 'Vétérinaires', icon: '🐾' },
+    { name: 'Rappels', label: 'Rappels', icon: '⏰' },
+  ];
+
+  const isActive = (tabName) => {
+    const idx = state.routes.findIndex((r) => r.name === tabName);
+    return idx === state.index;
+  };
+
+  return (
+    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {tabs.map((tab, i) => {
+        if (!tab) {
+          return (
+            <View key="fab" style={styles.fabWrapper}>
+              <TouchableOpacity
+                style={styles.fab}
+                activeOpacity={0.85}
+                onPress={() =>
+                  navigation.navigate('Accueil', {
+                    screen: 'AccueilMain',
+                    params: { openAdd: Date.now() },
+                  })
+                }
+              >
+                <Text style={styles.fabIcon}>＋</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        }
+        const active = isActive(tab.name);
+        return (
+          <TouchableOpacity
+            key={tab.name}
+            style={styles.tabItem}
+            onPress={() => navigation.navigate(tab.name)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.tabIcon}>{tab.icon}</Text>
+            <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function OwnerNavigator() {
   return (
-    <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} />} screenOptions={screenOptions}>
-      <Drawer.Screen name="Accueil" component={AccueilScreen} options={{ title: '🏠 Accueil', drawerLabel: '🏠 Accueil' }} />
-      <Drawer.Screen name="Dossier" component={DossierScreen} options={{ title: '📁 Dossier', drawerLabel: '📁 Dossier' }} />
-      <Drawer.Screen name="Vaccins" component={VaccinsScreen} options={{ title: '💉 Vaccins', drawerLabel: '💉 Vaccins' }} />
-      <Drawer.Screen name="Medicaments" component={MedicamentsScreen} options={{ title: '💊 Médication', drawerLabel: '💊 Médication' }} />
-      <Drawer.Screen name="Chirurgies" component={ChirurgiesScreen} options={{ title: '🔪 Chirurgies', drawerLabel: '🔪 Chirurgies' }} />
-      <Drawer.Screen name="Aliment" component={AlimentScreen} options={{ title: '🍎 Alimentation', drawerLabel: '🍎 Alimentation' }} />
-      <Drawer.Screen name="Notes" component={NotesScreen} options={{ title: '📋 Observations', drawerLabel: '📋 Observations' }} />
-      <Drawer.Screen name="Messages" component={MessagesScreen} options={{ title: '💬 Messagerie vétérinaire', drawerLabel: '💬 Messagerie' }} />
-      <Drawer.Screen name="Journal" component={JournalScreen} options={{ title: '📖 Journal de vie', drawerLabel: '📖 Journal de vie' }} />
-      <Drawer.Screen name="Documents" component={DocumentsScreen} options={{ title: '📄 Documents', drawerLabel: '📄 Documents' }} />
-      <Drawer.Screen name="Videos" component={VideosScreen} options={{ title: '🎥 Vidéos', drawerLabel: '🎥 Vidéos' }} />
-      <Drawer.Screen name="Poids" component={PoidsScreen} options={{ title: '⚖️ Poids', drawerLabel: '⚖️ Poids' }} />
-      <Drawer.Screen name="Planning" component={PlanningScreen} options={{ title: '📅 Rendez-vous', drawerLabel: '📅 Rendez-vous' }} />
-      <Drawer.Screen name="Budget" component={BudgetScreen} options={{ title: '💰 Budget', drawerLabel: '💰 Budget' }} />
-      <Drawer.Screen name="Veterinaires" component={VeterinairesScreen} options={{ title: '🏥 Vétérinaires', drawerLabel: '🏥 Vétérinaires' }} />
-      <Drawer.Screen name="Rappels" component={RappelsScreen} options={{ title: '⚠️ Rappels', drawerLabel: '⚠️ Rappels' }} />
-      <Drawer.Screen name="Parametres" component={ParametresScreen} options={{ title: '⚙️ Paramètres', drawerLabel: '⚙️ Paramètres' }} />
-    </Drawer.Navigator>
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Accueil" component={AccueilStack} />
+      <Tab.Screen name="Dossier" component={DossierStack} />
+      <Tab.Screen name="Ajouter" component={EmptyScreen} />
+      <Tab.Screen name="Veterinaires" component={VetStack} />
+      <Tab.Screen name="Rappels" component={RappelsStack} />
+    </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    marginBottom: spacing.sm,
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: 'flex-end',
+    paddingTop: 8,
   },
-  headerEmoji: {
-    fontSize: 36,
-    marginBottom: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  headerEmail: {
-    fontSize: 12,
-    color: colors.textLight,
-    marginTop: spacing.xs,
-  },
-  logoutButton: {
-    marginTop: spacing.lg,
-    marginHorizontal: spacing.md,
-    padding: spacing.md,
-    borderRadius: 8,
-    backgroundColor: colors.redLight,
+  tabItem: {
+    flex: 1,
     alignItems: 'center',
+    paddingBottom: 4,
   },
-  logoutText: {
-    color: colors.red,
-    fontWeight: '600',
+  tabIcon: {
+    fontSize: 22,
+    marginBottom: 2,
+  },
+  tabLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+  },
+  tabLabelActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  fabWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 4,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 30,
+    color: colors.white,
+    lineHeight: 34,
   },
 });

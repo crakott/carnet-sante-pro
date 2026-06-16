@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen, ScreenTitle, Card, Button, Field, Input, Select, IconButton, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -16,9 +16,20 @@ export default function AccueilScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal } = useAnimals();
   const { reminderSettings } = useAuth();
   const navigation = useNavigation();
+  const route = useRoute();
   const [showAdd, setShowAdd] = useState(false);
   const [newAnimal, setNewAnimal] = useState(emptyAnimal);
   const [editingAnimal, setEditingAnimal] = useState(null);
+
+  // Open add modal when triggered by the FAB in the bottom tab bar
+  const lastOpenAdd = useRef(null);
+  useEffect(() => {
+    const ts = route.params?.openAdd;
+    if (ts && ts !== lastOpenAdd.current) {
+      lastOpenAdd.current = ts;
+      setShowAdd(true);
+    }
+  }, [route.params?.openAdd]);
 
   const reminders = getReminders(animals, reminderSettings);
 
