@@ -139,7 +139,7 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
 // vaccine, treatment, antiparasitic and dewormer due dates, based on each user's
 // configured thresholds (settings/{uid}.reminders). Fires at threshold day (advance
 // warning), the day before, and the day of. Dedup via settings/{uid}.upcomingSentKeys.
-exports.sendUpcomingReminders = onSchedule({ schedule: 'every day 08:00', region: REGION, timeZone: 'Europe/Paris' }, async () => {
+exports.sendUpcomingReminders = onSchedule({ schedule: '0 8 * * *', region: REGION, timeZone: 'Europe/Paris' }, async () => {
   const db = admin.firestore();
   const messaging = admin.messaging();
 
