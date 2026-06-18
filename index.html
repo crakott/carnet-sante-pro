@@ -290,10 +290,16 @@
             'Oiseau': ['Paramyxovirus', 'Newcastle'],
         };
         const MEDICAMENTS_COURANTS = [
-            'Amoxicilline', 'Doxycycline', 'Métronidazole', 'Fluconazole',
-            'Paracétamol', 'Ibuprofène', 'Carprofen', 'Meloxicam',
-            'Prednisone', 'Dexaméthasone', 'Loratadine', 'Cetirizine',
-            'Oméprazole', 'Famotidine', 'Lactulose', 'Probiotiques'
+            { group: 'ANTIBIOTIQUES', items: ['Clamoxyl', 'Augmentin', 'Vibramycine', 'Keflex', 'Baytril', 'Marboflox', 'Zithromax (Azithromycine)'] },
+            { group: 'ANTI-INFLAMMATOIRES', items: ['Metacam', 'Meloxidyl', 'Previcox', 'Feldène', 'Cortancyl', 'Rimadyl', 'Carprieve'] },
+            { group: 'ANTIHISTAMINIQUES & ALLERGIES', items: ['Piriteze', 'Claritine', 'Benadryl', 'Apoquel', 'Omnaris'] },
+            { group: 'PROTECTEURS GASTRIQUES & DIGESTIFS', items: ['Losec', 'Nexium', 'Zantac', 'Eupantol', 'Cerenia', 'Primperan'] },
+            { group: 'COLLYRES & TRAITEMENTS AURICULAIRES', items: ['Tobradex', 'Exocine', 'Ciloxan', 'Pilocar', 'Lamisil ototopique'] },
+            { group: 'ANTIFONGIQUES', items: ['Lamisil', 'Diflucan', 'Sporanox', 'Nizoral', 'Daktarin'] },
+            { group: 'CARDIOLOGIQUES', items: ['Vetmedin', 'Digoxine Nativelle', 'Lasilix', 'Aldactone', 'Renitec'] },
+            { group: 'THYROÏDIENS', items: ['Thyroxine', 'Levaxin', 'Tapazole', 'PTU'] },
+            { group: 'DIABÈTE', items: ['Insuline', 'Humuline', 'Lantus', 'Minidiab', 'Humalog'] },
+            { group: 'DENTAIRE ET AUTRES', items: ['Hibitane', 'Fluoridex'] },
         ];
         const VETERINAIRES = [
             { id: 1, nom: "Clinique Saint-Germain", distance: "2.3 km", lat: 48.8539, lng: 2.3340, telephone: "01 23 45 67 89", horaires: "Lun-Ven: 9h-19h", specialites: ["Chiens", "Chats"], rating: 4.8 },
@@ -2545,8 +2551,12 @@
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un traitement</h3>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
                                 <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewMed({ ...newMed, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
-                                    <option value="">Médicaments courants</option>
-                                    {MEDICAMENTS_COURANTS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    <option value="">— Choisir un médicament —</option>
+                                    {MEDICAMENTS_COURANTS.map(g => (
+                                        <optgroup key={g.group} label={g.group}>
+                                            {g.items.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </optgroup>
+                                    ))}
                                     <option value="autres">Autres</option>
                                 </select>
                                 <input type="text" placeholder="Nom du médicament" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
