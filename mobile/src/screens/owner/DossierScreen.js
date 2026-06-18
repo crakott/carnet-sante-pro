@@ -21,7 +21,7 @@ import { APP_URL } from '../../constants';
 import { colors, spacing } from '../../theme';
 
 const INTERSTITIAL_ID = __DEV__
-  ? TestIds.INTERSTITIAL
+  ? (TestIds?.INTERSTITIAL ?? 'ca-app-pub-3940256099942544/1033173712')
   : 'ca-app-pub-3973597189754626/6766559212';
 
 export default function DossierScreen() {
