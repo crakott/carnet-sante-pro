@@ -5,7 +5,7 @@ import MedicamentsSection from '../../components/MedicamentsSection';
 import { useAnimals } from '../../context/AnimalsContext';
 
 export default function MedicamentsScreen() {
-  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem } = useAnimals();
+  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem } = useAnimals();
   const animal = animals.find((a) => a.id === selectedAnimal);
 
   if (animals.length === 0) {
@@ -19,7 +19,16 @@ export default function MedicamentsScreen() {
   return (
     <Screen>
       <AnimalPicker animals={animals} selectedAnimal={selectedAnimal} onSelect={setSelectedAnimal} />
-      {animal ? <MedicamentsSection animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} /> : <EmptyState>Sélectionnez un animal</EmptyState>}
+      {animal ? (
+        <MedicamentsSection
+          animal={animal}
+          addAnimalItem={addAnimalItem}
+          deleteAnimalItem={deleteAnimalItem}
+          updateAnimalItem={updateAnimalItem}
+        />
+      ) : (
+        <EmptyState>Sélectionnez un animal</EmptyState>
+      )}
     </Screen>
   );
 }

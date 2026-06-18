@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Screen, ScreenTitle, Card, Button, Field, Input, Select, IconButton, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
+import { Screen, ScreenTitle, Card, Button, Field, Input, Select, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
 import AdBanner from '../../components/AdBanner';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -94,8 +94,12 @@ export default function AccueilScreen() {
                 onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Dossier'); }}
                 actions={
                   <View style={styles.cardActions}>
-                    <IconButton title="✏️" color={colors.blue} bg={colors.blueLight} onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} />
-                    <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => confirmDelete(animal)} />
+                    <TouchableOpacity onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} style={styles.btnEdit}>
+                      <Text style={styles.btnEditText}>✏️ Modifier</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => confirmDelete(animal)} style={styles.btnDelete}>
+                      <Text style={styles.btnDeleteText}>🗑️ Supprimer</Text>
+                    </TouchableOpacity>
                   </View>
                 }
               />
@@ -158,7 +162,11 @@ function AnimalForm({ animal, setAnimal }) {
         <View style={styles.photoRow}>
           <Avatar animal={animal} size={48} />
           <Button title={animal.photo ? 'Changer la photo' : 'Choisir une photo'} onPress={pickPhoto} color={colors.blueLight} textColor={colors.blue} style={{ flex: 1 }} />
-          {animal.photo ? <IconButton title="✕" color={colors.red} bg={colors.redLight} onPress={() => setAnimal({ ...animal, photo: '' })} /> : null}
+          {animal.photo ? (
+              <TouchableOpacity onPress={() => setAnimal({ ...animal, photo: '' })} style={{ padding: 8, borderRadius: 6, backgroundColor: colors.redLight }}>
+                <Text style={{ color: colors.red, fontWeight: '700' }}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
         </View>
         {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
       </Field>
@@ -229,9 +237,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   cardActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
+    flexDirection: 'column',
+    gap: 4,
   },
+  btnEdit: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: colors.blueLight,
+  },
+  btnEditText: { color: colors.blue, fontSize: 11, fontWeight: '600' },
+  btnDelete: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: colors.redLight,
+  },
+  btnDeleteText: { color: colors.red, fontSize: 11, fontWeight: '600' },
   photoRow: {
     flexDirection: 'row',
     alignItems: 'center',

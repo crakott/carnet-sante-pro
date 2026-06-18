@@ -15,7 +15,8 @@ export const getReminders = (animals, reminderSettings) => {
     (animal.medicaments || []).forEach((m) => {
       const medDate = new Date(m.dateFin);
       const daysUntil = Math.ceil((medDate - today) / (1000 * 60 * 60 * 24));
-      if (daysUntil <= reminderSettings.medicament) {
+      const threshold = m.rappelJours != null ? m.rappelJours : reminderSettings.medicament;
+      if (daysUntil <= threshold) {
         reminders.push({ type: 'medicament', animal: animal.nom, nom: m.nom, daysUntil, urgent: daysUntil <= 1 });
       }
     });

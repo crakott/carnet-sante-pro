@@ -28,6 +28,7 @@ const AccueilStackNav = createNativeStackNavigator();
 const DossierStackNav = createNativeStackNavigator();
 const VetStackNav = createNativeStackNavigator();
 const RappelsStackNav = createNativeStackNavigator();
+const ParametresStackNav = createNativeStackNavigator();
 
 const stackOptions = {
   headerStyle: { backgroundColor: colors.white },
@@ -36,25 +37,25 @@ const stackOptions = {
   headerBackTitle: 'Retour',
 };
 
+function HomeButton({ navigation }) {
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Accueil', { screen: 'AccueilMain' })}
+      hitSlop={12}
+      style={{ marginLeft: 4 }}
+    >
+      <Text style={{ fontSize: 22 }}>🏠</Text>
+    </TouchableOpacity>
+  );
+}
+
 function AccueilStack() {
   return (
     <AccueilStackNav.Navigator screenOptions={stackOptions}>
       <AccueilStackNav.Screen
         name="AccueilMain"
         component={AccueilScreen}
-        options={({ navigation }) => ({
-          title: '🐾 Carnet Santé PRO',
-          headerRight: () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Parametres')} hitSlop={12} style={{ marginRight: 4 }}>
-              <Text style={{ fontSize: 22 }}>⚙️</Text>
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <AccueilStackNav.Screen
-        name="Parametres"
-        component={ParametresScreen}
-        options={{ title: '⚙️ Paramètres' }}
+        options={{ title: '🐾 Carnet Santé PRO' }}
       />
     </AccueilStackNav.Navigator>
   );
@@ -63,9 +64,16 @@ function AccueilStack() {
 function DossierStack() {
   return (
     <DossierStackNav.Navigator screenOptions={stackOptions}>
-      <DossierStackNav.Screen name="DossierMain" component={DossierScreen} options={{ title: '📁 Dossier' }} />
+      <DossierStackNav.Screen
+        name="DossierMain"
+        component={DossierScreen}
+        options={({ navigation }) => ({
+          title: '📁 Dossier',
+          headerLeft: () => <HomeButton navigation={navigation} />,
+        })}
+      />
       <DossierStackNav.Screen name="Vaccins" component={VaccinsScreen} options={{ title: '💉 Vaccins' }} />
-      <DossierStackNav.Screen name="Medicaments" component={MedicamentsScreen} options={{ title: '💊 Médicaments' }} />
+      <DossierStackNav.Screen name="Medicaments" component={MedicamentsScreen} options={{ title: '💊 Traitements' }} />
       <DossierStackNav.Screen name="Chirurgies" component={ChirurgiesScreen} options={{ title: '🔪 Chirurgies' }} />
       <DossierStackNav.Screen name="Aliment" component={AlimentScreen} options={{ title: '🍎 Alimentation' }} />
       <DossierStackNav.Screen name="Notes" component={NotesScreen} options={{ title: '📋 Observations' }} />
@@ -83,7 +91,14 @@ function DossierStack() {
 function VetStack() {
   return (
     <VetStackNav.Navigator screenOptions={stackOptions}>
-      <VetStackNav.Screen name="VeterinairesMain" component={VeterinairesScreen} options={{ title: '🏥 Vétérinaires' }} />
+      <VetStackNav.Screen
+        name="VeterinairesMain"
+        component={VeterinairesScreen}
+        options={({ navigation }) => ({
+          title: '🏥 Vétérinaires',
+          headerLeft: () => <HomeButton navigation={navigation} />,
+        })}
+      />
     </VetStackNav.Navigator>
   );
 }
@@ -91,22 +106,49 @@ function VetStack() {
 function RappelsStack() {
   return (
     <RappelsStackNav.Navigator screenOptions={stackOptions}>
-      <RappelsStackNav.Screen name="RappelsMain" component={RappelsScreen} options={{ title: '⚠️ Rappels' }} />
+      <RappelsStackNav.Screen
+        name="RappelsMain"
+        component={RappelsScreen}
+        options={({ navigation }) => ({
+          title: '⚠️ Rappels',
+          headerLeft: () => <HomeButton navigation={navigation} />,
+        })}
+      />
     </RappelsStackNav.Navigator>
+  );
+}
+
+function ParametresStack() {
+  return (
+    <ParametresStackNav.Navigator screenOptions={stackOptions}>
+      <ParametresStackNav.Screen
+        name="ParametresMain"
+        component={ParametresScreen}
+        options={({ navigation }) => ({
+          title: '⚙️ Paramètres',
+          headerLeft: () => <HomeButton navigation={navigation} />,
+        })}
+      />
+    </ParametresStackNav.Navigator>
   );
 }
 
 function EmptyScreen() { return null; }
 
+const HIDDEN = '__hidden__';
+const FAB_SLOT = '__fab__';
+
 function CustomTabBar({ state, navigation }) {
   const insets = useSafeAreaInsets();
 
+  // Order must match Tab.Screen order below: Accueil(hidden), Dossier, Veterinaires, Ajouter(fab), Rappels, Parametres
   const tabs = [
-    { name: 'Accueil', label: 'Accueil', icon: '🏠' },
+    HIDDEN,
     { name: 'Dossier', label: 'Dossier', icon: '📋' },
-    null, // FAB center slot
     { name: 'Veterinaires', label: 'Vétérinaires', icon: '🐾' },
+    FAB_SLOT,
     { name: 'Rappels', label: 'Rappels', icon: '⏰' },
+    { name: 'Parametres', label: 'Paramètres', icon: '⚙️' },
   ];
 
   const isActive = (tabName) => {
@@ -117,7 +159,8 @@ function CustomTabBar({ state, navigation }) {
   return (
     <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
       {tabs.map((tab, i) => {
-        if (!tab) {
+        if (tab === HIDDEN) return null;
+        if (tab === FAB_SLOT) {
           return (
             <View key="fab" style={styles.fabWrapper}>
               <TouchableOpacity
@@ -160,9 +203,10 @@ export default function OwnerNavigator() {
     >
       <Tab.Screen name="Accueil" component={AccueilStack} />
       <Tab.Screen name="Dossier" component={DossierStack} />
-      <Tab.Screen name="Ajouter" component={EmptyScreen} />
       <Tab.Screen name="Veterinaires" component={VetStack} />
+      <Tab.Screen name="Ajouter" component={EmptyScreen} />
       <Tab.Screen name="Rappels" component={RappelsStack} />
+      <Tab.Screen name="Parametres" component={ParametresStack} />
     </Tab.Navigator>
   );
 }

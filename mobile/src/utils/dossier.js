@@ -22,7 +22,7 @@ const daysUntil = (dateStr) => {
 export const DOSSIER_GROUPS = ['Santé', 'Quotidien', 'Administratif'];
 export const DOSSIER_CARDS = [
   { id: 'Vaccins', emoji: '💉', label: 'Vaccins', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
-  { id: 'Medicaments', emoji: '💊', label: 'Médicaments', color: colors.pink, bg: colors.pinkLight, group: 'Santé' },
+  { id: 'Medicaments', emoji: '💊', label: 'Traitements', color: colors.pink, bg: colors.pinkLight, group: 'Santé' },
   { id: 'Chirurgies', emoji: '🔪', label: 'Chirurgies', color: colors.rose, bg: colors.roseLight, group: 'Santé' },
   { id: 'Poids', emoji: '⚖️', label: 'Poids', color: colors.primary, bg: colors.greenLight, group: 'Santé' },
   { id: 'Aliment', emoji: '🍎', label: 'Alimentation', color: colors.yellow, bg: colors.yellowLight, group: 'Quotidien' },

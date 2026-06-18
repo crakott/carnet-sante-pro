@@ -18,10 +18,29 @@ export const VACCINS_COURANTS = {
 };
 
 export const MEDICAMENTS_COURANTS = [
-  'Amoxicilline', 'Doxycycline', 'Métronidazole', 'Fluconazole',
-  'Paracétamol', 'Ibuprofène', 'Carprofen', 'Meloxicam',
-  'Prednisone', 'Dexaméthasone', 'Loratadine', 'Cetirizine',
-  'Oméprazole', 'Famotidine', 'Lactulose', 'Probiotiques',
+  'Clamoxyl / Augmentin', 'Vibramycine', 'Keflex', 'Baytril', 'Marboflox', 'Zithromax',
+  'Metacam / Meloxidyl', 'Previcox', 'Feldène', 'Cortancyl', 'Rimadyl / Carprieve',
+  'Piriteze', 'Claritine', 'Benadryl', 'Apoquel', 'Omnaris',
+  'Losec / Nexium', 'Zantac', 'Eupantol', 'Cerenia', 'Primperan',
+  'Tobradex', 'Exocine', 'Ciloxan', 'Pilocar', 'Lamisil ototopique',
+  'Lamisil', 'Diflucan', 'Sporanox', 'Nizoral', 'Daktarin',
+  'Vetmedin', 'Digoxine Nativelle', 'Lasilix', 'Aldactone', 'Renitec',
+  'Thyroxine / Levaxin', 'Tapazole', 'PTU',
+  'Insuline Humuline', 'Lantus', 'Minidiab', 'Humalog',
+  'Hibitane', 'Fluoridex',
+];
+
+export const MEDICAMENTS_CATEGORIES = [
+  { cat: 'ANTIBIOTIQUES', items: ['Clamoxyl / Augmentin', 'Vibramycine', 'Keflex', 'Baytril', 'Marboflox', 'Zithromax'] },
+  { cat: 'ANTI-INFLAMMATOIRES', items: ['Metacam / Meloxidyl', 'Previcox', 'Feldène', 'Cortancyl', 'Rimadyl / Carprieve'] },
+  { cat: 'ANTIHISTAMINIQUES & ALLERGIES', items: ['Piriteze', 'Claritine', 'Benadryl', 'Apoquel', 'Omnaris'] },
+  { cat: 'PROTECTEURS GASTRIQUES & DIGESTIFS', items: ['Losec / Nexium', 'Zantac', 'Eupantol', 'Cerenia', 'Primperan'] },
+  { cat: 'COLLYRES & AURICULAIRES', items: ['Tobradex', 'Exocine', 'Ciloxan', 'Pilocar', 'Lamisil ototopique'] },
+  { cat: 'ANTIFONGIQUES', items: ['Lamisil', 'Diflucan', 'Sporanox', 'Nizoral', 'Daktarin'] },
+  { cat: 'CARDIOLOGIQUES', items: ['Vetmedin', 'Digoxine Nativelle', 'Lasilix', 'Aldactone', 'Renitec'] },
+  { cat: 'THYROÏDIENS', items: ['Thyroxine / Levaxin', 'Tapazole', 'PTU'] },
+  { cat: 'DIABÈTE', items: ['Insuline Humuline', 'Lantus', 'Minidiab', 'Humalog'] },
+  { cat: 'DENTAIRE ET AUTRES', items: ['Hibitane', 'Fluoridex'] },
 ];
 
 export const VETERINAIRES = [
