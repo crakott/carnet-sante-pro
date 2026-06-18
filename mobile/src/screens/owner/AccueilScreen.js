@@ -95,10 +95,10 @@ export default function AccueilScreen() {
                 actions={
                   <View style={styles.cardActions}>
                     <TouchableOpacity onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} style={styles.btnEdit}>
-                      <Text style={styles.btnEditText}>✏️ Modifier</Text>
+                      <Text style={styles.btnEditText}>✎</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => confirmDelete(animal)} style={styles.btnDelete}>
-                      <Text style={styles.btnDeleteText}>🗑️ Supprimer</Text>
+                      <Text style={styles.btnDeleteText}>✖</Text>
                     </TouchableOpacity>
                   </View>
                 }
@@ -241,19 +241,23 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   btnEdit: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: colors.blueLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  btnEditText: { color: colors.blue, fontSize: 11, fontWeight: '600' },
+  btnEditText: { color: colors.blue, fontSize: 16, fontWeight: '700' },
   btnDelete: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: colors.redLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  btnDeleteText: { color: colors.red, fontSize: 11, fontWeight: '600' },
+  btnDeleteText: { color: colors.red, fontSize: 16, fontWeight: '700' },
   photoRow: {
     flexDirection: 'row',
     alignItems: 'center',
