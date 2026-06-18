@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Card, Button, Field, Input, Row } from './ui';
 import { colors, spacing, radius } from '../theme';
-import { formatDate, todayStr, addDays } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 import { MEDICAMENTS_CATEGORIES } from '../constants';
+
+const HEURES_OPTIONS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
+const DEFAULT_HEURES = {
+  1: ['08:00'],
+  2: ['08:00', '20:00'],
+  3: ['08:00', '14:00', '20:00'],
+  4: ['08:00', '12:00', '16:00', '20:00'],
+};
 
 export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const today = todayStr();
@@ -15,13 +24,23 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
   const [dosage, setDosage] = useState('');
   const [unite, setUnite] = useState('mg');
   const [frequence, setFrequence] = useState('');
-  const [duree, setDuree] = useState('');
-  const [dateDebut, setDateDebut] = useState(today);
-  const [rappelJours, setRappelJours] = useState('');
+  const [dateDebut, setDateDebut] = useState(isoToDisplay(today));
+  const [dateFin, setDateFin] = useState('');
+  const [heuresRappel, setHeuresRappel] = useState([]);
+
+  // Sync heuresRappel count with frequence, preserving existing values
+  useEffect(() => {
+    const n = parseInt(frequence) || 0;
+    if (n <= 0) { setHeuresRappel([]); return; }
+    const defaults = DEFAULT_HEURES[n] || Array(n).fill('08:00');
+    setHeuresRappel((prev) =>
+      Array.from({ length: n }, (_, i) => prev[i] || defaults[i])
+    );
+  }, [frequence]);
 
   const resetForm = () => {
     setNom(''); setDosage(''); setUnite('mg'); setFrequence('');
-    setDuree(''); setDateDebut(today); setRappelJours('');
+    setDateDebut(isoToDisplay(today)); setDateFin(''); setHeuresRappel([]);
   };
 
   const openAdd = () => {
@@ -36,24 +55,24 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
     setDosage(item.dosage || '');
     setUnite(item.unite || 'mg');
     setFrequence((item.frequence || '').replace('x/jour', ''));
-    setDuree(item.duree || '');
-    setDateDebut(item.dateDebut || today);
-    setRappelJours(item.rappelJours != null ? String(item.rappelJours) : '');
+    setDateDebut(isoToDisplay(item.dateDebut) || isoToDisplay(today));
+    setDateFin(isoToDisplay(item.dateFin) || '');
+    setHeuresRappel(item.heuresRappel || []);
     setShowForm(true);
   };
 
   const handleSave = () => {
-    if (!nom || !dosage || !frequence || !duree) return;
-    const dateFin = addDays(dateDebut, parseInt(duree, 10));
+    if (!nom || !dosage || !frequence || !dateFin) return;
+    const dateDebutIso = displayToIso(dateDebut);
+    const dateFinIso = displayToIso(dateFin);
     const data = {
       nom,
       dosage,
       unite,
       frequence: `${frequence}x/jour`,
-      duree,
-      dateDebut,
-      dateFin,
-      ...(rappelJours !== '' ? { rappelJours: parseInt(rappelJours, 10) } : {}),
+      dateDebut: dateDebutIso,
+      dateFin: dateFinIso,
+      heuresRappel: heuresRappel.length > 0 ? heuresRappel : undefined,
     };
     if (editingId) {
       updateAnimalItem(animal, 'medicaments', editingId, data);
@@ -69,6 +88,10 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
     resetForm();
     setShowForm(false);
     setEditingId(null);
+  };
+
+  const updateHeure = (index, value) => {
+    setHeuresRappel((prev) => prev.map((h, i) => (i === index ? value : h)));
   };
 
   return (
@@ -97,9 +120,7 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
                     enabled={false}
                     color="#9ca3af"
                   />,
-                  ...cat.items.map((m) => (
-                    <Picker.Item key={m} label={m} value={m} />
-                  )),
+                  ...cat.items.map((m) => <Picker.Item key={m} label={m} value={m} />),
                 ]).flat()}
               </Picker>
             </View>
@@ -124,23 +145,48 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
             </View>
           </Row>
 
-          <Row style={{ gap: spacing.sm }}>
-            <Field label="Fréquence (x/jour)" hint=" ">
-              <Input value={frequence} onChangeText={setFrequence} placeholder="ex. 2" keyboardType="numeric" />
-            </Field>
-            <Field label="Durée (jours)" hint=" ">
-              <Input value={duree} onChangeText={setDuree} placeholder="ex. 7" keyboardType="numeric" />
-            </Field>
-          </Row>
+          <Field label="Fréquence (x/jour)">
+            <Input value={frequence} onChangeText={setFrequence} placeholder="ex. 3" keyboardType="numeric" />
+          </Field>
 
           <Row style={{ gap: spacing.sm }}>
             <Field label="Date de début" hint=" ">
-              <Input value={dateDebut} onChangeText={setDateDebut} placeholder="AAAA-MM-JJ" />
+              <Input
+                value={dateDebut}
+                onChangeText={(v) => setDateDebut(formatDateInput(v))}
+                placeholder="JJ/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
+              />
             </Field>
-            <Field label="Rappel (jours avant fin)" hint=" ">
-              <Input value={rappelJours} onChangeText={setRappelJours} placeholder="ex. 3" keyboardType="numeric" />
+            <Field label="Date de fin" hint=" ">
+              <Input
+                value={dateFin}
+                onChangeText={(v) => setDateFin(formatDateInput(v))}
+                placeholder="JJ/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
+              />
             </Field>
           </Row>
+
+          {heuresRappel.length > 0 && (
+            <Field label="🔔 Heures de rappel">
+              {heuresRappel.map((h, i) => (
+                <View key={i} style={[styles.heurePickerWrapper, { marginBottom: i < heuresRappel.length - 1 ? spacing.sm : 0 }]}>
+                  <Picker
+                    selectedValue={h}
+                    onValueChange={(v) => updateHeure(i, v)}
+                    style={styles.heurePicker}
+                  >
+                    {HEURES_OPTIONS.map((opt) => (
+                      <Picker.Item key={opt} label={opt} value={opt} />
+                    ))}
+                  </Picker>
+                </View>
+              ))}
+            </Field>
+          )}
 
           <Row style={{ gap: spacing.sm }}>
             <Button title={editingId ? '✅ Enregistrer' : '➕ Ajouter'} onPress={handleSave} color={colors.pink} style={{ flex: 1 }} />
@@ -159,7 +205,9 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
                   <Text style={styles.itemTitle}>{m.nom}</Text>
                   {m.dosage ? <Text style={styles.itemMeta}>💊 {m.dosage} {m.unite} • {m.frequence}</Text> : null}
                   <Text style={styles.itemMeta}>📅 {formatDate(m.dateDebut)}{m.dateFin ? ` → ${formatDate(m.dateFin)}` : ''}</Text>
-                  {m.rappelJours != null ? <Text style={styles.itemMeta}>🔔 Rappel {m.rappelJours}j avant la fin</Text> : null}
+                  {m.heuresRappel?.length > 0 ? (
+                    <Text style={styles.itemMeta}>🔔 {m.heuresRappel.join(' • ')}</Text>
+                  ) : null}
                   {m.dateFin ? (
                     <View style={[styles.badge, { backgroundColor: isActive ? colors.pinkLight : colors.background }]}>
                       <Text style={[styles.badgeText, { color: isActive ? '#be185d' : colors.textLight }]}>
@@ -205,6 +253,19 @@ const styles = StyleSheet.create({
   },
   pickerSmall: {
     color: colors.text,
+    ...(Platform.OS === 'ios' ? { height: 120 } : {}),
+  },
+  heurePickerWrapper: {
+    borderWidth: 1.5,
+    borderColor: colors.pink,
+    borderRadius: radius.sm,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+    width: 160,
+  },
+  heurePicker: {
+    color: colors.pink,
+    fontWeight: '700',
     ...(Platform.OS === 'ios' ? { height: 120 } : {}),
   },
   item: {

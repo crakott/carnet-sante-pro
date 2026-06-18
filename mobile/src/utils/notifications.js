@@ -54,7 +54,7 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
       count++;
     }
 
-    // Médicaments
+    // Médicaments — rappel de fin de traitement
     for (const m of (animal.medicaments || [])) {
       const trigger = buildTriggerDate(m.dateFin, medDays);
       if (!trigger || trigger <= now) continue;
@@ -68,6 +68,36 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
         trigger: { date: trigger, channelId: CHANNEL_ID },
       });
       count++;
+    }
+
+    // Médicaments — rappels quotidiens aux heures de prise
+    for (const m of (animal.medicaments || [])) {
+      if (!m.heuresRappel?.length || !m.dateFin || !m.dateDebut) continue;
+      const fin = new Date(m.dateFin);
+      fin.setHours(23, 59, 59, 0);
+      if (fin < now) continue;
+      let d = new Date(Math.max(new Date(m.dateDebut).getTime(), now.getTime()));
+      d.setHours(0, 0, 0, 0);
+      while (d <= fin && count < 58) {
+        for (const heure of m.heuresRappel) {
+          const [h, min] = heure.split(':').map(Number);
+          const t = new Date(d);
+          t.setHours(h, min, 0, 0);
+          if (t > now) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: `💊 ${animal.nom} — ${m.nom}`,
+                body: m.dosage ? `${m.dosage} ${m.unite} • ${m.frequence}` : m.frequence,
+                sound: true,
+                data: { type: 'medicament_heure', animalId: animal.id },
+              },
+              trigger: { date: t, channelId: CHANNEL_ID },
+            });
+            count++;
+          }
+        }
+        d.setDate(d.getDate() + 1);
+      }
     }
 
     // Antiparasitaires
