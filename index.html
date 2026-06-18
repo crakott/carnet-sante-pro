@@ -833,7 +833,7 @@
         function App() {
             const [user, setUser] = React.useState(null);
             const [loading, setLoading] = React.useState(true);
-            const [activeTab, setActiveTab] = React.useState('accueil');
+            const [activeTab, setActiveTab] = React.useState('dossier');
             const [animals, setAnimals] = React.useState([]);
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
@@ -1795,10 +1795,10 @@
 
         // Mobile bottom navigation bar
         const BOTTOM_NAV_TABS = [
-            { id: 'accueil', icon: '🏠', label: 'Accueil' },
             { id: 'dossier', icon: '📋', label: 'Dossier' },
             { id: 'veterinaires', icon: '🐾', label: 'Vétérinaires' },
-            { id: 'rappels', icon: '⏰', label: 'Rappels' }
+            { id: 'rappels', icon: '⏰', label: 'Rappels' },
+            { id: 'parametres', icon: '⚙️', label: 'Paramètres' },
         ];
 
         function BottomNavItem({ tab, activeTab, setActiveTab }) {
@@ -1829,20 +1829,7 @@
         function BottomNav({ activeTab, setActiveTab }) {
             return (
                 <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', zIndex: 100 }}>
-                    {BOTTOM_NAV_TABS.slice(0, 2).map(tab => (
-                        <BottomNavItem key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    ))}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', padding: '8px 0 10px', fontSize: '11px', color: '#6b7280' }}>
-                        <button
-                            onClick={() => setActiveTab('accueil')}
-                            title="Ajouter un animal"
-                            style={{ position: 'absolute', top: '-22px', width: '52px', height: '52px', borderRadius: '50%', background: '#10b981', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', boxShadow: '0 4px 8px rgba(16,185,129,0.4)', cursor: 'pointer' }}
-                        >
-                            ➕
-                        </button>
-                        <span style={{ marginTop: '32px' }}>Ajouter</span>
-                    </div>
-                    {BOTTOM_NAV_TABS.slice(2).map(tab => (
+                    {BOTTOM_NAV_TABS.map(tab => (
                         <BottomNavItem key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />
                     ))}
                 </nav>
