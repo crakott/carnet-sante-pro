@@ -2263,7 +2263,13 @@
 
             const startEdit = () => {
                 const init = {};
-                fields.forEach(f => { init[f.key] = item[f.key] ?? ''; });
+                fields.forEach(f => {
+                    if (f.type === 'time-array') {
+                        init[f.key] = Array.isArray(item[f.key]) && item[f.key].length ? [...item[f.key]] : ['08:00'];
+                    } else {
+                        init[f.key] = item[f.key] ?? '';
+                    }
+                });
                 setValues(init);
                 setEditing(true);
             };
@@ -2288,6 +2294,14 @@
                                         </select>
                                     ) : f.type === 'textarea' ? (
                                         <textarea value={values[f.key]} onChange={e => setValues({ ...values, [f.key]: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px' }} />
+                                    ) : f.type === 'time-array' ? (
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            {(values[f.key] || ['08:00']).map((h, i) => (
+                                                <input key={i} type="time" value={h}
+                                                    onChange={e => { const u = [...values[f.key]]; u[i] = e.target.value; setValues({ ...values, [f.key]: u }); }}
+                                                    style={{ padding: '8px', border: '1px solid #ec4899', borderRadius: '6px', fontSize: '14px', fontWeight: '600', color: '#ec4899' }} />
+                                            ))}
+                                        </div>
                                     ) : (
                                         <input type={f.type || 'text'} step={f.step} value={values[f.key]} onChange={e => setValues({ ...values, [f.key]: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
                                     )}
@@ -2587,7 +2601,8 @@
                                                 { key: 'unite', label: 'Unité', type: 'select', options: ['g', 'mg', 'ml', 'UI'].map(u => ({ value: u, label: u })) },
                                                 { key: 'frequence', label: 'Fréquence' },
                                                 { key: 'dateDebut', label: 'Date de début', type: 'date' },
-                                                { key: 'dateFin', label: 'Date de fin', type: 'date' }
+                                                { key: 'dateFin', label: 'Date de fin', type: 'date' },
+                                                { key: 'heures', label: '⏰ Heures de rappel', type: 'time-array', fullWidth: true },
                                             ]}
                                             onSave={(vals) => updateAnimalItem(animal, 'medicaments', m.id, vals)}
                                             onDelete={() => deleteAnimalItem(animal, 'medicaments', m.id)}
