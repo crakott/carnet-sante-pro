@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Text, StyleSheet, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { Screen, ScreenTitle, EmptyState, Card, Button } from '../../components/ui';
+import AdBanner from '../../components/AdBanner';
 import AnimalPicker from '../../components/AnimalPicker';
 import { useAnimals } from '../../context/AnimalsContext';
 import { getDistanceKm, fetchNearbyVets } from '../../utils/vets';
@@ -79,6 +80,8 @@ export default function VeterinairesScreen() {
       <ScreenTitle>🏥 Vétérinaires</ScreenTitle>
 
       <AnimalPicker animals={animals} selectedAnimal={selectedAnimal} onSelect={setSelectedAnimal} />
+
+      <AdBanner />
 
       <Button
         title={geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trouver les vétérinaires autour de moi'}

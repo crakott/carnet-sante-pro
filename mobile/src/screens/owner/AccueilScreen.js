@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen, ScreenTitle, Card, Button, Field, Input, Select, IconButton, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
+import AdBanner from '../../components/AdBanner';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
@@ -104,6 +105,8 @@ export default function AccueilScreen() {
       )}
 
       <Button title="➕ Ajouter un animal" onPress={() => setShowAdd(true)} />
+
+      <AdBanner />
 
       <ModalSheet visible={showAdd} onClose={() => setShowAdd(false)}>
         <Text style={styles.modalTitle}>Ajouter un animal</Text>

@@ -27,6 +27,12 @@
     "plugins": [
       "expo-audio",
       [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3973597189754626~1411166463"
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",

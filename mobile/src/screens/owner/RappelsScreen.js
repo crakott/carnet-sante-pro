@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { Screen, ScreenTitle, Card } from '../../components/ui';
+import AdBanner from '../../components/AdBanner';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { getReminders, getAnimalAllScheduled } from '../../utils/reminders';
@@ -102,6 +103,8 @@ export default function RappelsScreen() {
           <Text style={styles.emptyStateText}>✅ Aucun animal enregistré</Text>
         </Card>
       )}
+
+      <AdBanner />
     </Screen>
   );
 }

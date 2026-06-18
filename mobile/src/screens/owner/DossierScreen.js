@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
+import { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
 import * as Print from 'expo-print';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
@@ -13,12 +14,29 @@ import { getVideosForAnimal } from '../../utils/videos';
 import { APP_URL } from '../../constants';
 import { colors, spacing } from '../../theme';
 
+const INTERSTITIAL_ID = __DEV__
+  ? TestIds.INTERSTITIAL
+  : 'ca-app-pub-3973597189754626/6766559212';
+
 export default function DossierScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, saveAnimal } = useAnimals();
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
+
+  // Show interstitial ~1 time out of 3 when the dossier is opened
+  useEffect(() => {
+    if (Math.random() > 0.33) return;
+    const interstitial = InterstitialAd.createForAdRequest(INTERSTITIAL_ID, {
+      requestNonPersonalizedAdsOnly: true,
+    });
+    const unsubscribe = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+      interstitial.show();
+    });
+    interstitial.load();
+    return unsubscribe;
+  }, [selectedAnimal]);
 
   const animal = animals.find((a) => a.id === selectedAnimal) || animals[0];
 
