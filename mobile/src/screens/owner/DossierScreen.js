@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
+import { useAdsReady } from '../../../App';
 let InterstitialAd = null, AdEventType = null, TestIds = null;
 try {
   const m = require('react-native-google-mobile-ads');
@@ -27,13 +28,14 @@ const INTERSTITIAL_ID = __DEV__
 export default function DossierScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, saveAnimal } = useAnimals();
   const navigation = useNavigation();
+  const adsReady = useAdsReady();
   const [email, setEmail] = useState('');
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
 
   // Show interstitial ~1 time out of 3 when the dossier is opened (native builds only)
   useEffect(() => {
-    if (!InterstitialAd || Math.random() > 0.33) return;
+    if (!InterstitialAd || !adsReady || Math.random() > 0.33) return;
     const interstitial = InterstitialAd.createForAdRequest(INTERSTITIAL_ID, {
       requestNonPersonalizedAdsOnly: true,
     });

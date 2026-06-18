@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useAdsReady } from '../../App';
 
 // react-native-google-mobile-ads is a native module — not available in Expo Go
 let BannerAd = null, BannerAdSize = null, TestIds = null;
@@ -11,7 +12,8 @@ try {
 } catch {}
 
 export default function AdBanner() {
-  if (!BannerAd) return null;
+  const adsReady = useAdsReady();
+  if (!BannerAd || !adsReady) return null;
   const unitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3973597189754626/3202718726';
   return (
     <View style={{ alignItems: 'center', marginVertical: 8 }}>

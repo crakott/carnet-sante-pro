@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, createContext, useContext } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -13,6 +13,9 @@ try {
   MobileAds = require('react-native-google-mobile-ads').default;
 } catch {}
 
+export const AdsContext = createContext(false);
+export const useAdsReady = () => useContext(AdsContext);
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -22,21 +25,28 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
+  const [adsReady, setAdsReady] = useState(false);
+
   useEffect(() => {
     if (MobileAds) {
-      MobileAds().initialize().catch(() => {});
+      MobileAds().initialize()
+        .then(() => setAdsReady(true))
+        .catch(() => setAdsReady(true));
+    } else {
+      setAdsReady(true);
     }
   }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <RootNavigator />
-        </AuthProvider>
+        <AdsContext.Provider value={adsReady}>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
+        </AdsContext.Provider>
         <StatusBar style="auto" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
-
