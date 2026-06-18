@@ -1,28 +1,25 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-import { spacing } from '../theme';
+import { View } from 'react-native';
 
-const UNIT_ID = __DEV__
-  ? TestIds.ADAPTIVE_BANNER
-  : 'ca-app-pub-3973597189754626/3202718726';
+// react-native-google-mobile-ads is a native module — not available in Expo Go
+let BannerAd = null, BannerAdSize = null, TestIds = null;
+try {
+  const m = require('react-native-google-mobile-ads');
+  BannerAd = m.BannerAd;
+  BannerAdSize = m.BannerAdSize;
+  TestIds = m.TestIds;
+} catch {}
 
 export default function AdBanner() {
+  if (!BannerAd) return null;
+  const unitId = __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-3973597189754626/3202718726';
   return (
-    <View style={styles.container}>
+    <View style={{ alignItems: 'center', marginVertical: 8 }}>
       <BannerAd
-        unitId={UNIT_ID}
+        unitId={unitId}
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
         requestOptions={{ requestNonPersonalizedAdsOnly: true }}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-});

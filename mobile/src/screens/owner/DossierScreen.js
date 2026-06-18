@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
-import { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
+let InterstitialAd = null, AdEventType = null, TestIds = null;
+try {
+  const m = require('react-native-google-mobile-ads');
+  InterstitialAd = m.InterstitialAd;
+  AdEventType = m.AdEventType;
+  TestIds = m.TestIds;
+} catch {}
 import * as Print from 'expo-print';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
@@ -25,9 +31,9 @@ export default function DossierScreen() {
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
 
-  // Show interstitial ~1 time out of 3 when the dossier is opened
+  // Show interstitial ~1 time out of 3 when the dossier is opened (native builds only)
   useEffect(() => {
-    if (Math.random() > 0.33) return;
+    if (!InterstitialAd || Math.random() > 0.33) return;
     const interstitial = InterstitialAd.createForAdRequest(INTERSTITIAL_ID, {
       requestNonPersonalizedAdsOnly: true,
     });
