@@ -10,7 +10,7 @@ import { colors, radius, spacing } from '../../theme';
 WebBrowser.maybeCompleteAuthSession();
 
 // Récupérez ce WebClientId dans Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
-const GOOGLE_WEB_CLIENT_ID = 'VOTRE_WEB_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
 
 export default function AuthScreen() {
   const { signup, login, signInWithGoogle, resetPassword } = useAuth();
