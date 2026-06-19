@@ -309,23 +309,6 @@ export default function ParametresScreen() {
         <Text style={styles.profileValue}>{user?.email || '—'}</Text>
       </AccordionCard>
 
-      {/* ── Rappels ─────────────────────────────────────────────────── */}
-      <AccordionCard id="rappels" icon="⏰" iconBg={colors.yellowLight} title="Délais de rappels (en jours)" expanded={expanded} onToggle={setExpanded}>
-        <Field label="Vaccins" hint="Recevoir un rappel X jours avant expiration">
-          <Input value={String(settings.vaccin)} onChangeText={(v) => update('vaccin', v)} keyboardType="numeric" />
-        </Field>
-        <Field label="Médicaments">
-          <Input value={String(settings.medicament)} onChangeText={(v) => update('medicament', v)} keyboardType="numeric" />
-        </Field>
-        <Field label="🦟 Antiparasitaires">
-          <Input value={String(settings.antiparasitaire)} onChangeText={(v) => update('antiparasitaire', v)} keyboardType="numeric" />
-        </Field>
-        <Field label="🪱 Vermifuges">
-          <Input value={String(settings.vermifuge)} onChangeText={(v) => update('vermifuge', v)} keyboardType="numeric" />
-        </Field>
-        <Button title="💾 Sauvegarder" onPress={handleSave} />
-      </AccordionCard>
-
       {/* ── Notifications ───────────────────────────────────────────── */}
       <AccordionCard id="notifications" icon="🔔" iconBg={colors.pinkLight} title="Notifications" expanded={expanded} onToggle={setExpanded}>
         <View style={styles.toggleRow}>

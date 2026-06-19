@@ -20,10 +20,13 @@ const sendEmailReminder = (r) => {
 
 function CountdownBadge({ daysUntil }) {
   const overdue = daysUntil <= 0;
+  const soon = daysUntil > 0 && daysUntil <= 7;
   const text = overdue ? `En retard de ${Math.abs(daysUntil)} j` : `Dans ${daysUntil} j`;
+  const bg = overdue ? '#fee2e2' : soon ? '#fef3c7' : '#d1fae5';
+  const textColor = overdue ? '#dc2626' : soon ? '#92400e' : '#047857';
   return (
-    <View style={[styles.badge, overdue ? styles.badgeRed : styles.badgeGreen]}>
-      <Text style={[styles.badgeText, overdue ? styles.badgeTextRed : styles.badgeTextGreen]}>{text}</Text>
+    <View style={[styles.badge, { backgroundColor: bg }]}>
+      <Text style={[styles.badgeText, { color: textColor }]}>{text}</Text>
     </View>
   );
 }
@@ -60,7 +63,7 @@ export default function RappelsScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.emailBtn} onPress={() => sendEmailReminder(r)}>
-                  <Text style={styles.emailBtnIcon}>📅</Text>
+                  <Text style={styles.emailBtnIcon}>📧</Text>
                 </TouchableOpacity>
               </View>
             </Card>
@@ -170,16 +173,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   emailBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#fef3c7',
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emailBtnIcon: {
-    fontSize: 18,
+    fontSize: 20,
   },
   animalHeader: {
     flexDirection: 'row',
@@ -229,21 +230,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
   },
-  badgeRed: {
-    backgroundColor: colors.redLight,
-  },
-  badgeGreen: {
-    backgroundColor: colors.pillGreenBg,
-  },
   badgeText: {
     fontSize: 11,
     fontWeight: '600',
-  },
-  badgeTextRed: {
-    color: colors.red,
-  },
-  badgeTextGreen: {
-    color: colors.pillGreenText,
   },
   emptyAnimal: {
     fontSize: 13,

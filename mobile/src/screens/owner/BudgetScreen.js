@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Screen, ScreenTitle, EmptyState, Card, Button, Field, Input, Select, IconButton, Row } from '../../components/ui';
@@ -75,8 +75,22 @@ export default function BudgetScreen() {
 
   const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const selectedAnimalObj = animals.find((a) => a.id !== undefined && budgetAnimalFilter !== 'tous' && a.id === budgetAnimalFilter) || null;
+
   return (
     <Screen>
+      {selectedAnimalObj && (
+        <View style={{ flexDirection:'row', alignItems:'center', padding:12, backgroundColor:'#f0fdf4', borderBottomWidth:1, borderBottomColor:'#d1fae5' }}>
+          {selectedAnimalObj.photo ? (
+            <Image source={{ uri: selectedAnimalObj.photo }} style={{ width:40, height:40, borderRadius:20, marginRight:10 }} />
+          ) : (
+            <View style={{ width:40, height:40, borderRadius:20, backgroundColor:'#10b981', marginRight:10, alignItems:'center', justifyContent:'center' }}>
+              <Text style={{ color:'#fff', fontSize:18 }}>{selectedAnimalObj.espece?.[0] || '🐾'}</Text>
+            </View>
+          )}
+          <Text style={{ fontWeight:'700', fontSize:16, color:'#064e3b' }}>{selectedAnimalObj.nom || 'Animal'}</Text>
+        </View>
+      )}
       <ScreenTitle>💰 Budget {titleSuffix}</ScreenTitle>
 
       <Field label="Trier par animal" hint=" ">

@@ -218,11 +218,11 @@ export default function MedicamentsSection({ animal, addAnimalItem, deleteAnimal
                 </View>
                 {m.id ? (
                   <View style={styles.itemActions}>
-                    <TouchableOpacity onPress={() => openEdit(m)} style={styles.btnEdit}>
-                      <Text style={styles.btnEditText}>✎</Text>
+                    <TouchableOpacity onPress={() => openEdit(m)} style={{ backgroundColor:'#dbeafe', borderRadius:12, padding:14, marginBottom:4 }}>
+                      <Text style={{ fontSize:20 }}>✏️</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteAnimalItem(animal, 'medicaments', m.id)} style={styles.btnDelete}>
-                      <Text style={styles.btnDeleteText}>✖</Text>
+                    <TouchableOpacity onPress={() => deleteAnimalItem(animal, 'medicaments', m.id)} style={{ backgroundColor:'#fee2e2', borderRadius:12, padding:14 }}>
+                      <Text style={{ fontSize:20 }}>🗑️</Text>
                     </TouchableOpacity>
                   </View>
                 ) : null}
@@ -294,22 +294,4 @@ const styles = StyleSheet.create({
     gap: 4,
     marginLeft: spacing.sm,
   },
-  btnEdit: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.blueLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnEditText: { color: colors.blue, fontSize: 16, fontWeight: '700' },
-  btnDelete: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.redLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnDeleteText: { color: colors.red, fontSize: 16, fontWeight: '700' },
 });

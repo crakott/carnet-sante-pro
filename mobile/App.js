@@ -22,7 +22,7 @@ export default function App() {
         <AuthProvider>
           <RootNavigator />
         </AuthProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="light" backgroundColor="#10b981" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
