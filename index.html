@@ -3863,6 +3863,25 @@
                     setGeoError("La géolocalisation n'est pas disponible sur cet appareil.");
                     return;
                 }
+
+                // Reuse cached position if less than 10 minutes old
+                try {
+                    const cached = JSON.parse(localStorage.getItem('geoCache') || 'null');
+                    if (cached && Date.now() - cached.ts < 10 * 60 * 1000) {
+                        const coords = { lat: cached.lat, lng: cached.lng };
+                        setUserPos(coords);
+                        setGeoStatus('done');
+                        setNearbyVets(null);
+                        setVetsStatus('loading');
+                        setVetsError('');
+                        fetchNearbyVets(coords.lat, coords.lng).then(found => {
+                            setNearbyVets(found.map(v => ({ ...v, distanceKm: getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) })).sort((a, b) => a.distanceKm - b.distanceKm));
+                            setVetsStatus('done');
+                        }).catch(() => { setVetsStatus('error'); setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment (service de cartographie indisponible). Voici une sélection d'exemple en attendant."); });
+                        return;
+                    }
+                } catch (e) {}
+
                 setGeoStatus('loading');
                 setGeoError('');
                 setNearbyVets(null);
@@ -3871,6 +3890,7 @@
                 navigator.geolocation.getCurrentPosition(
                     async (pos) => {
                         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        try { localStorage.setItem('geoCache', JSON.stringify({ lat: coords.lat, lng: coords.lng, ts: Date.now() })); } catch (e) {}
                         setUserPos(coords);
                         setGeoStatus('done');
                         setVetsStatus('loading');
@@ -3957,7 +3977,9 @@
                                 )}
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
+                                        href={vet.lat && vet.lng
+                                            ? `https://www.google.com/maps/dir/?api=1&destination=${vet.lat},${vet.lng}`
+                                            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
                                         target="_blank" rel="noopener noreferrer"
                                         style={{ flex: 1, padding: '10px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#e0f2fe', color: '#0369a1' }}
                                     >
