@@ -116,6 +116,7 @@ export default function VeterinairesScreen() {
   const [geoStatus, setGeoStatus] = useState('idle');
   const [geoError, setGeoError] = useState('');
   const [nearbyVets, setNearbyVets] = useState(null);
+  const [foundRadiusKm, setFoundRadiusKm] = useState(25);
   const [vetsStatus, setVetsStatus] = useState('idle');
   const [vetsError, setVetsError] = useState('');
 
@@ -123,6 +124,7 @@ export default function VeterinairesScreen() {
     setGeoStatus('loading');
     setGeoError('');
     setNearbyVets(null);
+    setFoundRadiusKm(25);
     setVetsStatus('idle');
     setVetsError('');
 
@@ -140,12 +142,13 @@ export default function VeterinairesScreen() {
       setGeoStatus('done');
       setVetsStatus('loading');
       try {
-        const found = await fetchNearbyVets(coords.lat, coords.lng);
+        const { results, radiusKm } = await fetchNearbyVets(coords.lat, coords.lng);
         setNearbyVets(
-          found
+          results
             .map((v) => ({ ...v, distanceKm: getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) }))
             .sort((a, b) => a.distanceKm - b.distanceKm)
         );
+        setFoundRadiusKm(radiusKm);
         setVetsStatus('done');
       } catch (err) {
         setVetsStatus('error');
@@ -243,9 +246,9 @@ export default function VeterinairesScreen() {
       {geoStatus === 'error' ? <Text style={styles.errorText}>⚠️ {geoError}</Text> : null}
       {geoStatus === 'done' && vetsStatus === 'loading' ? <Text style={styles.infoText}>🔎 Recherche des vétérinaires autour de votre position…</Text> : null}
       {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets ? (
-        <Text style={styles.successText}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité</Text>
+        <Text style={styles.successText}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} dans un rayon de {foundRadiusKm} km (OpenStreetMap), triés par proximité</Text>
       ) : null}
-      {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets ? <Text style={styles.warnText}>⚠️ Aucun vétérinaire trouvé sur OpenStreetMap dans un rayon de 25 km.</Text> : null}
+      {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets ? <Text style={styles.warnText}>⚠️ Aucun vétérinaire trouvé sur OpenStreetMap dans un rayon de 50 km.</Text> : null}
       {geoStatus === 'done' && vetsStatus === 'error' ? <Text style={styles.warnText}>⚠️ {vetsError}</Text> : null}
 
       {showMapsLink ? (
