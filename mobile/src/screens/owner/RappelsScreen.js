@@ -117,9 +117,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
-    color: colors.textMuted,
+    color: '#b45309',
     letterSpacing: 0.8,
     marginBottom: spacing.sm,
     marginLeft: 2,
