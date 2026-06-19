@@ -24,6 +24,7 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [resetMsg, setResetMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -130,13 +131,23 @@ export default function AuthScreen() {
           />
         </Field>
         <Field label="Mot de passe">
-          <Input
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Mot de passe"
-            secureTextEntry
-            autoCapitalize="none"
-          />
+          <View style={{ position: 'relative' }}>
+            <Input
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Mot de passe"
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              style={{ paddingRight: 48 }}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
         </Field>
 
         <Button title={isSignup ? 'Créer mon compte' : 'Se connecter'} onPress={handleAuth} disabled={submitting} style={{ marginBottom: spacing.sm }} />
@@ -263,6 +274,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
     marginTop: spacing.lg,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   dividerRow: {
     flexDirection: 'row',
