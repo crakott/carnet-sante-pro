@@ -1163,6 +1163,7 @@
         function AuthForm({ auth, db, onBack, defaultPro }) {
             const [email, setEmail] = React.useState('');
             const [password, setPassword] = React.useState('');
+            const [showPassword, setShowPassword] = React.useState(false);
             const [isSignup, setIsSignup] = React.useState(false);
             const [isVet, setIsVet] = React.useState(!!defaultPro);
             const [nom, setNom] = React.useState('');
@@ -1273,8 +1274,14 @@
                     <form onSubmit={handleAuth}>
                         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
                             style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '10px', fontSize: '16px' }} />
-                        <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', marginBottom: '14px', fontSize: '16px' }} />
+                        <div style={{ position: 'relative', marginBottom: '14px' }}>
+                            <input type={showPassword ? 'text' : 'password'} placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)}
+                                style={{ width: '100%', padding: '12px', paddingRight: '44px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '16px', boxSizing: 'border-box' }} />
+                            <button type="button" onClick={() => setShowPassword(v => !v)}
+                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#9ca3af', padding: '4px', lineHeight: 1 }}>
+                                {showPassword ? '🙈' : '👁️'}
+                            </button>
+                        </div>
                         <button type="submit"
                             style={{ width: '100%', padding: '13px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '16px', marginBottom: '10px' }}>
                             {isSignup ? 'Créer mon compte' : 'Se connecter'}
