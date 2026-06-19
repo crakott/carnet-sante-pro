@@ -5,6 +5,8 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   signOut,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -91,6 +93,21 @@ export function AuthProvider({ children }) {
     await createSettingsDoc(cred.user.uid, isVet ? 'veterinaire' : 'proprietaire', profile);
   };
 
+  const signInWithGoogle = async (idToken) => {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const cred = await signInWithCredential(auth, credential);
+    const settingsRef = doc(db, 'settings', cred.user.uid);
+    const snap = await getDoc(settingsRef);
+    if (!snap.exists()) {
+      // New Google user — extract name from Google profile
+      const displayName = cred.user.displayName || '';
+      const parts = displayName.split(' ');
+      const prenom = parts[0] || '';
+      const nom = parts.slice(1).join(' ') || '';
+      await createSettingsDoc(cred.user.uid, 'proprietaire', { prenom, nom });
+    }
+  };
+
   const login = async (email, password) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
@@ -124,6 +141,7 @@ export function AuthProvider({ children }) {
         reloadSettings,
         signup,
         login,
+        signInWithGoogle,
         logout,
         resetPassword,
         saveReminderSettings,

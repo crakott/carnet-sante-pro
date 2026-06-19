@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
 import { Input, Button, Field, Screen } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { formatDateInput, displayToIso } from '../../utils/dates';
 import { colors, radius, spacing } from '../../theme';
 
+WebBrowser.maybeCompleteAuthSession();
+
+// Récupérez ce WebClientId dans Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
+const GOOGLE_WEB_CLIENT_ID = 'VOTRE_WEB_CLIENT_ID.apps.googleusercontent.com';
+
 export default function AuthScreen() {
-  const { signup, login, resetPassword } = useAuth();
+  const { signup, login, signInWithGoogle, resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nom, setNom] = useState('');
@@ -17,6 +24,27 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [resetMsg, setResetMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const idToken = googleResponse.authentication?.idToken;
+      if (idToken) {
+        setSubmitting(true);
+        setError('');
+        signInWithGoogle(idToken)
+          .catch((err) => setError(err.message))
+          .finally(() => setSubmitting(false));
+      } else {
+        setError('Connexion Google échouée : token manquant.');
+      }
+    } else if (googleResponse?.type === 'error') {
+      setError('Connexion Google annulée ou échouée.');
+    }
+  }, [googleResponse]);
 
   const handleAuth = async () => {
     setError('');
@@ -112,10 +140,28 @@ export default function AuthScreen() {
         </Field>
 
         <Button title={isSignup ? 'Créer mon compte' : 'Se connecter'} onPress={handleAuth} disabled={submitting} style={{ marginBottom: spacing.sm }} />
+
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>ou</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.googleBtn, (submitting || !googleRequest) && { opacity: 0.6 }]}
+          onPress={() => { setError(''); googlePrompt(); }}
+          disabled={submitting || !googleRequest}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.googleG}>G</Text>
+          <Text style={styles.googleBtnText}>Continuer avec Google</Text>
+        </TouchableOpacity>
+
         <Button
           title={isSignup ? 'Déjà inscrit ? Se connecter' : 'Créer un compte gratuit'}
           onPress={() => { setIsSignup(!isSignup); setError(''); setResetMsg(''); }}
           outline
+          style={{ marginTop: spacing.sm }}
         />
 
         {!isSignup && (
@@ -217,5 +263,47 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
     marginTop: spacing.lg,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e5e7eb',
+  },
+  dividerText: {
+    fontSize: 13,
+    color: colors.textLight,
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: radius.sm,
+    paddingVertical: 13,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  googleG: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
   },
 });
