@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 const CHANNEL_ID = 'carnet-sante-rappels';
+const MESSAGES_CHANNEL_ID = 'carnet-sante-messages';
 
 export const setupNotificationChannel = async () => {
   if (Platform.OS === 'android') {
@@ -138,4 +139,34 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
 
 export const cancelAllNotifications = async () => {
   await Notifications.cancelAllScheduledNotificationsAsync();
+};
+
+// Registers the device FCM token for server-side push notifications (new messages).
+// Returns the token string, or null if permissions are denied or unavailable (Expo Go).
+export const registerFCMToken = async () => {
+  const { status } = await Notifications.getPermissionsAsync();
+  let finalStatus = status;
+  if (status !== 'granted') {
+    const { status: s } = await Notifications.requestPermissionsAsync();
+    finalStatus = s;
+  }
+  if (finalStatus !== 'granted') return null;
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(MESSAGES_CHANNEL_ID, {
+      name: 'Messages vétérinaire',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#10b981',
+      sound: 'default',
+    });
+  }
+
+  try {
+    const token = await Notifications.getDevicePushTokenAsync();
+    return token.data;
+  } catch {
+    // Not available in Expo Go or without google-services.json
+    return null;
+  }
 };

@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase — contient des clés API, ne pas committer
+google-services.json
+GoogleService-Info.plist

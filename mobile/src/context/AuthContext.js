@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { registerFCMToken } from '../utils/notifications';
 
 const DEFAULT_REMINDERS = { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 };
 
@@ -74,6 +75,10 @@ export function AuthProvider({ children }) {
       setLoading(false);
       if (currentUser) {
         loadSettings(currentUser.uid);
+        // Register/refresh FCM token for server-side message notifications
+        registerFCMToken().then((token) => {
+          if (token) setDoc(doc(db, 'settings', currentUser.uid), { fcmToken: token }, { merge: true }).catch(() => {});
+        }).catch(() => {});
       } else {
         setUserRole(null);
         setSubscriptionStatus(null);
