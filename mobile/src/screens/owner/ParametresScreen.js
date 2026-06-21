@@ -443,6 +443,12 @@ export default function ParametresScreen() {
       <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)} style={styles.privacyLink}>
         <Text style={styles.privacyText}>Politique de confidentialité</Text>
       </TouchableOpacity>
+
+      <View style={styles.copyright}>
+        <Text style={styles.copyrightText}>© 2025 Christopher Rakotoson</Text>
+        <Text style={styles.copyrightText}>All rights reserved</Text>
+        <Text style={styles.copyrightSub}>Logiciel propriétaire — toute copie ou redistribution est interdite.</Text>
+      </View>
     </Screen>
   );
 }
@@ -603,5 +609,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
     textDecorationLine: 'underline',
+  },
+  copyright: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.xxl,
+    gap: 4,
+  },
+  copyrightText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  copyrightSub: {
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
