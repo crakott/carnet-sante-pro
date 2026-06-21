@@ -1,5 +1,6 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
@@ -293,5 +294,70 @@ exports.sendDoseReminders = onSchedule({ schedule: 'every 30 minutes', region: R
         notifSentKeys: [...sentKeys, ...newKeys],
       }, { merge: true });
     }
+  }
+});
+
+// Triggered when a new message is created in animals/{animalId}/messages/{messageId}.
+// Sends a FCM push notification to the recipient(s):
+//   - from 'veterinaire' → notify the animal's owner + household members
+//   - from 'proprietaire' → notify vets who previously participated in this thread
+exports.sendMessageNotification = onDocumentCreated({ document: 'animals/{animalId}/messages/{messageId}', region: REGION }, async (event) => {
+  const message = event.data.data();
+  const { animalId } = event.params;
+  if (!message || !message.from) return;
+
+  const db = admin.firestore();
+  const messaging = admin.messaging();
+
+  const animalDoc = await db.doc(`animals/${animalId}`).get();
+  if (!animalDoc.exists) return;
+  const animal = animalDoc.data();
+  const animalNom = animal.nom || 'Animal';
+  const bodyText = message.text ? message.text.substring(0, 120) : '📷 Photo';
+
+  let title;
+
+  const sendTo = async (uid) => {
+    if (!uid) return;
+    const settingsDoc = await db.doc(`settings/${uid}`).get();
+    const fcmToken = settingsDoc.data()?.fcmToken;
+    if (!fcmToken) return;
+    try {
+      await messaging.send({
+        token: fcmToken,
+        notification: { title, body: `${animalNom} — ${bodyText}` },
+        android: { priority: 'high' },
+        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+      });
+    } catch (err) {
+      if (err.code === 'messaging/registration-token-not-registered') {
+        await db.doc(`settings/${uid}`).set({ fcmToken: null }, { merge: true });
+      }
+    }
+  };
+
+  if (message.from === 'veterinaire') {
+    const vetName = [message.authorPrenom, message.authorNom].filter(Boolean).join(' ') || 'Votre vétérinaire';
+    title = `💬 Dr. ${vetName}`;
+    const recipientUids = new Set([animal.userId].filter(Boolean));
+    if (animal.householdId) {
+      const householdDoc = await db.doc(`households/${animal.householdId}`).get();
+      (householdDoc.data()?.members || []).forEach(uid => recipientUids.add(uid));
+    }
+    for (const uid of recipientUids) await sendTo(uid);
+
+  } else if (message.from === 'proprietaire') {
+    const ownerName = [message.authorPrenom, message.authorNom].filter(Boolean).join(' ') || 'Le propriétaire';
+    title = `💬 ${ownerName}`;
+    const prevVetMessages = await db.collection(`animals/${animalId}/messages`)
+      .where('from', '==', 'veterinaire')
+      .limit(20)
+      .get();
+    const vetUids = new Set();
+    prevVetMessages.docs.forEach(doc => {
+      const uid = doc.data().authorUid;
+      if (uid) vetUids.add(uid);
+    });
+    for (const uid of vetUids) await sendTo(uid);
   }
 });

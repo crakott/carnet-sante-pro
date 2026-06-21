@@ -907,7 +907,7 @@
                         const settings = snap.data();
                         const s = settings.reminders || {};
                         setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
-                        setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '' });
+                        setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '', userId: uid });
                         setUserRole(settings.role || 'proprietaire');
                         setHouseholdId(settings.householdId || null);
                         return settings.householdId || null;
@@ -3541,6 +3541,7 @@
                 try {
                     await addDoc(collection(db, 'animals', animal.id, 'messages'), {
                         from: currentRole,
+                        authorUid: authorProfile?.userId || '',
                         authorNom: authorProfile?.nom || '',
                         authorPrenom: authorProfile?.prenom || '',
                         text: text.trim(),
@@ -4760,7 +4761,7 @@
                 const unsub = onSnapshot(doc(db, 'settings', user.uid), (snap) => {
                     const data = snap.exists() ? snap.data() : {};
                     setSubStatus(data.subscriptionStatus || 'inactive');
-                    setVetProfile({ nom: data.nom || '', prenom: data.prenom || '' });
+                    setVetProfile({ nom: data.nom || '', prenom: data.prenom || '', userId: user.uid });
                 }, (err) => {
                     console.error('Erreur abonnement:', err);
                     setSubStatus('inactive');
