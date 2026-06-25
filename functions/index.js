@@ -15,35 +15,38 @@ const appUrl = defineString('APP_URL');
 
 // Notifie le propriétaire d'un animal quand son vétérinaire lui envoie un message
 exports.onNewMessage = onDocumentCreated(
-  { document: 'animals/{animalId}/messages/{messageId}', region: REGION },
+  'animals/{animalId}/messages/{messageId}',
   async (event) => {
-    const message = event.data?.data();
+    if (!event.data) return;
+    const message = event.data.data();
     if (!message || message.from !== 'veterinaire') return;
 
-    const { animalId } = event.params;
+    const animalId = event.params.animalId;
     const db = admin.firestore();
 
-    const animalDoc = await db.doc(`animals/${animalId}`).get();
-    if (!animalDoc.exists) return;
-    const { userId: ownerUid, nom: animalName = 'votre animal' } = animalDoc.data();
+    const animalSnap = await db.doc('animals/' + animalId).get();
+    if (!animalSnap.exists) return;
+    const animal = animalSnap.data();
 
-    const settingsDoc = await db.doc(`settings/${ownerUid}`).get();
-    if (!settingsDoc.exists) return;
-    const fcmToken = settingsDoc.data().fcmToken;
+    const settingsSnap = await db.doc('settings/' + animal.userId).get();
+    if (!settingsSnap.exists) return;
+    const fcmToken = settingsSnap.data().fcmToken;
     if (!fcmToken) return;
 
     const senderName = message.authorPrenom
-      ? `Dr. ${message.authorPrenom} ${message.authorNom || ''}`.trim()
+      ? ('Dr. ' + message.authorPrenom + ' ' + (message.authorNom || '')).trim()
       : 'Votre vétérinaire';
-
     const body = message.text
-      ? `${senderName} : ${message.text.substring(0, 120)}`
-      : `${senderName} vous a envoyé un message`;
+      ? senderName + ' : ' + message.text.substring(0, 120)
+      : senderName + ' vous a envoyé un message';
 
     await admin.messaging().send({
       token: fcmToken,
-      notification: { title: `💬 Nouveau message — ${animalName}`, body },
-      data: { type: 'message', animalId },
+      notification: {
+        title: '💬 Nouveau message — ' + (animal.nom || 'votre animal'),
+        body: body,
+      },
+      data: { type: 'message', animalId: animalId },
       android: {
         channelId: 'carnet-sante-messages',
         priority: 'high',
