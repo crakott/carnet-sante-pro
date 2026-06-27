@@ -1421,11 +1421,11 @@
                             <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé tout au long de l'année.</p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
                                 {[
-                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves. Notez chaque injection et configurez une alerte avant la date de rappel pour ne jamais l'oublier.' },
-                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et vers représentent un risque tout au long de l'année. Un traitement préventif tous les 1 à 3 mois suffit à protéger efficacement chien et chat.' },
-                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L'obésité est la première cause de maladies chroniques chez les animaux de compagnie. Pesez votre animal chaque mois et suivez l'évolution sur un graphique dédié.' },
-                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent 80 % des chiens et chats de plus de 3 ans. Un brossage régulier et une surveillance des gencives prolongent l'espérance de vie.' },
-                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l'espèce, l'âge et l'état de santé. Consignez le régime alimentaire de votre animal pour faciliter les consultations vétérinaires.' },
+                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves. Notez chaque injection et configurez une alerte avant la date de rappel pour ne jamais l\'oublier.' },
+                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et vers représentent un risque tout au long de l\'année. Un traitement préventif tous les 1 à 3 mois suffit à protéger efficacement chien et chat.' },
+                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité est la première cause de maladies chroniques chez les animaux de compagnie. Pesez votre animal chaque mois et suivez l\'évolution sur un graphique dédié.' },
+                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent 80 % des chiens et chats de plus de 3 ans. Un brossage régulier et une surveillance des gencives prolongent l\'espérance de vie.' },
+                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime alimentaire de votre animal pour faciliter les consultations vétérinaires.' },
                                     { icon: '📋', title: 'Dossier médical complet', text: 'Un dossier centralisé avec vaccins, traitements, chirurgies et observations permet à votre vétérinaire de mieux suivre la santé globale de votre animal au fil des années.' },
                                 ].map((c, i) => (
                                     <div key={i} style={{ background: '#f0fdf4', borderRadius: '12px', padding: '24px', borderLeft: '4px solid #10b981' }}>
@@ -1445,12 +1445,12 @@
                                 Questions fréquentes
                             </h2>
                             {[
-                                { q: 'Carnet Santé PRO est-il gratuit ?', r: 'Oui, l'application est entièrement gratuite pour les propriétaires d'animaux. Un abonnement mensuel est uniquement requis pour l'espace vétérinaire professionnel (49,99 €/mois).' },
+                                { q: 'Carnet Santé PRO est-il gratuit ?', r: 'Oui, l\'application est entièrement gratuite pour les propriétaires d\'animaux. Un abonnement mensuel est uniquement requis pour l\'espace vétérinaire professionnel (49,99 €/mois).' },
                                 { q: 'Mes données sont-elles sécurisées ?', r: 'Toutes vos données sont stockées de manière sécurisée sur les serveurs Firebase de Google, chiffrées en transit et au repos. Seuls vous et les vétérinaires que vous autorisez peuvent accéder au dossier de votre animal.' },
-                                { q: 'Puis-je utiliser l'application sans connexion internet ?', r: 'Oui, Carnet Santé PRO fonctionne hors ligne grâce à la persistance locale. Vos modifications sont synchronisées automatiquement dès que vous retrouvez une connexion.' },
+                                { q: 'Puis-je utiliser l\'application sans connexion internet ?', r: 'Oui, Carnet Santé PRO fonctionne hors ligne grâce à la persistance locale. Vos modifications sont synchronisées automatiquement dès que vous retrouvez une connexion.' },
                                 { q: 'Comment fonctionne le partage du dossier avec mon vétérinaire ?', r: 'Votre vétérinaire peut rechercher votre animal par son identifiant (numéro de puce) ou par son nom et vos coordonnées. Il peut consulter le dossier complet et y ajouter des actes médicaux validés.' },
-                                { q: 'Comment activer les notifications de rappels ?', r: 'Dans l'onglet Paramètres, activez les notifications push et configurez le nombre de jours d'avance souhaité pour chaque type de rappel (vaccins, traitements, antiparasitaires, vermifuges).' },
-                                { q: 'Puis-je partager les animaux avec ma famille ?', r: 'Oui, la fonctionnalité "Foyer partagé" permet à plusieurs membres d'une même famille de gérer ensemble les carnets de santé de tous les animaux du foyer.' },
+                                { q: 'Comment activer les notifications de rappels ?', r: 'Dans l\'onglet Paramètres, activez les notifications push et configurez le nombre de jours d\'avance souhaité pour chaque type de rappel (vaccins, traitements, antiparasitaires, vermifuges).' },
+                                { q: 'Puis-je partager les animaux avec ma famille ?', r: 'Oui, la fonctionnalité "Foyer partagé" permet à plusieurs membres d\'une même famille de gérer ensemble les carnets de santé de tous les animaux du foyer.' },
                             ].map((faq, i) => (
                                 <div key={i} style={{ background: 'white', borderRadius: '10px', padding: '20px 24px', marginBottom: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                                     <h3 style={{ fontWeight: '700', fontSize: '15px', color: '#111827', marginBottom: '8px' }}>❓ {faq.q}</h3>
