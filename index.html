@@ -840,6 +840,18 @@
             const [user, setUser] = React.useState(null);
             const [loading, setLoading] = React.useState(true);
             const [activeTab, setActiveTab] = React.useState('accueil');
+            const [tabHistory, setTabHistory] = React.useState([]);
+
+            const navigateTo = (tab) => {
+                if (tab !== activeTab) setTabHistory(h => [...h, activeTab]);
+                setActiveTab(tab);
+            };
+            const goBack = () => {
+                if (tabHistory.length === 0) return;
+                const prev = tabHistory[tabHistory.length - 1];
+                setTabHistory(h => h.slice(0, -1));
+                setActiveTab(prev);
+            };
             const [animals, setAnimals] = React.useState([]);
             const [selectedAnimal, setSelectedAnimal] = React.useState(null);
             const [reminderSettings, setReminderSettings] = React.useState({ vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 });
@@ -1112,10 +1124,10 @@
 
             return (
                 <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
-                    {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} user={user} auth={auth} />}
+                    {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={navigateTo} user={user} auth={auth} />}
 
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: isDesktop ? 0 : '70px' }}>
-                        {!isDesktop && <MobileHeader setActiveTab={setActiveTab} />}
+                        {!isDesktop && <MobileHeader navigateTo={navigateTo} goBack={goBack} canGoBack={tabHistory.length > 0} />}
 
                         <NotificationPrompt animals={animals} reminders={reminders} />
 
@@ -1123,7 +1135,7 @@
 
                         <Content
                             activeTab={activeTab}
-                            setActiveTab={setActiveTab}
+                            setActiveTab={navigateTo}
                             animals={animals}
                             selectedAnimal={selectedAnimal}
                             setSelectedAnimal={setSelectedAnimal}
@@ -1153,7 +1165,7 @@
                         </div>
                     </div>
 
-                    {!isDesktop && <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />}
+                    {!isDesktop && <BottomNav activeTab={activeTab} setActiveTab={navigateTo} />}
                 </div>
             );
         }
@@ -1731,13 +1743,16 @@
             );
         }
 
-        // Mobile header with quick access to Paramètres
-        function MobileHeader({ setActiveTab }) {
+        // Mobile header with home + optional back button
+        function MobileHeader({ navigateTo, goBack, canGoBack }) {
             return (
-                <div style={{ background: 'white', padding: '15px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <button onClick={() => setActiveTab('accueil')} title="Accueil" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>🏠</button>
-                        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>🐾 Carnet Santé</h1>
+                <div style={{ background: 'white', padding: '12px 15px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {canGoBack && (
+                            <button onClick={goBack} title="Retour" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', padding: '0 4px 0 0', lineHeight: 1, color: '#10b981', fontWeight: '700' }}>‹</button>
+                        )}
+                        <button onClick={() => navigateTo('accueil')} title="Accueil" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>🏠</button>
+                        <h1 style={{ fontSize: '20px', fontWeight: 'bold', marginLeft: '4px' }}>🐾 Carnet Santé</h1>
                     </div>
                 </div>
             );
