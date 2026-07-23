@@ -1551,32 +1551,6 @@
                         </div>
                     </section>
 
-                    {/* ── CONSEILS SANTÉ ── */}
-                    <section style={{ padding: '64px 20px', background: 'white' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
-                                Conseils santé pour vos animaux
-                            </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé tout au long de l'année.</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
-                                {[
-                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves. Notez chaque injection et configurez une alerte avant la date de rappel pour ne jamais l\'oublier.' },
-                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et vers représentent un risque tout au long de l\'année. Un traitement préventif tous les 1 à 3 mois suffit à protéger efficacement chien et chat.' },
-                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité est la première cause de maladies chroniques chez les animaux de compagnie. Pesez votre animal chaque mois et suivez l\'évolution sur un graphique dédié.' },
-                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent 80 % des chiens et chats de plus de 3 ans. Un brossage régulier et une surveillance des gencives prolongent l\'espérance de vie.' },
-                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime alimentaire de votre animal pour faciliter les consultations vétérinaires.' },
-                                    { icon: '📋', title: 'Dossier médical complet', text: 'Un dossier centralisé avec vaccins, traitements, chirurgies et observations permet à votre vétérinaire de mieux suivre la santé globale de votre animal au fil des années.' },
-                                ].map((c, i) => (
-                                    <div key={i} style={{ background: '#f0fdf4', borderRadius: '12px', padding: '24px', borderLeft: '4px solid #10b981' }}>
-                                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>{c.icon}</div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '16px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
-                                        <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.6 }}>{c.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
                     {/* ── FAQ ── */}
                     <section style={{ padding: '64px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
@@ -1609,6 +1583,32 @@
                             style={{ padding: '16px 40px', background: 'white', color: '#10b981', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '18px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
                             Créer mon compte gratuitement →
                         </button>
+                    </section>
+
+                    {/* ── CONSEILS SANTÉ ── */}
+                    <section style={{ padding: '64px 20px', background: 'white' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
+                                Conseils santé pour vos animaux
+                            </h2>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé tout au long de l'année.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
+                                {[
+                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves. Notez chaque injection et configurez une alerte avant la date de rappel pour ne jamais l\'oublier.' },
+                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et vers représentent un risque tout au long de l\'année. Un traitement préventif tous les 1 à 3 mois suffit à protéger efficacement chien et chat.' },
+                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité est la première cause de maladies chroniques chez les animaux de compagnie. Pesez votre animal chaque mois et suivez l\'évolution sur un graphique dédié.' },
+                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent 80 % des chiens et chats de plus de 3 ans. Un brossage régulier et une surveillance des gencives prolongent l\'espérance de vie.' },
+                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime alimentaire de votre animal pour faciliter les consultations vétérinaires.' },
+                                    { icon: '📋', title: 'Dossier médical complet', text: 'Un dossier centralisé avec vaccins, traitements, chirurgies et observations permet à votre vétérinaire de mieux suivre la santé globale de votre animal au fil des années.' },
+                                ].map((c, i) => (
+                                    <div key={i} style={{ background: '#f0fdf4', borderRadius: '12px', padding: '24px', borderLeft: '4px solid #10b981' }}>
+                                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>{c.icon}</div>
+                                        <h3 style={{ fontWeight: '700', fontSize: '16px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
+                                        <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.6 }}>{c.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </section>
 
                     {/* ── FOOTER ── */}
@@ -4186,7 +4186,20 @@
                         <button onClick={locateMe} disabled={geoStatus === 'loading'} style={{ width: '100%', padding: '10px 20px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: geoStatus === 'loading' ? 'default' : 'pointer', fontWeight: '600', opacity: geoStatus === 'loading' ? 0.7 : 1 }}>
                             {geoStatus === 'loading' ? '📍 Localisation en cours…' : '📍 Me géolocaliser pour trouver les vétérinaires autour de moi'}
                         </button>
-                        {geoStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {geoError}</p>}
+                        {geoStatus === 'error' && (
+                            <div style={{ marginTop: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '16px' }}>
+                                <p style={{ margin: '0 0 6px', fontWeight: '700', color: '#dc2626', fontSize: '14px' }}>⚠️ Localisation impossible</p>
+                                <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#7f1d1d', lineHeight: 1.5 }}>{geoError}</p>
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <button onClick={locateMe} style={{ padding: '8px 16px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                                        🔄 Réessayer
+                                    </button>
+                                    <a href="https://www.google.com/maps/search/v%C3%A9t%C3%A9rinaire" target="_blank" rel="noopener noreferrer" style={{ fontSize: '13px', color: '#2563eb', textDecoration: 'underline' }}>
+                                        🗺️ Rechercher sur Google Maps
+                                    </a>
+                                </div>
+                            </div>
+                        )}
                         {geoStatus === 'done' && vetsStatus === 'loading' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#2563eb' }}>🔎 Recherche des vétérinaires autour de votre position…</p>}
                         {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité</p>}
                         {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire référencé sur OpenStreetMap dans un rayon de 25 km autour de votre position. Voici une sélection d'exemple en attendant.</p>}
