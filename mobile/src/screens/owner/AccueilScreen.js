@@ -1,15 +1,44 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen, ScreenTitle, Card, Button, Field, Input, Select, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
 import AdBanner from '../../components/AdBanner';
+import TutorialOverlay from '../../components/TutorialOverlay';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
 import { ESPECES, EMOJIS_ESPECE } from '../../constants';
 import { getReminders } from '../../utils/reminders';
 import { computeAge, isoToDisplay, displayToIso, formatDateInput } from '../../utils/dates';
+
+const TUTORIAL_STEPS = [
+  {
+    icon: '🐾',
+    title: 'Ajoutez votre premier animal',
+    description: 'Appuyez sur ➕ Ajouter un animal pour créer son profil et commencer son suivi santé.',
+    arrow: 'up',
+  },
+  {
+    icon: '📋',
+    title: 'Carnet de santé complet',
+    description: 'Appuyez sur un animal de la liste pour consulter ses vaccins, médicaments, pesées et ajouter de nouveaux soins.',
+    arrow: 'up',
+  },
+  {
+    icon: '🔔',
+    title: 'Rappels intelligents',
+    description: 'Ne ratez plus aucune échéance ! Activez les rappels pour recevoir des notifications avant chaque vaccin ou traitement.',
+    arrow: 'down',
+  },
+  {
+    icon: '🏥',
+    title: 'Vétérinaires à proximité',
+    description: "L'onglet Vétérinaires vous géolocalise et liste les cliniques les plus proches pour les appeler directement.",
+    arrow: 'down',
+  },
+];
 
 const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' };
 
@@ -21,8 +50,8 @@ export default function AccueilScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [newAnimal, setNewAnimal] = useState(emptyAnimal);
   const [editingAnimal, setEditingAnimal] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
-  // Open add modal when triggered by the FAB in the bottom tab bar
   const lastOpenAdd = useRef(null);
   useEffect(() => {
     const ts = route.params?.openAdd;
@@ -31,6 +60,12 @@ export default function AccueilScreen() {
       setShowAdd(true);
     }
   }, [route.params?.openAdd]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('hasSeenTutorialAccueil').then((value) => {
+      if (value !== 'true') setShowTutorial(true);
+    });
+  }, []);
 
   const reminders = getReminders(animals, reminderSettings);
 
@@ -133,6 +168,13 @@ export default function AccueilScreen() {
           </>
         ) : null}
       </ModalSheet>
+
+      <TutorialOverlay
+        steps={TUTORIAL_STEPS}
+        storageKey="hasSeenTutorialAccueil"
+        visible={showTutorial}
+        onDone={() => setShowTutorial(false)}
+      />
     </Screen>
   );
 }
