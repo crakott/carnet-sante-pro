@@ -40,6 +40,5 @@ yarn-error.*
 /ios
 /android
 
-# Firebase — contient des clés API, ne pas committer
-google-services.json
+# iOS Firebase (contient des clés privées)
 GoogleService-Info.plist
