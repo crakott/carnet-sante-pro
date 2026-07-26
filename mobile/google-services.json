@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1059301417055",
+    "project_id": "carnet-sante-pro",
+    "storage_bucket": "carnet-sante-pro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1059301417055:android:a9177b55121b67bcd4fbea",
+        "android_client_info": {
+          "package_name": "com.carnetsantepro.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrCCvNlP1oRsFZo9kqjwrXTcbjEpBOP9Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
