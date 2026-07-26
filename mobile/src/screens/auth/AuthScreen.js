@@ -9,11 +9,8 @@ import { colors, radius, spacing } from '../../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Web client ID: Firebase Console → Authentication → Sign-in method → Google → Web SDK configuration
 const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
-// Android client ID: Google Cloud Console → Credentials → OAuth 2.0 → Android
-// TODO: remplacer par le vrai androidClientId depuis Google Cloud Console
-const GOOGLE_ANDROID_CLIENT_ID = GOOGLE_WEB_CLIENT_ID;
+const GOOGLE_ANDROID_CLIENT_ID = '1059301417055-etcblvn03chui4rotliig4fsdfo85har.apps.googleusercontent.com';
 
 export default function AuthScreen() {
   const { signup, login, signInWithGoogle, resetPassword } = useAuth();
