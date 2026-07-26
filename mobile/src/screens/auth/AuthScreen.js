@@ -9,8 +9,6 @@ import { colors, radius, spacing } from '../../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Web client ID (Firebase Console → Authentication → Google → Web SDK configuration)
-// Used for both web and Android browser-based OAuth flow
 const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
 
 export default function AuthScreen() {
@@ -27,10 +25,11 @@ export default function AuthScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_WEB_CLIENT_ID,
-  });
+  const isAndroid = Platform.OS === 'android';
+
+  const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest(
+    isAndroid ? null : { webClientId: GOOGLE_WEB_CLIENT_ID }
+  );
 
   useEffect(() => {
     if (googleResponse?.type === 'success') {
@@ -154,21 +153,24 @@ export default function AuthScreen() {
 
         <Button title={isSignup ? 'Créer mon compte' : 'Se connecter'} onPress={handleAuth} disabled={submitting} style={{ marginBottom: spacing.sm }} />
 
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>ou</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.googleBtn, (submitting || !googleRequest) && { opacity: 0.6 }]}
-          onPress={() => { setError(''); googlePrompt(); }}
-          disabled={submitting || !googleRequest}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.googleG}>G</Text>
-          <Text style={styles.googleBtnText}>Continuer avec Google</Text>
-        </TouchableOpacity>
+        {!isAndroid && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            <TouchableOpacity
+              style={[styles.googleBtn, (submitting || !googleRequest) && { opacity: 0.6 }]}
+              onPress={() => { setError(''); googlePrompt(); }}
+              disabled={submitting || !googleRequest}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.googleG}>G</Text>
+              <Text style={styles.googleBtnText}>Continuer avec Google</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         <Button
           title={isSignup ? 'Déjà inscrit ? Se connecter' : 'Créer un compte gratuit'}
