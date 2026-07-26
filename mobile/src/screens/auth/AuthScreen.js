@@ -9,8 +9,9 @@ import { colors, radius, spacing } from '../../theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Web client ID (Firebase Console → Authentication → Google → Web SDK configuration)
+// Used for both web and Android browser-based OAuth flow
 const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
-const GOOGLE_ANDROID_CLIENT_ID = '1059301417055-etcblvn03chui4rotliig4fsdfo85har.apps.googleusercontent.com';
 
 export default function AuthScreen() {
   const { signup, login, signInWithGoogle, resetPassword } = useAuth();
@@ -28,7 +29,7 @@ export default function AuthScreen() {
 
   const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest({
     webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    androidClientId: GOOGLE_WEB_CLIENT_ID,
   });
 
   useEffect(() => {
