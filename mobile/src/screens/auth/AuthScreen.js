@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Input, Button, Field, Screen } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { formatDateInput, displayToIso } from '../../utils/dates';
 import { colors, radius, spacing } from '../../theme';
-
-WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
 
@@ -25,28 +22,27 @@ export default function AuthScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const isAndroid = Platform.OS === 'android';
-
-  const [googleRequest, googleResponse, googlePrompt] = Google.useAuthRequest(
-    isAndroid ? null : { webClientId: GOOGLE_WEB_CLIENT_ID }
-  );
-
   useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const idToken = googleResponse.authentication?.idToken;
-      if (idToken) {
-        setSubmitting(true);
-        setError('');
-        signInWithGoogle(idToken)
-          .catch((err) => setError(err.message))
-          .finally(() => setSubmitting(false));
-      } else {
-        setError('Connexion Google échouée : token manquant.');
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setSubmitting(true);
+      setError('');
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (response.type === 'success') {
+        await signInWithGoogle(response.data.idToken);
       }
-    } else if (googleResponse?.type === 'error') {
-      setError('Connexion Google annulée ou échouée.');
+    } catch (err) {
+      if (err.code !== statusCodes.SIGN_IN_CANCELLED) {
+        setError('Connexion Google échouée : ' + err.message);
+      }
+    } finally {
+      setSubmitting(false);
     }
-  }, [googleResponse]);
+  };
 
   const handleAuth = async () => {
     setError('');
@@ -153,24 +149,21 @@ export default function AuthScreen() {
 
         <Button title={isSignup ? 'Créer mon compte' : 'Se connecter'} onPress={handleAuth} disabled={submitting} style={{ marginBottom: spacing.sm }} />
 
-        {!isAndroid && (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-            <TouchableOpacity
-              style={[styles.googleBtn, (submitting || !googleRequest) && { opacity: 0.6 }]}
-              onPress={() => { setError(''); googlePrompt(); }}
-              disabled={submitting || !googleRequest}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.googleG}>G</Text>
-              <Text style={styles.googleBtnText}>Continuer avec Google</Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>ou</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.googleBtn, submitting && { opacity: 0.6 }]}
+          onPress={handleGoogleSignIn}
+          disabled={submitting}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.googleG}>G</Text>
+          <Text style={styles.googleBtnText}>Continuer avec Google</Text>
+        </TouchableOpacity>
 
         <Button
           title={isSignup ? 'Déjà inscrit ? Se connecter' : 'Créer un compte gratuit'}
