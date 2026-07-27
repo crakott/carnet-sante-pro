@@ -2,6 +2,11 @@
   "expo": {
     "name": "Carnet Santé PRO",
     "slug": "carnet-sante-pro",
+    "extra": {
+      "eas": {
+        "projectId": "92e5ea22-a8b9-4ebc-8d26-d88ef3bdd51d"
+      }
+    },
     "scheme": "carnetsantepro",
     "version": "1.0.0",
     "orientation": "portrait",
