@@ -406,12 +406,63 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         };
 
-        // Recherche les cliniques vétérinaires réelles autour d'une position via OpenStreetMap (Overpass API)
+        // Récupère le code département INSEE depuis des coordonnées (API Géo gouvernementale)
+        const getDepartementCode = async (lat, lng) => {
+            const res = await fetch(`https://geo.api.gouv.fr/communes?lat=${lat}&lon=${lng}&fields=departement&limit=1`);
+            if (!res.ok) throw new Error('geo.api.gouv.fr indisponible');
+            const data = await res.json();
+            return (data[0] && data[0].departement && data[0].departement.code) || null;
+        };
+
+        // Recherche via l\'annuaire de l\'Ordre National des Vétérinaires (CNOV)
+        // Endpoint public (pas d\'authentification requise) : GET /api/directories/search-veterinaries-for-care
+        const fetchCNOVVets = async (departementCode) => {
+            const url = `https://extranet.veterinaire.fr/api/directories/search-veterinaries-for-care?departmentId=${departementCode}`;
+            const res = await fetch(url, { headers: { Accept: 'application/json' } });
+            if (!res.ok) throw new Error('CNOV HTTP ' + res.status);
+            const raw = await res.json();
+            // Normalise la réponse (liste directe ou { data/items/results: [...] })
+            const list = Array.isArray(raw) ? raw
+                : Array.isArray(raw.data) ? raw.data
+                : Array.isArray(raw.items) ? raw.items
+                : Array.isArray(raw.results) ? raw.results
+                : [];
+            return list.map((v, i) => {
+                // Nom : soit une structure "cabinet", soit un vétérinaire individuel
+                const structureNom = v.structure?.nom || v.nomStructure || v.nomExercice || null;
+                const vetNom = [v.prenom, v.nom].filter(Boolean).join(' ') || null;
+                const nom = structureNom || vetNom || v.name || v.nom || 'Vétérinaire';
+                const cp = v.structure?.codePostal || v.codePostal || v.postalCode || '';
+                const ville = v.structure?.ville || v.structure?.commune || v.ville || v.commune || v.city || '';
+                const adresseLigne = v.structure?.adresse || v.adresse || v.adresseExercice || v.address || '';
+                const adresse = [adresseLigne, cp, ville].filter(Boolean).join(' ') || null;
+                const telephone = v.structure?.telephone || v.telephone || v.phone || null;
+                const specialites = Array.isArray(v.specialites) ? v.specialites
+                    : Array.isArray(v.especes) ? v.especes
+                    : null;
+                const vLat = v.structure?.latitude ?? v.latitude ?? v.lat ?? null;
+                const vLng = v.structure?.longitude ?? v.longitude ?? v.lng ?? null;
+                return {
+                    id: `cnov-${v.id || i}`,
+                    nom,
+                    telephone,
+                    horaires: v.horaires || null,
+                    adresse,
+                    specialites: specialites && specialites.length > 0 ? specialites : null,
+                    emergency: false,
+                    source: 'cnov',
+                    lat: typeof vLat === 'number' ? vLat : null,
+                    lng: typeof vLng === 'number' ? vLng : null,
+                };
+            }).filter(v => v.nom || v.adresse);
+        };
+
+        // Recherche les cliniques vétérinaires via OpenStreetMap (Overpass API) — fallback
         const OVERPASS_ENDPOINTS = [
             'https://overpass-api.de/api/interpreter',
             'https://overpass.kumi.systems/api/interpreter',
         ];
-        const fetchNearbyVets = async (lat, lng) => {
+        const fetchOverpassVets = async (lat, lng) => {
             const query = `[out:json][timeout:25];(node["amenity"="veterinary"](around:25000,${lat},${lng});way["amenity"="veterinary"](around:25000,${lat},${lng}););out center 30;`;
             let lastError = null;
             for (const endpoint of OVERPASS_ENDPOINTS) {
@@ -433,6 +484,7 @@
                                 horaires: tags.opening_hours || null,
                                 adresse: adresse || null,
                                 emergency: tags.emergency === 'yes',
+                                source: 'osm',
                                 lat: vLat,
                                 lng: vLng,
                             };
@@ -443,6 +495,22 @@
                 }
             }
             throw lastError || new Error('Service de recherche indisponible');
+        };
+
+        // Essaie d\'abord le CNOV (annuaire officiel), puis OpenStreetMap en fallback
+        const fetchNearbyVets = async (lat, lng) => {
+            let deptCode = null;
+            try { deptCode = await getDepartementCode(lat, lng); } catch (e) {}
+            if (deptCode) {
+                try {
+                    const cnovResults = await fetchCNOVVets(deptCode);
+                    if (cnovResults.length > 0) return { results: cnovResults, source: 'cnov' };
+                } catch (e) {
+                    // CNOV indisponible (maintenance ou erreur) → on bascule sur OpenStreetMap
+                }
+            }
+            const osmResults = await fetchOverpassVets(lat, lng);
+            return { results: osmResults, source: 'osm' };
         };
 
         // A vet is considered "urgence" if tagged emergency=yes on OSM, has a "Urgences"
@@ -475,8 +543,8 @@
                         const { latitude: lat, longitude: lng } = pos.coords;
                         let candidates = [];
                         try {
-                            const found = await fetchNearbyVets(lat, lng);
-                            candidates = found.filter(isEmergencyVet);
+                            const { results } = await fetchNearbyVets(lat, lng);
+                            candidates = results.filter(isEmergencyVet);
                         } catch (err) {
                             console.error('Erreur recherche urgences vétérinaires:', err);
                         }
@@ -4238,13 +4306,23 @@
             const [geoStatus, setGeoStatus] = React.useState('idle'); // idle | loading | done | error
             const [geoError, setGeoError] = React.useState('');
             const [nearbyVets, setNearbyVets] = React.useState(null);
+            const [vetsSource, setVetsSource] = React.useState(null); // 'cnov' | 'osm' | null
             const [vetsStatus, setVetsStatus] = React.useState('idle'); // idle | loading | done | error
             const [vetsError, setVetsError] = React.useState('');
+
+            const applyVetsResult = (coords, found, source) => {
+                const withDist = found
+                    .map(v => ({ ...v, distanceKm: v.lat != null ? getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) : null }))
+                    .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+                setNearbyVets(withDist);
+                setVetsSource(source);
+                setVetsStatus('done');
+            };
 
             const locateMe = () => {
                 if (!navigator.geolocation) {
                     setGeoStatus('error');
-                    setGeoError("La géolocalisation n'est pas disponible sur cet appareil.");
+                    setGeoError("La géolocalisation n\'est pas disponible sur cet appareil.");
                     return;
                 }
 
@@ -4258,10 +4336,9 @@
                         setNearbyVets(null);
                         setVetsStatus('loading');
                         setVetsError('');
-                        fetchNearbyVets(coords.lat, coords.lng).then(found => {
-                            setNearbyVets(found.map(v => ({ ...v, distanceKm: getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) })).sort((a, b) => a.distanceKm - b.distanceKm));
-                            setVetsStatus('done');
-                        }).catch(() => { setVetsStatus('error'); setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment (service de cartographie indisponible). Voici une sélection d'exemple en attendant."); });
+                        fetchNearbyVets(coords.lat, coords.lng)
+                            .then(({ results, source }) => applyVetsResult(coords, results, source))
+                            .catch(() => { setVetsStatus('error'); setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment. Voici une sélection d\'exemple en attendant."); });
                         return;
                     }
                 } catch (e) {}
@@ -4279,17 +4356,12 @@
                         setGeoStatus('done');
                         setVetsStatus('loading');
                         try {
-                            const found = await fetchNearbyVets(coords.lat, coords.lng);
-                            setNearbyVets(
-                                found
-                                    .map(v => ({ ...v, distanceKm: getDistanceKm(coords.lat, coords.lng, v.lat, v.lng) }))
-                                    .sort((a, b) => a.distanceKm - b.distanceKm)
-                            );
-                            setVetsStatus('done');
+                            const { results, source } = await fetchNearbyVets(coords.lat, coords.lng);
+                            applyVetsResult(coords, results, source);
                         } catch (err) {
                             console.error('Erreur recherche vétérinaires à proximité:', err);
                             setVetsStatus('error');
-                            setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment (service de cartographie indisponible). Voici une sélection d'exemple en attendant.");
+                            setVetsError("Impossible de récupérer les vétérinaires à proximité pour le moment. Voici une sélection d\'exemple en attendant.");
                         }
                     },
                     (err) => {
@@ -4342,12 +4414,20 @@
                             </div>
                         )}
                         {geoStatus === 'done' && vetsStatus === 'loading' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#2563eb' }}>🔎 Recherche des vétérinaires autour de votre position…</p>}
-                        {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>✅ {nearbyVets.length} vétérinaire{nearbyVets.length > 1 ? 's' : ''} trouvé{nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité</p>}
-                        {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire référencé sur OpenStreetMap dans un rayon de 25 km autour de votre position. Voici une sélection d'exemple en attendant.</p>}
+                        {geoStatus === 'done' && vetsStatus === 'done' && usingRealVets && (
+                            <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981' }}>
+                                {vetsSource === 'cnov'
+                                    ? `✅ ${nearbyVets.length} vétérinaire${nearbyVets.length > 1 ? 's' : ''} trouvé${nearbyVets.length > 1 ? 's' : ''} dans votre département (annuaire officiel CNOV)`
+                                    : `✅ ${nearbyVets.length} vétérinaire${nearbyVets.length > 1 ? 's' : ''} trouvé${nearbyVets.length > 1 ? 's' : ''} près de chez vous (données OpenStreetMap), triés par proximité`}
+                            </p>
+                        )}
+                        {geoStatus === 'done' && vetsStatus === 'done' && !usingRealVets && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire trouvé autour de votre position. Voici une sélection d\'exemple en attendant.</p>}
                         {geoStatus === 'done' && vetsStatus === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ {vetsError}</p>}
                     </div>
 
-                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 8px' }}>À proximité</p>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 8px' }}>
+                        {usingRealVets && vetsSource === 'cnov' ? 'Annuaire officiel CNOV — ' : ''}À proximité
+                    </p>
                     {vets.map(vet => {
                         const distanceText = vet.distanceKm != null ? `${vet.distanceKm.toFixed(1)} km` : vet.distance;
                         const ratingFull = vet.rating ? Math.round(vet.rating) : 0;
@@ -4357,6 +4437,7 @@
                                     <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: '#dbeafe', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🏥</div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ fontSize: '16px', fontWeight: '700' }}>{vet.nom}</div>
+                                        {vet.source === 'cnov' && <span style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', background: '#ede9fe', padding: '1px 7px', borderRadius: '999px', marginTop: '3px', display: 'inline-block' }}>🏛️ CNOV</span>}
                                         {vet.rating && (
                                             <div style={{ color: '#f59e0b', fontSize: '13px', marginTop: '2px' }}>
                                                 {'★'.repeat(ratingFull)}<span style={{ color: '#e5e7eb' }}>{'★'.repeat(5 - ratingFull)}</span> {vet.rating}
