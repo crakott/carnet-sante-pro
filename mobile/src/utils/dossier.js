@@ -30,6 +30,7 @@ export const DOSSIER_CARDS = [
   { id: 'Messages', emoji: '💬', label: 'Messagerie vétérinaire', color: colors.cyan, bg: colors.blueLight, group: 'Quotidien' },
   { id: 'Journal', emoji: '📖', label: 'Journal de vie', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Documents', emoji: '📄', label: 'Documents', color: colors.indigo, bg: colors.indigoLight, group: 'Quotidien' },
+  { id: 'Galerie', emoji: '📷', label: 'Photos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Videos', emoji: '🎥', label: 'Vidéos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
@@ -75,6 +76,10 @@ export const getDossierCardStatus = (animal, cardId, videoCount = 0) => {
     case 'Notes': {
       const n = (animal.observations || []).length;
       return n > 0 ? { text: `${n} observation(s)`, ...ok } : { text: 'Aucune', ...none };
+    }
+    case 'Galerie': {
+      const n = (animal.photos || []).length;
+      return n > 0 ? { text: `${n} photo(s)`, iconColor: colors.pink } : { text: 'Aucune photo', ...none };
     }
     case 'Videos':
       return videoCount > 0 ? { text: `${videoCount} vidéo(s)`, ...ok } : { text: 'Aucune vidéo', ...none };

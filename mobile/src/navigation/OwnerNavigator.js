@@ -19,6 +19,7 @@ import MessagesScreen from '../screens/owner/MessagesScreen';
 import PoidsScreen from '../screens/owner/PoidsScreen';
 import PlanningScreen from '../screens/owner/PlanningScreen';
 import BudgetScreen from '../screens/owner/BudgetScreen';
+import GalerieScreen from '../screens/owner/GalerieScreen';
 import VeterinairesScreen from '../screens/owner/VeterinairesScreen';
 import RappelsScreen from '../screens/owner/RappelsScreen';
 import ParametresScreen from '../screens/owner/ParametresScreen';
@@ -84,6 +85,7 @@ function DossierStack() {
       <DossierStackNav.Screen name="Poids" component={PoidsScreen} options={({ navigation }) => ({ title: '⚖️ Poids', headerLeft: () => <HomeButton navigation={navigation} /> })} />
       <DossierStackNav.Screen name="Planning" component={PlanningScreen} options={({ navigation }) => ({ title: '📅 Rendez-vous', headerLeft: () => <HomeButton navigation={navigation} /> })} />
       <DossierStackNav.Screen name="Budget" component={BudgetScreen} options={({ navigation }) => ({ title: '💰 Budget', headerLeft: () => <HomeButton navigation={navigation} /> })} />
+      <DossierStackNav.Screen name="Galerie" component={GalerieScreen} options={({ navigation }) => ({ title: '📷 Photos', headerLeft: () => <HomeButton navigation={navigation} /> })} />
     </DossierStackNav.Navigator>
   );
 }

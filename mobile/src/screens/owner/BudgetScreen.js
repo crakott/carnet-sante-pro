@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, Alert, TouchableOpacity } from 'react-na
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Screen, ScreenTitle, EmptyState, Card, Button, Field, Input, Select, IconButton, Row } from '../../components/ui';
+import BudgetChart from '../../components/BudgetChart';
 import { useAnimals } from '../../context/AnimalsContext';
 import { formatDate, todayStr } from '../../utils/dates';
 import { EMOJIS_ESPECE, CATEGORIES_BUDGET, CATEGORY_EMOJIS } from '../../constants';
@@ -140,6 +141,12 @@ export default function BudgetScreen() {
         <Card style={styles.totalCard}>
           <Text style={styles.totalLabel}>Total {titleSuffix}</Text>
           <Text style={styles.totalValue}>{total.toFixed(2)}€</Text>
+        </Card>
+      ) : null}
+
+      {entries.length > 1 ? (
+        <Card>
+          <BudgetChart entries={entries} />
         </Card>
       ) : null}
 
