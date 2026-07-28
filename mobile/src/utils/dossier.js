@@ -32,9 +32,9 @@ export const DOSSIER_CARDS = [
   { id: 'Documents', emoji: '📄', label: 'Documents', color: colors.indigo, bg: colors.indigoLight, group: 'Quotidien' },
   { id: 'Galerie', emoji: '📷', label: 'Photos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Videos', emoji: '🎥', label: 'Vidéos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
-  { id: 'Securite', emoji: '🚨', label: 'Sécurité & Urgences', color: colors.red, bg: colors.redLight, group: 'Quotidien' },
   { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
+  { id: 'Assurance', emoji: '🛡️', label: 'Assurance', color: colors.indigo, bg: colors.indigoLight, group: 'Administratif' },
 ];
 
 // Style of the status pill shown next to a Dossier card (mirrors getDossierStatusPillStyle)
@@ -108,6 +108,16 @@ export const getDossierCardStatus = (animal, cardId, videoCount = 0) => {
       const total = (animal.budget || []).reduce((s, b) => s + b.montant, 0);
       return { text: `${total.toFixed(0)} €`, iconColor: colors.yellow };
     }
+    case 'Assurance': {
+      const ins = animal.assurance;
+      if (!ins || !ins.compagnie) return { text: 'Non renseignée', ...none };
+      if (ins.dateFin) {
+        const d = daysUntil(ins.dateFin);
+        if (d !== null && d < 0) return { text: `Expirée (${ins.compagnie})`, iconColor: colors.red };
+        if (d !== null && d <= 30) return { text: `Renouvellement dans ${d} j`, iconColor: colors.yellow };
+      }
+      return { text: ins.compagnie, ...ok };
+    }
     default:
       return { text: '', ...none };
   }
@@ -145,10 +155,17 @@ export const buildDossierEmailBody = (animal) => {
 };
 
 // Build a standalone printable HTML report (with embedded photos/audio), used with expo-print
-// (mirrors openDossierReport in the web app)
 export const buildDossierHtml = (animal) => {
   const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
   const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const poids = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const rdvs = [...(animal.rdvs || [])].sort((a, b) => b.date.localeCompare(a.date));
+  const chirurgies = animal.chirurgies || [];
+  const antiparasitaires = animal.antiparasitaires || [];
+  const vermifuges = animal.vermifuges || [];
+  const budget = animal.budget || [];
+  const ins = animal.assurance;
+  const generated = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const obsHtml = observations.length > 0
     ? observations.map((o) => `
@@ -160,6 +177,37 @@ export const buildDossierHtml = (animal) => {
         </div>`).join('')
     : '<p>Aucune observation enregistrée</p>';
 
+  const poidsHtml = poids.length > 0
+    ? `<table><tr><th>Date</th><th>Poids</th></tr>${poids.map((p) => `<tr><td>${escapeHtml(p.date)}</td><td>${escapeHtml(String(p.valeur))} kg</td></tr>`).join('')}</table>`
+    : '<p>Non renseigné</p>';
+
+  const rdvsHtml = rdvs.length > 0
+    ? rdvs.map((r) => `<div class="obs"><p class="obs-head"><strong>${escapeHtml(r.motif)}</strong> — ${escapeHtml(r.date)}${r.heure ? ` à ${escapeHtml(r.heure)}` : ''}</p>${r.lieu ? `<p>📍 ${escapeHtml(r.lieu)}</p>` : ''}${r.notes ? `<p><em>${escapeHtml(r.notes)}</em></p>` : ''}</div>`).join('')
+    : '<p>Aucun rendez-vous enregistré</p>';
+
+  const chirHtml = chirurgies.length > 0
+    ? chirurgies.map((c) => `<div class="obs"><p class="obs-head"><strong>${escapeHtml(c.nom || c.type || 'Chirurgie')}</strong>${c.date ? ` — ${escapeHtml(c.date)}` : ''}</p>${c.notes ? `<p>${escapeHtml(c.notes)}</p>` : ''}</div>`).join('')
+    : '<p>Aucune chirurgie enregistrée</p>';
+
+  const antiHtml = antiparasitaires.length > 0
+    ? `<ul>${antiparasitaires.map((a) => `<li>${escapeHtml(a.produit || a.nom || '')}${a.date ? ` — ${escapeHtml(a.date)}` : ''}${a.prochaine ? ` (prochain : ${escapeHtml(a.prochaine)})` : ''}</li>`).join('')}</ul>`
+    : '<p>Aucun</p>';
+
+  const vermHtml = vermifuges.length > 0
+    ? `<ul>${vermifuges.map((v) => `<li>${escapeHtml(v.produit || v.nom || '')}${v.date ? ` — ${escapeHtml(v.date)}` : ''}${v.prochaine ? ` (prochain : ${escapeHtml(v.prochaine)})` : ''}</li>`).join('')}</ul>`
+    : '<p>Aucun</p>';
+
+  const budgetTotal = budget.reduce((s, b) => s + (b.montant || 0), 0);
+
+  const assuranceHtml = ins && ins.compagnie ? `
+    <p><strong>Compagnie :</strong> ${escapeHtml(ins.compagnie)}</p>
+    ${ins.numeroContrat ? `<p><strong>N° contrat :</strong> ${escapeHtml(ins.numeroContrat)}</p>` : ''}
+    ${ins.dateDebut ? `<p><strong>Début :</strong> ${escapeHtml(ins.dateDebut)}</p>` : ''}
+    ${ins.dateFin ? `<p><strong>Renouvellement :</strong> ${escapeHtml(ins.dateFin)}</p>` : ''}
+    ${ins.franchise ? `<p><strong>Franchise :</strong> ${escapeHtml(String(ins.franchise))} €</p>` : ''}
+    ${ins.plafond ? `<p><strong>Plafond annuel :</strong> ${escapeHtml(String(ins.plafond))} €</p>` : ''}
+    ${ins.notes ? `<p>${escapeHtml(ins.notes)}</p>` : ''}` : '<p>Non renseignée</p>';
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dossier santé - ${escapeHtml(animal.nom)}</title>
     <style>
         body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 800px; margin: 0 auto; }
@@ -169,18 +217,47 @@ export const buildDossierHtml = (animal) => {
         .obs-head { margin: 0 0 6px; }
         img { max-width: 320px; display: block; margin-top: 8px; border-radius: 6px; }
         audio { margin-top: 8px; display: block; }
+        table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+        th, td { border: 1px solid #e5e7eb; padding: 6px 12px; text-align: left; font-size: 13px; }
+        th { background: #f3f4f6; font-weight: 600; }
+        .footer { margin-top: 40px; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 12px; }
     </style></head>
     <body>
         <h1>🐾 Dossier santé de ${escapeHtml(animal.nom)}</h1>
         <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
         ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
+        ${animal.identifiant ? `<p>Identifiant : ${escapeHtml(animal.identifiant)}</p>` : ''}
+
         <h2>💉 Vaccins</h2>
         <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
-        <h2>⚖️ Poids actuel</h2>
-        <p>${lastWeight ? `${escapeHtml(lastWeight.valeur)} kg (mesuré le ${escapeHtml(lastWeight.date)})` : 'Non renseigné'}</p>
+
         <h2>💊 Médicaments en cours</h2>
         <p>${currentMedications.length > 0 ? currentMedications.map((m) => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
+
+        <h2>🔪 Chirurgies</h2>
+        ${chirHtml}
+
+        <h2>🐛 Antiparasitaires</h2>
+        ${antiHtml}
+
+        <h2>💊 Vermifuges</h2>
+        ${vermHtml}
+
+        <h2>⚖️ Historique de poids</h2>
+        ${poidsHtml}
+
+        <h2>📅 Rendez-vous</h2>
+        ${rdvsHtml}
+
         <h2>📋 Observations</h2>
         ${obsHtml}
+
+        <h2>🛡️ Assurance</h2>
+        ${assuranceHtml}
+
+        <h2>💰 Budget total</h2>
+        <p>${budgetTotal.toFixed(2)} € (${budget.length} dépense${budget.length > 1 ? 's' : ''})</p>
+
+        <div class="footer">Généré le ${escapeHtml(generated)} · Carnet Santé PRO</div>
     </body></html>`;
 };

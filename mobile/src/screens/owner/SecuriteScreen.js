@@ -1,8 +1,57 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-import { Screen, ScreenTitle } from '../../components/ui';
-import { URGENCES_OFFICIELS, ALIMENTS_DANGEREUX, PLANTES_TOXIQUES, GUIDE_PREMIERS_SECOURS } from '../../constants';
+import { Screen } from '../../components/ui';
+import { URGENCES_OFFICIELS, ALIMENTS_DANGEREUX, PLANTES_TOXIQUES, GUIDE_PREMIERS_SECOURS, VETERINAIRES } from '../../constants';
 import { colors, spacing, radius } from '../../theme';
+
+const REGION_LABEL = {
+  'Paris & Île-de-France': 'Paris / Île-de-France',
+  'Lyon & Auvergne-Rhône-Alpes': 'Lyon',
+  'Marseille & PACA': 'Marseille',
+  'Toulouse & Occitanie': 'Toulouse',
+  'Bordeaux & Nouvelle-Aquitaine': 'Bordeaux',
+  'Grand Est & Bourgogne': 'Est & Bourgogne',
+  'Hauts-de-France': 'Hauts-de-France',
+  'Bretagne & Pays de la Loire': 'Bretagne & Loire',
+  'Normandie': 'Normandie',
+};
+
+function groupVetsByRegion() {
+  const map = {};
+  VETERINAIRES.forEach((v) => {
+    const r = v.region || 'Autres';
+    if (!map[r]) map[r] = [];
+    map[r].push(v);
+  });
+  return Object.entries(map).map(([region, vets]) => ({ region, label: REGION_LABEL[region] || region, vets }));
+}
+
+function CliniqueCityAccordion({ label, vets }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.cityAccordion}>
+      <TouchableOpacity style={styles.cityAccordionHd} onPress={() => setOpen((o) => !o)} activeOpacity={0.75}>
+        <Text style={styles.cityIcon}>🏙️</Text>
+        <Text style={styles.cityTitle}>{label}</Text>
+        <Text style={styles.cityChevron}>{open ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {open && vets.map((vet) => (
+        <View key={vet.id} style={styles.clinicRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.clinicNom}>{vet.nom}</Text>
+            {vet.horaires ? <Text style={styles.clinicDetail}>⏰ {vet.horaires}</Text> : null}
+            {vet.adresse ? <Text style={styles.clinicDetail}>🏠 {vet.adresse}</Text> : null}
+          </View>
+          {vet.telephone ? (
+            <TouchableOpacity style={styles.clinicCallBtn} onPress={() => Linking.openURL(`tel:${vet.telephone.replace(/\s/g, '')}`)}>
+              <Text style={styles.clinicCallText}>📞</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
 
 const RISK_COLOR = { MORTEL: '#dc2626', 'ÉLEVÉ': '#f97316', MODÉRÉ: '#d97706' };
 const RISK_BG = { MORTEL: '#fee2e2', 'ÉLEVÉ': '#fff7ed', MODÉRÉ: '#fef3c7' };
@@ -81,12 +130,13 @@ function SectionTitle({ children }) {
 }
 
 export default function SecuriteScreen() {
+  const clinicGroups = groupVetsByRegion();
   return (
     <Screen>
-      <ScreenTitle>🚨 Sécurité & Urgences</ScreenTitle>
+      <Text style={styles.pageTitle}>🆘 Urgences & Santé</Text>
+      <Text style={styles.pageSubtitle}>Numéros d'urgence, premiers secours et toxiques courants.</Text>
 
-      {/* Numéros d'urgence */}
-      <SectionTitle>📞 Numéros d'urgence</SectionTitle>
+      <SectionTitle>NUMÉROS D'URGENCE</SectionTitle>
       {URGENCES_OFFICIELS.map((c) => (
         <TouchableOpacity
           key={c.id}
@@ -105,6 +155,16 @@ export default function SecuriteScreen() {
         </TouchableOpacity>
       ))}
 
+      {/* Cliniques d'urgence */}
+      <SectionTitle>CLINIQUES D'URGENCE 24H/24 PAR VILLE</SectionTitle>
+      {clinicGroups.map(({ region, label, vets }) => (
+        <CliniqueCityAccordion key={region} label={label} vets={vets} />
+      ))}
+
+      {/* Premiers secours */}
+      <SectionTitle>PREMIERS SECOURS</SectionTitle>
+      {GUIDE_PREMIERS_SECOURS.map((g) => <FirstAidCard key={g.id} guide={g} />)}
+
       {/* Aliments dangereux */}
       <SectionTitle>⚠️ Aliments dangereux</SectionTitle>
       <Text style={styles.hint}>Appuyez sur un aliment pour voir les risques et les symptômes.</Text>
@@ -115,18 +175,46 @@ export default function SecuriteScreen() {
       <Text style={styles.hint}>Appuyez sur une plante pour voir le niveau de danger et les symptômes.</Text>
       {PLANTES_TOXIQUES.map((p) => <ExpandableItem key={p.nom} item={p} riskKey="niveau" />)}
 
-      {/* Guide premiers secours */}
-      <SectionTitle>🩺 Guide premiers secours</SectionTitle>
-      <Text style={styles.hint}>Fiches de gestes d'urgence par type de situation. Appuyez pour développer.</Text>
-      {GUIDE_PREMIERS_SECOURS.map((g) => <FirstAidCard key={g.id} guide={g} />)}
-
+      <Text style={styles.sources}>Sources : Ordre National des Vétérinaires · CNITV · CAPAE-Ouest · SantéVet</Text>
       <View style={{ height: 40 }} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: spacing.lg, marginBottom: spacing.sm },
+  pageTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginBottom: 4 },
+  pageSubtitle: { fontSize: 13, color: colors.textLight, marginBottom: spacing.md },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: spacing.lg, marginBottom: spacing.sm },
+  sources: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg, lineHeight: 16 },
+  cityAccordion: {
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  cityAccordionHd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  cityIcon: { fontSize: 18 },
+  cityTitle: { flex: 1, fontWeight: '600', fontSize: 14, color: colors.text },
+  cityChevron: { fontSize: 10, color: colors.textMuted },
+  clinicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  clinicNom: { fontWeight: '600', fontSize: 13, color: colors.text, marginBottom: 2 },
+  clinicDetail: { fontSize: 11, color: colors.textLight },
+  clinicCallBtn: { backgroundColor: '#d1fae5', borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center', justifyContent: 'center' },
+  clinicCallText: { fontSize: 18 },
   hint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },
   urgenceCard: {
     flexDirection: 'row',

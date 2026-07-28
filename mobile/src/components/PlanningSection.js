@@ -11,14 +11,16 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
   const [date, setDate] = useState(todayStr());
   const [heure, setHeure] = useState('');
   const [lieu, setLieu] = useState('');
+  const [notes, setNotes] = useState('');
 
   const handleAdd = () => {
     if (motif && date) {
-      addAnimalItem(animal, 'rdvs', { motif, date, heure, lieu });
+      addAnimalItem(animal, 'rdvs', { motif, date, heure, lieu, notes });
       setMotif('');
       setDate(todayStr());
       setHeure('');
       setLieu('');
+      setNotes('');
       setShowForm(false);
     }
   };
@@ -45,6 +47,7 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
             </View>
             <Text style={styles.itemMeta}>📅 {formatDate(r.date)}{r.heure ? ` à ${r.heure}` : ''}</Text>
             {r.lieu ? <Text style={styles.itemMeta}>📍 {r.lieu}</Text> : null}
+            {r.notes ? <Text style={[styles.itemMeta, { fontStyle: 'italic', marginTop: 4 }]}>📝 {r.notes}</Text> : null}
           </View>
           <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'rdvs', r.id)} />
         </View>
@@ -69,6 +72,9 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
           </Field>
           <Field label="Lieu">
             <Input value={lieu} onChangeText={setLieu} placeholder="ex. Clinique Saint-Germain" />
+          </Field>
+          <Field label="Notes / check-list consultation">
+            <Input value={notes} onChangeText={setNotes} placeholder="Observations, questions à poser…" multiline style={{ minHeight: 64 }} />
           </Field>
           <View style={styles.actions}>
             <Button title="➕ Ajouter" onPress={handleAdd} color={colors.primary} style={{ flex: 1 }} />
