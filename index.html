@@ -2218,6 +2218,14 @@
             { id: 'dossier', icon: '📋', label: 'Dossier' },
             { id: 'urgences', icon: '🆘', label: 'Urgences' },
             { id: 'rappels', icon: '⏰', label: 'Rappels' },
+        ];
+
+        const MORE_TABS = [
+            { id: 'calendrier', icon: '📆', label: 'Calendrier' },
+            { id: 'voyage', icon: '✈️', label: 'Voyage' },
+            { id: 'planning', icon: '📅', label: 'Planning' },
+            { id: 'veterinaires', icon: '🏥', label: 'Vétérinaires' },
+            { id: 'budget', icon: '💰', label: 'Budget' },
             { id: 'parametres', icon: '⚙️', label: 'Paramètres' },
         ];
 
@@ -2247,25 +2255,57 @@
         }
 
         function BottomNav({ activeTab, setActiveTab }) {
+            const [showMore, setShowMore] = React.useState(false);
+            const moreActive = MORE_TABS.some(t => t.id === activeTab);
+
+            const handleMore = (id) => {
+                setShowMore(false);
+                setActiveTab(id);
+            };
+
             return (
-                <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', zIndex: 100 }}>
-                    {BOTTOM_NAV_TABS.slice(0, 2).map(tab => (
-                        <BottomNavItem key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    ))}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', padding: '8px 0 10px', fontSize: '11px', color: '#6b7280' }}>
+                <React.Fragment>
+                    {showMore && (
+                        <div onClick={() => setShowMore(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 99 }}>
+                            <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: '60px', left: '8px', right: '8px', background: 'white', borderRadius: '16px', padding: '12px', boxShadow: '0 -4px 24px rgba(0,0,0,0.15)' }}>
+                                <p style={{ fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px', paddingLeft: '4px' }}>Plus</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+                                    {MORE_TABS.map(tab => (
+                                        <button key={tab.id} onClick={() => handleMore(tab.id)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '12px 8px', background: activeTab === tab.id ? '#ecfdf5' : '#f9fafb', border: activeTab === tab.id ? '1.5px solid #10b981' : '1.5px solid transparent', borderRadius: '10px', cursor: 'pointer', color: activeTab === tab.id ? '#10b981' : '#374151', fontWeight: activeTab === tab.id ? '700' : '500', fontSize: '12px' }}>
+                                            <span style={{ fontSize: '22px' }}>{tab.icon}</span>
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', zIndex: 100 }}>
+                        {BOTTOM_NAV_TABS.slice(0, 2).map(tab => (
+                            <BottomNavItem key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        ))}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', padding: '8px 0 10px', fontSize: '11px', color: '#6b7280' }}>
+                            <button
+                                onClick={() => setActiveTab('accueil')}
+                                title="Accueil"
+                                style={{ position: 'absolute', top: '-22px', width: '52px', height: '52px', borderRadius: '50%', background: '#10b981', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', boxShadow: '0 4px 8px rgba(16,185,129,0.4)', cursor: 'pointer' }}
+                            >
+                                🏠
+                            </button>
+                            <span style={{ marginTop: '32px' }}>Accueil</span>
+                        </div>
+                        {BOTTOM_NAV_TABS.slice(2).map(tab => (
+                            <BottomNavItem key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        ))}
                         <button
-                            onClick={() => setActiveTab('accueil')}
-                            title="Accueil"
-                            style={{ position: 'absolute', top: '-22px', width: '52px', height: '52px', borderRadius: '50%', background: '#10b981', color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', boxShadow: '0 4px 8px rgba(16,185,129,0.4)', cursor: 'pointer' }}
+                            onClick={() => setShowMore(v => !v)}
+                            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '8px 0 10px', background: 'none', border: 'none', cursor: 'pointer', color: (showMore || moreActive) ? '#10b981' : '#6b7280', fontWeight: (showMore || moreActive) ? '600' : '400', fontSize: '11px' }}
                         >
-                            ➕
+                            <span style={{ fontSize: '20px' }}>⋯</span>
+                            Plus
                         </button>
-                        <span style={{ marginTop: '32px' }}>Accueil</span>
-                    </div>
-                    {BOTTOM_NAV_TABS.slice(2).map(tab => (
-                        <BottomNavItem key={tab.id} tab={tab} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    ))}
-                </nav>
+                    </nav>
+                </React.Fragment>
             );
         }
 
