@@ -824,7 +824,7 @@
                 if (r.daysUntil < 0) return;
                 const key = `${r.animal}|${r.type}|${r.nom}|${r.daysUntil}`;
                 if (notified[key] === today) return;
-                const emoji = r.type === 'vaccin' ? '💉' : r.type === 'medicament' ? '💊' : r.type === 'antiparasitaire' ? '🦟' : '🪱';
+                const emoji = r.type === 'vaccin' ? '💉' : r.type === 'medicament' ? '💊' : r.type === 'antiparasitaire' ? '🦟' : r.type === 'rdv' ? '📅' : '🪱';
                 reg.active?.postMessage({
                     type: 'SCHEDULE_NOTIFICATION',
                     title: `${emoji} ${r.animal} — ${r.nom}`,
@@ -894,7 +894,16 @@
                         ? query(collection(db, 'animals'), where('householdId', '==', hId))
                         : query(collection(db, 'animals'), where('userId', '==', uid));
                     const querySnapshot = await getDocs(q);
-                    const animalsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    const ARRAY_FIELDS = ['vaccins','medicaments','antiparasitaires','vermifuges','observations','poids','aliments','budget','rdvs','chirurgies','documents'];
+                    const animalsData = querySnapshot.docs.map(docSnap => {
+                        const data = docSnap.data();
+                        ARRAY_FIELDS.forEach(field => {
+                            if (Array.isArray(data[field])) {
+                                data[field] = data[field].map((item, idx) => item.id ? item : { ...item, id: `${docSnap.id}_${field}_${idx}_${Date.now()}` });
+                            }
+                        });
+                        return { id: docSnap.id, ...data };
+                    });
                     setAnimals(animalsData);
                     if (animalsData.length > 0) setSelectedAnimal(animalsData[0].id);
                 } catch (error) {
@@ -1086,6 +1095,7 @@
                     (animal.medicaments || []).forEach(m => checkItem('medicament', animal.nom, m.nom, m.dateFin, reminderSettings.medicament));
                     (animal.antiparasitaires || []).forEach(t => checkItem('antiparasitaire', animal.nom, t.nom || 'Antiparasitaire', t.prochainTraitement, reminderSettings.antiparasitaire ?? 14));
                     (animal.vermifuges || []).forEach(t => checkItem('vermifuge', animal.nom, t.nom || 'Vermifuge', t.prochainTraitement, reminderSettings.vermifuge ?? 14));
+                    (animal.rdvs || []).forEach(r => r.date && checkItem('rdv', animal.nom, r.motif || 'Rendez-vous', r.date, 7));
                 });
 
                 return reminders.sort((a, b) => a.daysUntil - b.daysUntil);
@@ -2144,6 +2154,7 @@
             const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
             const [editingAnimal, setEditingAnimal] = React.useState(null);
             const [photoError, setPhotoError] = React.useState('');
+            const [searchQuery, setSearchQuery] = React.useState('');
 
             const handlePhotoChange = (file, setter) => {
                 setPhotoError('');
@@ -2167,14 +2178,25 @@
                 }
             };
 
+            const filteredAnimals = animals.filter(a => !searchQuery || (a.nom||'').toLowerCase().includes(searchQuery.toLowerCase()) || (a.espece||'').toLowerCase().includes(searchQuery.toLowerCase()) || (a.race||'').toLowerCase().includes(searchQuery.toLowerCase()));
+
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '20px' }}>Mes animaux ({animals.length})</h2>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '12px' }}>Mes animaux ({animals.length})</h2>
+                    {animals.length > 3 && (
+                        <input
+                            type="search"
+                            placeholder="Rechercher un animal..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '15px', marginBottom: '16px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                    )}
 
                     {/* Animals List */}
                     {animals.length > 0 && (
                         <div style={{ background: 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: '20px' }}>
-                            {animals.map((animal, i) => {
+                            {filteredAnimals.map((animal, i) => {
                                 const age = computeAge(animal.dateNaissance);
                                 const subtitle = [animal.race, age].filter(Boolean).join(' — ');
                                 const animalReminders = reminders.filter(r => r.animal === animal.nom);
@@ -2191,7 +2213,7 @@
                                             alignItems: 'center',
                                             gap: '12px',
                                             padding: '13px 14px',
-                                            borderBottom: i < animals.length - 1 ? '1px solid #f3f4f6' : 'none',
+                                            borderBottom: i < filteredAnimals.length - 1 ? '1px solid #f3f4f6' : 'none',
                                             cursor: 'pointer',
                                             background: selectedAnimal === animal.id ? '#f0fdf4' : 'white'
                                         }}
@@ -2568,8 +2590,8 @@
                 <React.Fragment>
                     <div style={{ flex: 1 }}>{children}</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        {item.id && <button onClick={startEdit} style={{ padding: '8px 12px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><EditIcon size={16} /></button>}
-                        {item.id && onDelete && <button onClick={onDelete} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><DeleteIcon size={16} /></button>}
+                        {onSave && <button onClick={startEdit} style={{ padding: '8px 12px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><EditIcon size={16} /></button>}
+                        {onDelete && <button onClick={onDelete} style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><DeleteIcon size={16} /></button>}
                     </div>
                 </React.Fragment>
             );
@@ -2662,13 +2684,14 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
-            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: todayStr, lot: '' });
+            const [newVaccin, setNewVaccin] = React.useState({ nom: '', date: todayStr, lot: '', delaiJours: 365 });
 
             const handleAddVaccin = () => {
                 if (newVaccin.nom && newVaccin.date) {
-                    const rappel = new Date(new Date(newVaccin.date).getTime() + 365 * 86400000).toISOString().split('T')[0];
-                    addAnimalItem(animal, 'vaccins', { nom: newVaccin.nom, date: newVaccin.date, rappel, lot: newVaccin.lot });
-                    setNewVaccin({ nom: '', date: todayStr, lot: '' });
+                    const delai = parseInt(newVaccin.delaiJours) || 365;
+                    const rappel = new Date(new Date(newVaccin.date).getTime() + delai * 86400000).toISOString().split('T')[0];
+                    addAnimalItem(animal, 'vaccins', { nom: newVaccin.nom, date: newVaccin.date, rappel, lot: newVaccin.lot, delaiJours: delai });
+                    setNewVaccin({ nom: '', date: todayStr, lot: '', delaiJours: 365 });
                     setShowForm(false);
                 }
             };
@@ -2691,8 +2714,23 @@
                                 <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({ ...newVaccin, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({ ...newVaccin, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <input type="text" placeholder="N° de lot (facultatif)" value={newVaccin.lot} onChange={(e) => setNewVaccin({ ...newVaccin, lot: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Durée de validité</label>
+                                        <select value={newVaccin.delaiJours} onChange={(e) => setNewVaccin({ ...newVaccin, delaiJours: parseInt(e.target.value) })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}>
+                                            <option value={183}>6 mois (183 j)</option>
+                                            <option value={365}>1 an (365 j)</option>
+                                            <option value={730}>2 ans (730 j)</option>
+                                            <option value={1095}>3 ans (1095 j)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Ou délai personnalisé (jours)</label>
+                                        <input type="number" min="1" max="3650" value={newVaccin.delaiJours} onChange={(e) => setNewVaccin({ ...newVaccin, delaiJours: parseInt(e.target.value) || 365 })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    </div>
+                                </div>
                             </div>
-                            <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '12px' }}>Le rappel sera calculé automatiquement 1 an après la date du vaccin.</p>
+                            <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '12px' }}>Rappel prévu le : {newVaccin.date ? formatDate(new Date(new Date(newVaccin.date).getTime() + (parseInt(newVaccin.delaiJours)||365) * 86400000).toISOString().split('T')[0]) : '–'}</p>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAddVaccin} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
                                 <button onClick={() => setShowForm(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>Annuler</button>
