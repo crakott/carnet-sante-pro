@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
 import { Screen } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
@@ -157,6 +157,13 @@ export default function CalendrierScreen() {
                   { borderColor: color, backgroundColor: isActive ? color : 'transparent' },
                 ]}
               >
+                {animal.photo ? (
+                  <Image source={{ uri: animal.photo }} style={styles.filterChipPhoto} />
+                ) : (
+                  <View style={[styles.filterChipPhoto, { backgroundColor: isActive ? 'rgba(255,255,255,0.35)' : color + '33', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ fontSize: 11, color: isActive ? '#fff' : color }}>{animal.espece?.[0] || '🐾'}</Text>
+                  </View>
+                )}
                 <Text style={[styles.filterChipText, { color: isActive ? '#fff' : color }]}>
                   {animal.nom || 'Animal'}
                 </Text>
@@ -291,10 +298,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1.5,
+  },
+  filterChipPhoto: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   filterChipText: {
     fontSize: 13,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
 import { Screen, Button, Field, Input, EmptyState } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
@@ -135,6 +135,13 @@ export default function VoyageScreen() {
                 activeOpacity={0.7}
                 style={[styles.animalPill, isSelected && styles.animalPillSelected]}
               >
+                {a.photo ? (
+                  <Image source={{ uri: a.photo }} style={styles.animalPillPhoto} />
+                ) : (
+                  <View style={[styles.animalPillPhoto, { backgroundColor: isSelected ? 'rgba(255,255,255,0.3)' : '#d1fae5', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ fontSize: 11, color: isSelected ? '#fff' : colors.primary }}>{a.espece?.[0] || '🐾'}</Text>
+                  </View>
+                )}
                 <Text style={[styles.animalPillText, isSelected && styles.animalPillTextSelected]}>
                   {a.nom || 'Animal'}
                 </Text>
@@ -251,12 +258,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   animalPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1.5,
     borderColor: colors.inputBorder,
     backgroundColor: colors.white,
+  },
+  animalPillPhoto: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
   },
   animalPillSelected: {
     borderColor: colors.primary,
