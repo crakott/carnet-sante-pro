@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Input, Button, Field, Screen } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { formatDateInput, displayToIso } from '../../utils/dates';
@@ -19,24 +18,6 @@ export default function AuthScreen() {
   const [resetMsg, setResetMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const handleGoogleSignIn = async () => {
-    try {
-      setSubmitting(true);
-      setError('');
-      await GoogleSignin.hasPlayServices();
-      const response = await GoogleSignin.signIn();
-      if (response.type === 'success') {
-        await signInWithGoogle(response.data.idToken);
-      }
-    } catch (err) {
-      if (err.code !== statusCodes.SIGN_IN_CANCELLED) {
-        setError('Connexion Google échouée : ' + err.message);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleAuth = async () => {
     setError('');
@@ -142,22 +123,6 @@ export default function AuthScreen() {
         </Field>
 
         <Button title={isSignup ? 'Créer mon compte' : 'Se connecter'} onPress={handleAuth} disabled={submitting} style={{ marginBottom: spacing.sm }} />
-
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>ou</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.googleBtn, submitting && { opacity: 0.6 }]}
-          onPress={handleGoogleSignIn}
-          disabled={submitting}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.googleG}>G</Text>
-          <Text style={styles.googleBtnText}>Continuer avec Google</Text>
-        </TouchableOpacity>
 
         <Button
           title={isSignup ? 'Déjà inscrit ? Se connecter' : 'Créer un compte gratuit'}
