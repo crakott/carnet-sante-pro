@@ -2965,6 +2965,33 @@
                     )}
 
                     <div style={{ display: 'grid', gap: '12px' }}>
+                        {animal.aliments && animal.aliments.length > 0 && (() => {
+                            const byTime = {};
+                            [...animal.aliments].sort((a, b) => (a.horaire || '00:00').localeCompare(b.horaire || '00:00')).forEach(a => {
+                                const h = a.horaire || 'Sans horaire';
+                                if (!byTime[h]) byTime[h] = [];
+                                byTime[h].push(a);
+                            });
+                            return (
+                                <div style={{ background: 'white', borderRadius: '10px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                    <h4 style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px' }}>🗓️ Planning journalier</h4>
+                                    {Object.entries(byTime).map(([heure, items]) => (
+                                        <div key={heure} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                            <div style={{ minWidth: '54px', textAlign: 'center', background: '#fef3c7', borderRadius: '8px', padding: '4px 6px' }}>
+                                                <p style={{ fontSize: '14px', fontWeight: '700', color: '#d97706' }}>{heure}</p>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                {items.map((a, i) => (
+                                                    <p key={a.id || i} style={{ fontSize: '14px', color: '#374151', marginBottom: '2px' }}>
+                                                        <strong>{a.nom}</strong>{a.quantite ? ` — ${a.quantite}` : ''}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                         {animal.aliments && animal.aliments.length > 0 ? (
                             animal.aliments.map((a, i) => (
                                 <div key={a.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #f59e0b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3059,6 +3086,31 @@
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
                     <AnimalProfileCard animal={animal} />
+
+                    {(() => {
+                        const photos = (animal.observations || []).filter(o => o.photo).sort((a, b) => new Date(b.date) - new Date(a.date));
+                        if (photos.length === 0) return null;
+                        return (
+                            <div style={{ background: 'white', borderRadius: '10px', padding: '16px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h4 style={{ fontWeight: '700', fontSize: '14px', marginBottom: '12px' }}>📷 Galerie photos ({photos.length})</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
+                                    {photos.map((o, i) => (
+                                        <div key={o.id || i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <img
+                                                src={o.photo}
+                                                alt={o.description || 'Photo'}
+                                                onClick={() => window.open(o.photo, '_blank')}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                            />
+                                            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', padding: '3px 5px' }}>
+                                                <p style={{ color: 'white', fontSize: '9px', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.description || formatDate(o.date)}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2' }}>
@@ -3241,12 +3293,12 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
-            const [newChirurgie, setNewChirurgie] = React.useState({ nom: '', date: todayStr, notes: '' });
+            const [newChirurgie, setNewChirurgie] = React.useState({ nom: '', date: todayStr, notes: '', photo: '' });
 
             const handleAdd = () => {
                 if (newChirurgie.nom && newChirurgie.date) {
-                    addAnimalItem(animal, 'chirurgies', { nom: newChirurgie.nom, date: newChirurgie.date, notes: newChirurgie.notes });
-                    setNewChirurgie({ nom: '', date: todayStr, notes: '' });
+                    addAnimalItem(animal, 'chirurgies', { nom: newChirurgie.nom, date: newChirurgie.date, notes: newChirurgie.notes, photo: newChirurgie.photo });
+                    setNewChirurgie({ nom: '', date: todayStr, notes: '', photo: '' });
                     setShowForm(false);
                 }
             };
@@ -3265,6 +3317,11 @@
                                 <input type="text" placeholder="Type d'intervention (ex. Stérilisation, Détartrage, Extraction dentaire…)" value={newChirurgie.nom} onChange={(e) => setNewChirurgie({ ...newChirurgie, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <input type="date" value={newChirurgie.date} onChange={(e) => setNewChirurgie({ ...newChirurgie, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <textarea placeholder="Notes (déroulement, suites opératoires, anesthésie…)" value={newChirurgie.notes} onChange={(e) => setNewChirurgie({ ...newChirurgie, notes: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px' }} />
+                                <div>
+                                    <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '6px' }}>📷 Photo (optionnel)</label>
+                                    <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) readImageAsResizedDataUrl(f, 1600, 0.82, (photo) => setNewChirurgie(prev => ({ ...prev, photo })), () => {}); }} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    {newChirurgie.photo && <img src={newChirurgie.photo} alt="preview" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginTop: '6px' }} />}
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAdd} style={{ padding: '10px 20px', background: CHIRURGIE_COLOR, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
@@ -3299,6 +3356,7 @@
                                         </EditableRow>
                                     </div>
                                     {c.notes && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{c.notes}</p>}
+                                    {c.photo && <img src={c.photo} alt="Intervention" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '6px', marginTop: '8px' }} />}
                                 </div>
                             ))
                         ) : (
@@ -3573,23 +3631,30 @@
 
         function PoidsChart({ poids, objectif }) {
             const sorted = [...poids].sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (sorted.length < 2) return null;
             const values = sorted.map(p => p.valeur);
-            const allValues = objectif ? [...values, objectif] : values;
+            const allValues = objectif != null ? [...values, objectif] : values;
             const minVal = Math.min(...allValues);
             const maxVal = Math.max(...allValues);
             const range = maxVal - minVal || 1;
-            const W = 350, H = 220;
-            const padLeft = 45, padRight = 25, padTop = 15, padBottom = 50;
+            const W = 360, H = 220;
+            const padLeft = 48, padRight = 20, padTop = 15, padBottom = 50;
             const chartW = W - padLeft - padRight;
             const chartH = H - padTop - padBottom;
-            const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+            const t0 = new Date(sorted[0].date).getTime();
+            const t1 = new Date(sorted[sorted.length - 1].date).getTime();
+            const tRange = t1 - t0 || 1;
+            const toX = (dateStr) => padLeft + ((new Date(dateStr).getTime() - t0) / tRange) * chartW;
+            const toY = (val) => H - padBottom - ((val - minVal) / range) * chartH;
+            const points = sorted.map(p => ({ x: toX(p.date), y: toY(p.valeur), valeur: p.valeur, date: p.date }));
+            const polyPts = points.map(p => `${p.x},${p.y}`).join(' ');
 
-            const points = sorted.map(p => {
-                const date = new Date(p.date);
-                const monthIdx = date.getMonth();
-                const x = padLeft + (monthIdx / 11) * chartW;
-                const y = H - padBottom - ((p.valeur - minVal) / range * chartH);
-                return { x, y };
+            const labelCount = Math.min(5, sorted.length);
+            const xLabels = Array.from({ length: labelCount }, (_, i) => {
+                const idx = Math.round(i * (sorted.length - 1) / (labelCount - 1 || 1));
+                const d = new Date(sorted[idx].date);
+                const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                return { x: toX(sorted[idx].date), label };
             });
 
             return (
@@ -3603,26 +3668,30 @@
                         </defs>
                         <line x1={padLeft} y1={H - padBottom} x2={W - padRight} y2={H - padBottom} stroke="#d1d5db" strokeWidth="2" />
                         <line x1={padLeft} y1={padTop} x2={padLeft} y2={H - padBottom} stroke="#d1d5db" strokeWidth="2" />
-                        <text x="15" y={padTop + 12} fontSize="11" fill="#6b7280" fontWeight="600">Poids</text>
-                        <text x={W / 2} y={H - 8} fontSize="11" fill="#6b7280" fontWeight="600" textAnchor="middle">Mois</text>
                         {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
                             const val = minVal + (maxVal - minVal) * ratio;
                             const y = H - padBottom - ratio * chartH;
                             return (
                                 <g key={i}>
-                                    <line x1={padLeft - 5} y1={y} x2={padLeft} y2={y} stroke="#d1d5db" strokeWidth="1" />
-                                    <text x={padLeft - 8} y={y + 4} fontSize="10" fill="#6b7280" textAnchor="end">{val.toFixed(1)}</text>
+                                    <line x1={padLeft - 4} y1={y} x2={padLeft} y2={y} stroke="#d1d5db" strokeWidth="1" />
+                                    <text x={padLeft - 6} y={y + 4} fontSize="10" fill="#6b7280" textAnchor="end">{val.toFixed(1)}</text>
                                 </g>
                             );
                         })}
-                        {monthNames.map((month, i) => {
-                            const x = padLeft + (i / 11) * chartW;
-                            return <text key={i} x={x} y={H - padBottom + 25} fontSize="10" fill="#6b7280" textAnchor="middle" fontWeight="600">{month}</text>;
-                        })}
-                        <polyline points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#poidsGrad)" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="white" strokeWidth="2" />)}
+                        {xLabels.map((l, i) => (
+                            <text key={i} x={l.x} y={H - padBottom + 22} fontSize="10" fill="#6b7280" textAnchor="middle" fontWeight="600">{l.label}</text>
+                        ))}
+                        <polyline points={polyPts} fill="url(#poidsGrad)" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        {points.map((p, i) => (
+                            <g key={i}>
+                                <circle cx={p.x} cy={p.y} r="4" fill="#10b981" stroke="white" strokeWidth="2" />
+                                {i === points.length - 1 && (
+                                    <text x={p.x} y={p.y - 8} fontSize="11" fill="#10b981" textAnchor="middle" fontWeight="700">{p.valeur} kg</text>
+                                )}
+                            </g>
+                        ))}
                         {objectif != null && (() => {
-                            const y = H - padBottom - ((objectif - minVal) / range * chartH);
+                            const y = toY(objectif);
                             return (
                                 <g>
                                     <line x1={padLeft} y1={y} x2={W - padRight} y2={y} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,4" />
@@ -3895,12 +3964,12 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
-            const [newRdv, setNewRdv] = React.useState({ date: todayStr, heure: '', motif: '', lieu: '' });
+            const [newRdv, setNewRdv] = React.useState({ date: todayStr, heure: '', motif: '', lieu: '', recurrence: 'aucune' });
 
             const handleAdd = () => {
                 if (newRdv.date && newRdv.motif) {
                     addAnimalItem(animal, 'rdvs', { ...newRdv });
-                    setNewRdv({ date: todayStr, heure: '', motif: '', lieu: '' });
+                    setNewRdv({ date: todayStr, heure: '', motif: '', lieu: '', recurrence: 'aucune' });
                     setShowForm(false);
                 }
             };
@@ -3922,7 +3991,8 @@
                                 { key: 'motif', label: 'Motif' },
                                 { key: 'date', label: 'Date', type: 'date' },
                                 { key: 'heure', label: 'Heure', type: 'time' },
-                                { key: 'lieu', label: 'Lieu' }
+                                { key: 'lieu', label: 'Lieu' },
+                                { key: 'recurrence', label: 'Récurrence', type: 'select', options: [{value:'aucune',label:'Aucune'},{value:'mensuelle',label:'Mensuelle'},{value:'trimestrielle',label:'Trimestrielle'},{value:'semestrielle',label:'Semestrielle'},{value:'annuelle',label:'Annuelle'}] }
                             ]}
                             onSave={(vals) => updateAnimalItem(animal, 'rdvs', r.id, vals)}
                             onDelete={() => deleteAnimalItem(animal, 'rdvs', r.id)}
@@ -3933,6 +4003,7 @@
                             </div>
                             <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {formatDate(r.date)}{r.heure ? ` à ${r.heure}` : ''}</p>
                             {r.lieu && <p style={{ color: '#6b7280', fontSize: '14px' }}>📍 {r.lieu}</p>}
+                            {r.recurrence && r.recurrence !== 'aucune' && <p style={{ color: '#10b981', fontSize: '13px', fontWeight: '600' }}>🔁 {r.recurrence.charAt(0).toUpperCase() + r.recurrence.slice(1)}</p>}
                         </EditableRow>
                     </div>
                 );
@@ -3953,6 +4024,13 @@
                                     <input type="time" value={newRdv.heure} onChange={(e) => setNewRdv({ ...newRdv, heure: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 </div>
                                 <input type="text" placeholder="Lieu (ex : Clinique Saint-Germain)" value={newRdv.lieu} onChange={(e) => setNewRdv({ ...newRdv, lieu: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <select value={newRdv.recurrence} onChange={(e) => setNewRdv({ ...newRdv, recurrence: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option value="aucune">Pas de récurrence</option>
+                                    <option value="mensuelle">Mensuelle</option>
+                                    <option value="trimestrielle">Tous les 3 mois</option>
+                                    <option value="semestrielle">Tous les 6 mois</option>
+                                    <option value="annuelle">Annuelle</option>
+                                </select>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
@@ -4100,6 +4178,31 @@
                             </div>
                         </div>
                     )}
+
+                    {entries.length > 1 && (() => {
+                        const byCategory = {};
+                        entries.forEach(b => { byCategory[b.type] = (byCategory[b.type] || 0) + b.montant; });
+                        const cats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+                        const maxCat = cats[0]?.[1] || 1;
+                        return (
+                            <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                                <h4 style={{ fontWeight: '700', fontSize: '14px', marginBottom: '16px' }}>📊 Répartition par catégorie</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {cats.map(([cat, total]) => (
+                                        <div key={cat}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <span style={{ fontSize: '13px', fontWeight: '600' }}>{CATEGORY_EMOJIS[cat] || '➕'} {cat}</span>
+                                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#d97706' }}>{total.toFixed(2)} €</span>
+                                            </div>
+                                            <div style={{ background: '#f3f4f6', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                                                <div style={{ background: '#f59e0b', height: '100%', width: `${(total / maxCat) * 100}%`, borderRadius: '4px', transition: 'width 0.3s' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {entries.length === 0 ? (
@@ -4461,6 +4564,37 @@
             const [householdLinkCopied, setHouseholdLinkCopied] = React.useState(false);
             const [householdMembers, setHouseholdMembers] = React.useState([]);
             const [householdBusy, setHouseholdBusy] = React.useState(false);
+            const [contacts, setContacts] = React.useState([]);
+            const [contactsLoaded, setContactsLoaded] = React.useState(false);
+            const [showContactForm, setShowContactForm] = React.useState(false);
+            const [newContact, setNewContact] = React.useState({ nom: '', role: 'Vétérinaire habituel', tel: '' });
+
+            React.useEffect(() => {
+                if (!user || contactsLoaded) return;
+                (async () => {
+                    try {
+                        const snap = await getDoc(doc(db, 'settings', user.uid));
+                        if (snap.exists()) setContacts(snap.data().contacts || []);
+                    } catch (e) {}
+                    setContactsLoaded(true);
+                })();
+            }, [user]);
+
+            const saveContacts = async (list) => {
+                setContacts(list);
+                try { await setDoc(doc(db, 'settings', user.uid), { contacts: list }, { merge: true }); } catch (e) {}
+            };
+
+            const addContact = () => {
+                if (!newContact.nom) return;
+                const list = [...contacts, { ...newContact, id: Date.now() }];
+                saveContacts(list);
+                setNewContact({ nom: '', role: 'Vétérinaire habituel', tel: '' });
+                setShowContactForm(false);
+            };
+
+            const deleteContact = (id) => saveContacts(contacts.filter(c => c.id !== id));
+
             const appUrl = window.location.origin + window.location.pathname;
 
             React.useEffect(() => {
@@ -4698,6 +4832,53 @@
                             </>
                         )}
                     </CollapsibleSection>
+
+                    {/* ── Contacts d'urgence ── */}
+                    <div style={{ background: 'white', borderRadius: '10px', padding: '20px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+                        <h3 style={{ fontWeight: '700', marginBottom: '16px', fontSize: '16px' }}>📞 Contacts d\'urgence</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                            <div style={{ background: '#fef3c7', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <p style={{ fontWeight: '600', fontSize: '14px' }}>🆘 Antipoison national</p>
+                                    <p style={{ color: '#6b7280', fontSize: '13px' }}>Service national d\'information</p>
+                                </div>
+                                <a href="tel:+33140054848" style={{ fontWeight: '700', color: '#d97706', textDecoration: 'none', fontSize: '15px' }}>01 40 05 48 48</a>
+                            </div>
+                            {contacts.map(c => (
+                                <div key={c.id} style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <p style={{ fontWeight: '600', fontSize: '14px' }}>{c.nom}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '13px' }}>{c.role}</p>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {c.tel && <a href={`tel:${c.tel.replace(/\s/g,'')}`} style={{ fontWeight: '700', color: '#10b981', textDecoration: 'none', fontSize: '15px' }}>{c.tel}</a>}
+                                        <button onClick={() => deleteContact(c.id)} style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {showContactForm ? (
+                            <div style={{ display: 'grid', gap: '8px' }}>
+                                <select value={newContact.role} onChange={(e) => setNewContact({ ...newContact, role: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                    <option>Vétérinaire habituel</option>
+                                    <option>Clinique urgence</option>
+                                    <option>Pension / Garderie</option>
+                                    <option>Toiletteur</option>
+                                    <option>Autre</option>
+                                </select>
+                                <input type="text" placeholder="Nom / cabinet" value={newContact.nom} onChange={(e) => setNewContact({ ...newContact, nom: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="tel" placeholder="Numéro de téléphone" value={newContact.tel} onChange={(e) => setNewContact({ ...newContact, tel: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={addContact} style={{ padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
+                                    <button onClick={() => setShowContactForm(false)} style={{ padding: '8px 16px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Annuler</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button onClick={() => setShowContactForm(true)} style={{ padding: '8px 16px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
+                                ➕ Ajouter un contact
+                            </button>
+                        )}
+                    </div>
 
                     {/* ── Foyer partagé ── */}
                     <CollapsibleSection icon="👨‍👩‍👧" iconBg="#d1fae5" iconColor="#10b981" title="Foyer partagé">
