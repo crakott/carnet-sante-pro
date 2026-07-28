@@ -1,13 +1,16 @@
 import 'react-native-gesture-handler';
-import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
+
+const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
+GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

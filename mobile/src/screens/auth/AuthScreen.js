@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Input, Button, Field, Screen } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { formatDateInput, displayToIso } from '../../utils/dates';
 import { colors, radius, spacing } from '../../theme';
-
-const GOOGLE_WEB_CLIENT_ID = '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com';
 
 export default function AuthScreen() {
   const { signup, login, signInWithGoogle, resetPassword } = useAuth();
@@ -21,10 +19,6 @@ export default function AuthScreen() {
   const [resetMsg, setResetMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
-  }, []);
 
   const handleGoogleSignIn = async () => {
     try {

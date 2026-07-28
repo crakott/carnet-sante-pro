@@ -124,6 +124,7 @@ export function AuthProvider({ children }) {
   const logout = () => signOut(auth);
 
   const saveReminderSettings = async (settings) => {
+    if (!user) return;
     setReminderSettings(settings);
     await setDoc(doc(db, 'settings', user.uid), { userId: user.uid, reminders: settings }, { merge: true });
   };
