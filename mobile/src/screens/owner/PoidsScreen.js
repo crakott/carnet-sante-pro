@@ -6,7 +6,7 @@ import PoidsSection from '../../components/PoidsSection';
 import { useAnimals } from '../../context/AnimalsContext';
 
 export default function PoidsScreen() {
-  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem } = useAnimals();
+  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem } = useAnimals();
   const animal = animals.find((a) => a.id === selectedAnimal);
 
   if (animals.length === 0) {
@@ -32,7 +32,7 @@ export default function PoidsScreen() {
         </View>
       )}
       <AnimalPicker animals={animals} selectedAnimal={selectedAnimal} onSelect={setSelectedAnimal} />
-      {animal ? <PoidsSection animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} /> : <EmptyState>Sélectionnez un animal</EmptyState>}
+      {animal ? <PoidsSection animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} /> : <EmptyState>Sélectionnez un animal</EmptyState>}
     </Screen>
   );
 }

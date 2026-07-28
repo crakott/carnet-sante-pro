@@ -5,46 +5,69 @@ import AnimalPicker from '../../components/AnimalPicker';
 import { useAnimals } from '../../context/AnimalsContext';
 import { colors, spacing } from '../../theme';
 
+const UNITES = ['g', 'kg', 'ml', 'L'].map((u) => ({ label: u, value: u }));
+const emptyForm = { nom: '', quantite: '', unite: 'g', horaire: '12:00' };
+
 export default function AlimentScreen() {
-  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem } = useAnimals();
+  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem } = useAnimals();
   const animal = animals.find((a) => a.id === selectedAnimal);
   const [showForm, setShowForm] = useState(false);
-  const [nom, setNom] = useState('');
-  const [quantite, setQuantite] = useState('');
-  const [unite, setUnite] = useState('g');
-  const [horaire, setHoraire] = useState('12:00');
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  };
+
+  const openEdit = (a) => {
+    setEditingId(a.id);
+    const parts = (a.quantite || '').split(' ');
+    setForm({
+      nom: a.nom,
+      quantite: parts[0] || '',
+      unite: parts[1] || 'g',
+      horaire: a.horaire || '12:00',
+    });
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    if (!form.nom || !form.quantite) return;
+    const payload = { nom: form.nom, quantite: `${form.quantite} ${form.unite}`, horaire: form.horaire };
+    if (editingId) {
+      updateAnimalItem(animal, 'aliments', editingId, payload);
+    } else {
+      addAnimalItem(animal, 'aliments', payload);
+    }
+    setForm(emptyForm);
+    setEditingId(null);
+    setShowForm(false);
+  };
 
   if (animals.length === 0) {
-    return (
-      <Screen>
-        <EmptyState>Aucun animal enregistré</EmptyState>
-      </Screen>
-    );
+    return <Screen><EmptyState>Aucun animal enregistré</EmptyState></Screen>;
   }
-
-  const handleAdd = () => {
-    if (nom && quantite) {
-      addAnimalItem(animal, 'aliments', { nom, quantite: `${quantite} ${unite}`, horaire });
-      setNom(''); setQuantite(''); setUnite('g'); setHoraire('12:00');
-      setShowForm(false);
-    }
-  };
 
   return (
     <Screen>
       {animal && (
-        <View style={{ flexDirection:'row', alignItems:'center', padding:12, backgroundColor:'#f0fdf4', borderBottomWidth:1, borderBottomColor:'#d1fae5' }}>
+        <View style={styles.animalHeader}>
           {animal.photo ? (
-            <Image source={{ uri: animal.photo }} style={{ width:40, height:40, borderRadius:20, marginRight:10 }} />
+            <Image source={{ uri: animal.photo }} style={styles.animalPhoto} />
           ) : (
-            <View style={{ width:40, height:40, borderRadius:20, backgroundColor:'#10b981', marginRight:10, alignItems:'center', justifyContent:'center' }}>
-              <Text style={{ color:'#fff', fontSize:18 }}>{animal.espece?.[0] || '🐾'}</Text>
+            <View style={[styles.animalPhoto, styles.animalPhotoFallback]}>
+              <Text style={{ color: '#fff', fontSize: 18 }}>{animal.espece?.[0] || '🐾'}</Text>
             </View>
           )}
-          <Text style={{ fontWeight:'700', fontSize:16, color:'#064e3b' }}>{animal.nom || 'Animal'}</Text>
+          <Text style={styles.animalName}>{animal.nom || 'Animal'}</Text>
         </View>
       )}
       <AnimalPicker animals={animals} selectedAnimal={selectedAnimal} onSelect={setSelectedAnimal} />
+
       {!animal ? (
         <EmptyState>Sélectionnez un animal</EmptyState>
       ) : (
@@ -54,39 +77,44 @@ export default function AlimentScreen() {
           {showForm ? (
             <Card style={{ borderWidth: 2, borderColor: colors.yellow }}>
               <Field label="Nom de l'aliment">
-                <Input value={nom} onChangeText={setNom} placeholder="Nom de l'aliment" />
+                <Input value={form.nom} onChangeText={(v) => set('nom', v)} placeholder="Nom de l'aliment" />
               </Field>
               <Row style={{ gap: spacing.sm }}>
-                <Field label="Quantité" hint=" ">
-                  <Input value={quantite} onChangeText={setQuantite} placeholder="Quantité" keyboardType="numeric" />
+                <Field label="Quantité" hint=" " style={{ flex: 1 }}>
+                  <Input value={form.quantite} onChangeText={(v) => set('quantite', v)} placeholder="Quantité" keyboardType="numeric" />
                 </Field>
                 <View style={{ width: 90 }}>
                   <Field label="Unité" hint=" ">
-                    <Select selectedValue={unite} onValueChange={setUnite} items={['g', 'kg', 'ml', 'L'].map((u) => ({ label: u, value: u }))} />
+                    <Select selectedValue={form.unite} onValueChange={(v) => set('unite', v)} items={UNITES} />
                   </Field>
                 </View>
               </Row>
               <Field label="Horaire">
-                <Input value={horaire} onChangeText={setHoraire} placeholder="HH:MM" />
+                <Input value={form.horaire} onChangeText={(v) => set('horaire', v)} placeholder="HH:MM" />
               </Field>
               <Row style={{ gap: spacing.sm }}>
-                <Button title="➕ Ajouter" onPress={handleAdd} color={colors.yellow} style={{ flex: 1 }} />
+                <Button title={editingId ? '✏️ Modifier' : '➕ Ajouter'} onPress={handleSave} color={colors.yellow} style={{ flex: 1 }} />
                 <Button title="Annuler" onPress={() => setShowForm(false)} color={colors.border} textColor={colors.text} style={{ flex: 1 }} />
               </Row>
             </Card>
           ) : (
-            <Button title="➕ Ajouter un aliment" onPress={() => setShowForm(true)} style={{ marginBottom: spacing.lg }} />
+            <Button title="➕ Ajouter un aliment" onPress={openAdd} style={{ marginBottom: spacing.lg }} />
           )}
 
           <Card>
             {animal.aliments && animal.aliments.length > 0 ? (
               animal.aliments.map((a, i) => (
-                <View key={a.id || i} style={[styles.item, { borderLeftWidth: 4, borderLeftColor: colors.yellow, paddingLeft: spacing.sm }]}>
+                <View key={a.id || i} style={styles.item}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemTitle}>{a.nom}</Text>
                     <Text style={styles.itemMeta}>{a.quantite} • {a.horaire}</Text>
                   </View>
-                  {a.id ? <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'aliments', a.id)} /> : null}
+                  {a.id ? (
+                    <Row style={{ gap: 4 }}>
+                      <IconButton title="✏️" color={colors.yellow} bg="#fef9c3" onPress={() => openEdit(a)} />
+                      <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'aliments', a.id)} />
+                    </Row>
+                  ) : null}
                 </View>
               ))
             ) : (
@@ -100,16 +128,20 @@ export default function AlimentScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', marginBottom: spacing.lg, color: colors.text },
+  animalHeader: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#f0fdf4', borderBottomWidth: 1, borderBottomColor: '#d1fae5' },
+  animalPhoto: { width: 40, height: 40, borderRadius: 20, marginRight: 10 },
+  animalPhotoFallback: { backgroundColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
+  animalName: { fontWeight: '700', fontSize: 16, color: '#064e3b' },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: spacing.lg, color: '#1f2937' },
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#e5e7eb',
   },
-  itemTitle: { fontWeight: '600', color: colors.text },
-  itemMeta: { color: colors.textLight, fontSize: 14, marginTop: 2 },
-  empty: { color: colors.textMuted },
+  itemTitle: { fontWeight: '600', color: '#1f2937' },
+  itemMeta: { color: '#6b7280', fontSize: 14, marginTop: 2 },
+  empty: { color: '#9ca3af' },
 });

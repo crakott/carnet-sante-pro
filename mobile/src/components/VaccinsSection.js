@@ -1,25 +1,54 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Card, Button, Field, Input, Select, IconButton } from './ui';
+import { Card, Button, Field, Input, Select, IconButton, Row } from './ui';
 import TraitementSection from './TraitementSection';
 import { colors, spacing } from '../theme';
 import { formatDate, todayStr, addDays } from '../utils/dates';
 import { VACCINS_COURANTS } from '../constants';
 
-// Vaccins + Antiparasitaires + Vermifuges for one animal (mirrors VaccinsTab in the web app)
-export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem }) {
-  const [showForm, setShowForm] = useState(false);
-  const [nom, setNom] = useState('');
-  const [date, setDate] = useState(todayStr());
+const RAPPEL_INTERVALS = [
+  { label: '6 mois', value: 182 },
+  { label: '1 an', value: 365 },
+  { label: '18 mois', value: 548 },
+  { label: '2 ans', value: 730 },
+  { label: '3 ans', value: 1095 },
+];
 
-  const handleAdd = () => {
-    if (nom && date) {
-      const rappel = addDays(date, 365);
-      addAnimalItem(animal, 'vaccins', { nom, date, rappel });
-      setNom('');
-      setDate(todayStr());
-      setShowForm(false);
+const emptyForm = { nom: '', date: todayStr(), intervalDays: 365 };
+
+export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowForm(true);
+  };
+
+  const openEdit = (v) => {
+    setEditingId(v.id);
+    const intervalDays = v.rappel
+      ? Math.round((new Date(v.rappel) - new Date(v.date)) / 86400000)
+      : 365;
+    setForm({ nom: v.nom, date: v.date, intervalDays });
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    if (!form.nom || !form.date) return;
+    const rappel = addDays(form.date, form.intervalDays);
+    if (editingId) {
+      updateAnimalItem(animal, 'vaccins', editingId, { nom: form.nom, date: form.date, rappel });
+    } else {
+      addAnimalItem(animal, 'vaccins', { nom: form.nom, date: form.date, rappel });
     }
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const vaccinsCourants = VACCINS_COURANTS[animal.espece] || [];
@@ -30,24 +59,36 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
 
       {showForm ? (
         <Card style={{ borderWidth: 2, borderColor: colors.primary }}>
-          {vaccinsCourants.length > 0 && (
+          {!editingId && vaccinsCourants.length > 0 && (
             <Field label="Vaccins courants">
-              <Select selectedValue="" onValueChange={(v) => v && setNom(v)} placeholder="Choisir un vaccin courant" items={vaccinsCourants.map((v) => ({ label: v, value: v }))} />
+              <Select
+                selectedValue=""
+                onValueChange={(v) => v && set('nom', v)}
+                placeholder="Choisir un vaccin courant"
+                items={vaccinsCourants.map((v) => ({ label: v, value: v }))}
+              />
             </Field>
           )}
           <Field label="Nom du vaccin">
-            <Input value={nom} onChangeText={setNom} placeholder="Nom du vaccin" />
+            <Input value={form.nom} onChangeText={(v) => set('nom', v)} placeholder="Nom du vaccin" />
           </Field>
-          <Field label="Date" hint="Le rappel sera calculé automatiquement 1 an après la date du vaccin.">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+          <Field label="Date">
+            <Input value={form.date} onChangeText={(v) => set('date', v)} placeholder="AAAA-MM-JJ" />
           </Field>
-          <View style={styles.actions}>
-            <Button title="➕ Ajouter" onPress={handleAdd} style={{ flex: 1 }} />
+          <Field label="Intervalle de rappel">
+            <Select
+              selectedValue={form.intervalDays}
+              onValueChange={(v) => set('intervalDays', v)}
+              items={RAPPEL_INTERVALS.map((r) => ({ label: r.label, value: r.days || r.value }))}
+            />
+          </Field>
+          <Row style={{ gap: spacing.sm }}>
+            <Button title={editingId ? '✏️ Modifier' : '➕ Ajouter'} onPress={handleSave} style={{ flex: 1 }} />
             <Button title="Annuler" onPress={() => setShowForm(false)} color={colors.border} textColor={colors.text} style={{ flex: 1 }} />
-          </View>
+          </Row>
         </Card>
       ) : (
-        <Button title="➕ Ajouter un vaccin" onPress={() => setShowForm(true)} style={{ marginBottom: spacing.lg }} />
+        <Button title="➕ Ajouter un vaccin" onPress={openAdd} style={{ marginBottom: spacing.lg }} />
       )}
 
       <Card>
@@ -56,9 +97,17 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
             <View key={v.id || i} style={styles.item}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemTitle}>{v.nom}</Text>
-                <Text style={styles.itemMeta}>Fait: {formatDate(v.date)}{v.rappel ? ` | Rappel: ${formatDate(v.rappel)}` : ''}</Text>
+                <Text style={styles.itemMeta}>
+                  Fait : {formatDate(v.date)}
+                  {v.rappel ? ` | Rappel : ${formatDate(v.rappel)}` : ''}
+                </Text>
               </View>
-              {v.id ? <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'vaccins', v.id)} /> : null}
+              {v.id ? (
+                <Row style={{ gap: 4 }}>
+                  <IconButton title="✏️" color={colors.primary} bg={colors.greenLight} onPress={() => openEdit(v)} />
+                  <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'vaccins', v.id)} />
+                </Row>
+              ) : null}
             </View>
           ))
         ) : (
@@ -73,6 +122,7 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
         items={animal.antiparasitaires}
         onAdd={(item) => addAnimalItem(animal, 'antiparasitaires', item)}
         onDelete={(id) => deleteAnimalItem(animal, 'antiparasitaires', id)}
+        onUpdate={(id, updates) => updateAnimalItem(animal, 'antiparasitaires', id, updates)}
       />
 
       <TraitementSection
@@ -82,6 +132,7 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
         items={animal.vermifuges}
         onAdd={(item) => addAnimalItem(animal, 'vermifuges', item)}
         onDelete={(id) => deleteAnimalItem(animal, 'vermifuges', id)}
+        onUpdate={(id, updates) => updateAnimalItem(animal, 'vermifuges', id, updates)}
       />
     </View>
   );
@@ -89,7 +140,6 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
 
 const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', marginBottom: spacing.lg, color: colors.text },
-  actions: { flexDirection: 'row', gap: spacing.sm },
   item: {
     flexDirection: 'row',
     justifyContent: 'space-between',

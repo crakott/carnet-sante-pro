@@ -5,22 +5,42 @@ import PoidsChart from './PoidsChart';
 import { colors, spacing } from '../theme';
 import { formatDate, todayStr } from '../utils/dates';
 
-// Suivi du poids pour un animal (mirrors PoidsTab in the web app)
-export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem }) {
+export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const today = todayStr();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [valeur, setValeur] = useState('');
   const [date, setDate] = useState(today);
 
   const poids = animal.poids || [];
   const sortedDesc = [...poids].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const handleAdd = () => {
+  const openAdd = () => {
+    setEditingId(null);
+    setValeur('');
+    setDate(today);
+    setShowForm(true);
+  };
+
+  const openEdit = (p) => {
+    setEditingId(p.id);
+    setValeur(String(p.valeur));
+    setDate(p.date);
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
     const val = parseFloat(valeur);
-    if (val) {
+    if (!val) return;
+    if (editingId) {
+      updateAnimalItem(animal, 'poids', editingId, { valeur: val, date });
+    } else {
       addAnimalItem(animal, 'poids', { valeur: val, date });
-      setValeur(''); setDate(today); setShowForm(false);
     }
+    setValeur('');
+    setDate(today);
+    setShowForm(false);
+    setEditingId(null);
   };
 
   return (
@@ -36,12 +56,12 @@ export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem }
             <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
           </Field>
           <Row style={{ gap: spacing.sm }}>
-            <Button title="➕ Ajouter" onPress={handleAdd} color={colors.primary} style={{ flex: 1 }} />
+            <Button title={editingId ? '✏️ Modifier' : '➕ Ajouter'} onPress={handleSave} color={colors.primary} style={{ flex: 1 }} />
             <Button title="Annuler" onPress={() => setShowForm(false)} color={colors.border} textColor={colors.text} style={{ flex: 1 }} />
           </Row>
         </Card>
       ) : (
-        <Button title="➕ Ajouter une mesure" onPress={() => setShowForm(true)} style={{ marginBottom: spacing.lg }} />
+        <Button title="➕ Ajouter une mesure" onPress={openAdd} style={{ marginBottom: spacing.lg }} />
       )}
 
       {poids.length >= 2 ? (
@@ -75,7 +95,12 @@ export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem }
               <Text style={styles.itemValue}>{p.valeur} kg</Text>
               <Text style={styles.itemMeta}>{formatDate(p.date)}</Text>
             </View>
-            {p.id ? <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'poids', p.id)} /> : null}
+            {p.id ? (
+              <Row style={{ gap: 4 }}>
+                <IconButton title="✏️" color={colors.primary} bg={colors.greenLight} onPress={() => openEdit(p)} />
+                <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'poids', p.id)} />
+              </Row>
+            ) : null}
           </Card>
         ))
       ) : (

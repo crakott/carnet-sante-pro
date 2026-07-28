@@ -10,8 +10,9 @@ import { formatDate, todayStr } from '../utils/dates';
 import { DOCUMENT_TYPES, MAX_DOCUMENT_PDF_SIZE } from '../constants';
 
 // Documents (carnet de vaccination, ordonnances, certificats...) for one animal (mirrors DocumentsTab in the web app)
-export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalItem }) {
+export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [type, setType] = useState('vaccin');
   const [nom, setNom] = useState('');
   const [date, setDate] = useState(todayStr());
@@ -19,12 +20,23 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
   const [fileError, setFileError] = useState('');
 
   const resetForm = () => {
+    setEditingId(null);
     setType('vaccin');
     setNom('');
     setDate(todayStr());
     setPhotoBase64('');
     setFileError('');
     setShowForm(false);
+  };
+
+  const openEdit = (d) => {
+    setEditingId(d.id);
+    setType(d.type || 'vaccin');
+    setNom(d.nom || '');
+    setDate(d.date || todayStr());
+    setPhotoBase64('');
+    setFileError('');
+    setShowForm(true);
   };
 
   const pickPhoto = async () => {
@@ -58,8 +70,13 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
     }
   };
 
-  const handleAdd = () => {
-    if (photoBase64) {
+  const handleSave = () => {
+    if (editingId) {
+      const updates = { type, nom, date };
+      if (photoBase64) updates.photo = photoBase64;
+      updateAnimalItem(animal, 'documents', editingId, updates);
+      resetForm();
+    } else if (photoBase64) {
       addAnimalItem(animal, 'documents', { type, nom, date, photo: photoBase64 });
       resetForm();
     }
@@ -116,14 +133,17 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
           </Field>
 
           {fileError ? <Text style={styles.error}>{fileError}</Text> : null}
+          {editingId && !photoBase64 ? (
+            <Text style={styles.editHint}>📎 Laissez vide pour conserver le fichier existant</Text>
+          ) : null}
 
           <Row style={{ gap: spacing.sm }}>
-            <Button title="➕ Ajouter" onPress={handleAdd} color={colors.indigo} style={{ flex: 1 }} />
+            <Button title={editingId ? '✏️ Modifier' : '➕ Ajouter'} onPress={handleSave} color={colors.indigo} style={{ flex: 1 }} />
             <Button title="Annuler" onPress={resetForm} color={colors.border} textColor={colors.text} style={{ flex: 1 }} />
           </Row>
         </Card>
       ) : (
-        <Button title="➕ Ajouter un document" onPress={() => setShowForm(true)} color={colors.indigo} style={{ marginBottom: spacing.lg }} />
+        <Button title="➕ Ajouter un document" onPress={resetForm} color={colors.indigo} style={{ marginBottom: spacing.lg }} />
       )}
 
       {documents.length > 0 ? (
@@ -149,7 +169,10 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
                   </View>
                 ) : null}
               </View>
-              <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'documents', d.id)} />
+              <Row style={{ gap: 4 }}>
+                <IconButton title="✏️" color={colors.indigo} bg={colors.indigoLight} onPress={() => openEdit(d)} />
+                <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'documents', d.id)} />
+              </Row>
             </View>
           </Card>
         ))
@@ -172,4 +195,5 @@ const styles = StyleSheet.create({
   empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.xl },
   vetBadge: { alignSelf: 'flex-start', marginTop: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: 999, backgroundColor: colors.pillGreenBg },
   vetBadgeText: { fontSize: 11, fontWeight: '700', color: colors.pillGreenText },
+  editHint: { fontSize: 12, color: colors.textLight, marginBottom: spacing.sm },
 });

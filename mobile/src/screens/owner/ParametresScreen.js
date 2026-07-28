@@ -6,7 +6,7 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { Screen, Field, Input, Button } from '../../components/ui';
 import { scheduleAnimalNotifications, cancelAllNotifications } from '../../utils/notifications';
