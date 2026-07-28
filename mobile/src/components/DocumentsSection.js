@@ -43,11 +43,17 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
     setFileError('');
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { setFileError("Permission d'accès aux photos refusée."); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      base64: true,
-      quality: 0.6,
-    });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], base64: true, quality: 0.6 });
+    if (!result.canceled && result.assets?.[0]?.base64) {
+      setPhotoBase64(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
+  };
+
+  const takePhoto = async () => {
+    setFileError('');
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { setFileError("Permission d'accès à la caméra refusée."); return; }
+    const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 });
     if (!result.canceled && result.assets?.[0]?.base64) {
       setPhotoBase64(`data:image/jpeg;base64,${result.assets[0].base64}`);
     }
@@ -117,7 +123,8 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
 
           <Field label={`📷 Scanner une photo ou 📄 importer un PDF (max ${Math.round(MAX_DOCUMENT_PDF_SIZE / 1024)} Ko)`}>
             <Row style={{ gap: spacing.sm }}>
-              <Button title="📷 Photo" onPress={pickPhoto} color={colors.indigo} outline style={{ flex: 1 }} />
+              <Button title="📸 Appareil" onPress={takePhoto} color={colors.indigo} outline style={{ flex: 1 }} />
+              <Button title="🖼️ Galerie" onPress={pickPhoto} color={colors.indigo} outline style={{ flex: 1 }} />
               <Button title="📄 PDF" onPress={pickPdf} color={colors.indigo} outline style={{ flex: 1 }} />
             </Row>
             {photoBase64 ? (

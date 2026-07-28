@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -51,6 +51,7 @@ export default function AccueilScreen() {
   const [newAnimal, setNewAnimal] = useState(emptyAnimal);
   const [editingAnimal, setEditingAnimal] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [search, setSearch] = useState('');
 
   const lastOpenAdd = useRef(null);
   useEffect(() => {
@@ -68,6 +69,9 @@ export default function AccueilScreen() {
   }, []);
 
   const reminders = getReminders(animals, reminderSettings);
+  const filteredAnimals = search.trim()
+    ? animals.filter((a) => a.nom?.toLowerCase().includes(search.toLowerCase()))
+    : animals;
 
   const handleAddAnimal = async () => {
     if (newAnimal.nom && newAnimal.espece) {
@@ -109,9 +113,20 @@ export default function AccueilScreen() {
         </Card>
       )}
 
-      {animals.length > 0 && (
+      {animals.length > 3 && (
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="🔍 Rechercher un animal..."
+          placeholderTextColor={colors.textMuted}
+          clearButtonMode="while-editing"
+        />
+      )}
+
+      {filteredAnimals.length > 0 && (
         <ListGroup>
-          {animals.map((animal, i) => {
+          {filteredAnimals.map((animal, i) => {
             const age = computeAge(animal.dateNaissance);
             const subtitle = [animal.race, age].filter(Boolean).join(' — ');
             const animalReminders = reminders.filter((r) => r.animal === animal.nom);
@@ -121,7 +136,7 @@ export default function AccueilScreen() {
             return (
               <ListRow
                 key={animal.id}
-                last={i === animals.length - 1}
+                last={i === filteredAnimals.length - 1}
                 left={<Avatar animal={animal} size={44} />}
                 title={animal.nom}
                 subtitle={subtitle}
@@ -271,6 +286,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text,
     marginBottom: 4,
+  },
+  searchInput: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.inputBorder,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: colors.text,
+    marginBottom: spacing.md,
   },
   reminderLink: {
     color: colors.primaryDark,

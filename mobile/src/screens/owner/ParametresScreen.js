@@ -140,6 +140,36 @@ export default function ParametresScreen() {
   const [notifLoading, setNotifLoading] = useState(false);
   const [scheduling, setScheduling] = useState(false);
 
+  // Emergency contacts
+  const [urgenceContacts, setUrgenceContacts] = useState([]);
+  const [newContactNom, setNewContactNom] = useState('');
+  const [newContactTel, setNewContactTel] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    getDoc(doc(db, 'settings', user.uid)).then((snap) => {
+      if (snap.exists()) setUrgenceContacts(snap.data().urgenceContacts || []);
+    }).catch(() => {});
+  }, [user]);
+
+  const saveUrgenceContacts = async (contacts) => {
+    setUrgenceContacts(contacts);
+    if (!user) return;
+    await setDoc(doc(db, 'settings', user.uid), { urgenceContacts: contacts }, { merge: true });
+  };
+
+  const addUrgenceContact = () => {
+    if (!newContactNom.trim() || !newContactTel.trim()) return;
+    const updated = [...urgenceContacts, { id: Date.now().toString(), nom: newContactNom.trim(), tel: newContactTel.trim() }];
+    saveUrgenceContacts(updated);
+    setNewContactNom('');
+    setNewContactTel('');
+  };
+
+  const deleteUrgenceContact = (id) => {
+    saveUrgenceContacts(urgenceContacts.filter((c) => c.id !== id));
+  };
+
   // Household section states
   const [householdMembers, setHouseholdMembers] = useState(null);
   const [householdCode, setHouseholdCode] = useState('');
@@ -422,6 +452,28 @@ export default function ParametresScreen() {
         ))}
       </AccordionCard>
 
+      <AccordionCard id="urgence" icon="🆘" iconBg="#fee2e2" title="Contacts d'urgence" expanded={expanded} onToggle={setExpanded}>
+        <Text style={styles.hint}>Enregistrez vos contacts d'urgence (véto habituel, antipoison, pension…)</Text>
+        {urgenceContacts.map((c) => (
+          <View key={c.id} style={styles.contactRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contactNom}>{c.nom}</Text>
+              <Text style={styles.contactTel} onPress={() => Linking.openURL(`tel:${c.tel}`)}>{c.tel}</Text>
+            </View>
+            <TouchableOpacity onPress={() => deleteUrgenceContact(c.id)} style={styles.contactDelete}>
+              <Text style={{ color: colors.red }}>🗑️</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+        <Field label="Nom du contact">
+          <Input value={newContactNom} onChangeText={setNewContactNom} placeholder="ex. Clinique Saint-Germain" />
+        </Field>
+        <Field label="Téléphone">
+          <Input value={newContactTel} onChangeText={setNewContactTel} placeholder="06 XX XX XX XX" keyboardType="phone-pad" />
+        </Field>
+        <Button title="➕ Ajouter" onPress={addUrgenceContact} color="#ef4444" disabled={!newContactNom.trim() || !newContactTel.trim()} />
+      </AccordionCard>
+
       <AccordionCard id="suggestions" icon="💡" iconBg={colors.yellowLight} title="Suggestions" expanded={expanded} onToggle={setExpanded}>
         <Text style={styles.hint}>Une idée pour améliorer l'application ? Un bug à signaler ? Écrivez-nous !</Text>
         <Input
@@ -626,5 +678,29 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: 4,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: spacing.xs,
+  },
+  contactNom: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  contactTel: {
+    fontSize: 13,
+    color: colors.primary,
+    marginTop: 2,
+    textDecorationLine: 'underline',
+  },
+  contactDelete: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: colors.redLight,
   },
 });

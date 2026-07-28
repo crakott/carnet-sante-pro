@@ -132,6 +132,22 @@ export const scheduleAnimalNotifications = async (animals, settings) => {
       });
       count++;
     }
+
+    // Rendez-vous vétérinaires — rappel J-1
+    for (const r of (animal.rdvs || [])) {
+      const trigger = buildTriggerDate(r.date, 1);
+      if (!trigger || trigger <= now) continue;
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `📅 RDV demain — ${animal.nom}`,
+          body: `${r.motif}${r.heure ? ` à ${r.heure}` : ''}${r.lieu ? ` • ${r.lieu}` : ''}`,
+          sound: true,
+          data: { type: 'rdv', animalId: animal.id },
+        },
+        trigger: { date: trigger, channelId: CHANNEL_ID },
+      });
+      count++;
+    }
   }
 
   return count;
