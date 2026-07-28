@@ -4895,30 +4895,34 @@
                         </a>
                     </div>
 
-                    {/* Cliniques d'urgence par ville */}
-                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 10px' }}>Cliniques d\'urgence 24h/24 par ville</p>
-                    {URGENCES_VILLES.map(g => (
-                        <div key={g.ville} style={{ marginBottom: '8px' }}>
-                            <button onClick={() => toggle('v' + g.ville)} style={{ width: '100%', background: 'white', border: '1px solid #e5e7eb', borderRadius: openSection === 'v' + g.ville ? '10px 10px 0 0' : '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
-                                <span style={{ fontWeight: '700', fontSize: '14px' }}>🏙️ {g.ville}</span>
-                                <span style={{ fontSize: '16px', color: '#9ca3af' }}>{openSection === 'v' + g.ville ? '▲' : '▼'}</span>
-                            </button>
-                            {openSection === 'v' + g.ville && (
-                                <div style={{ border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
-                                    {g.cliniques.map((c, i) => (
-                                        <div key={i} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: 'white' }}>
-                                            <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>{c.nom}</div>
-                                            {c.adresse ? <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>📍 {c.adresse}</div> : null}
-                                            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>🕐 {c.horaires}</div>
-                                            <a href={`tel:${c.tel.replace(/\s/g, '')}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#d1fae5', color: '#059669', borderRadius: '6px', textDecoration: 'none', fontWeight: '600', fontSize: '13px' }}>
-                                                📞 {c.tel}
-                                            </a>
+                    {/* Cliniques d'urgence par ville — un seul accordéon */}
+                    <div style={{ marginBottom: '8px' }}>
+                        <button onClick={() => toggle('cliniques_villes')} style={{ width: '100%', background: 'white', border: '1px solid #e5e7eb', borderRadius: openSection === 'cliniques_villes' ? '10px 10px 0 0' : '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
+                            <span style={{ fontWeight: '700', fontSize: '14px' }}>🏙️ Cliniques d'urgence par ville <span style={{ fontWeight: '400', color: '#9ca3af', fontSize: '12px' }}>({URGENCES_VILLES.length} villes)</span></span>
+                            <span style={{ fontSize: '16px', color: '#9ca3af' }}>{openSection === 'cliniques_villes' ? '▲' : '▼'}</span>
+                        </button>
+                        {openSection === 'cliniques_villes' && (
+                            <div style={{ border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden', background: 'white' }}>
+                                {URGENCES_VILLES.map((g, gi) => (
+                                    <div key={g.ville}>
+                                        <div style={{ padding: '10px 16px 6px', background: '#f9fafb', borderTop: gi > 0 ? '1px solid #e5e7eb' : 'none' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🏙️ {g.ville}</span>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                                        {g.cliniques.map((c, i) => (
+                                            <div key={i} style={{ padding: '12px 16px', borderTop: '1px solid #f3f4f6' }}>
+                                                <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '3px' }}>{c.nom}</div>
+                                                {c.adresse ? <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '3px' }}>📍 {c.adresse}</div> : null}
+                                                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>🕐 {c.horaires}</div>
+                                                <a href={`tel:${c.tel.replace(/\s/g, '')}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#d1fae5', color: '#059669', borderRadius: '6px', textDecoration: 'none', fontWeight: '600', fontSize: '13px' }}>
+                                                    📞 {c.tel}
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Premiers secours */}
                     <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '24px 4px 10px' }}>Premiers secours</p>
