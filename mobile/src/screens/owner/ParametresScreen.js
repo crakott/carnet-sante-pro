@@ -8,6 +8,7 @@ import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { URGENCES_OFFICIELS } from '../../constants';
 import { Screen, Field, Input, Button } from '../../components/ui';
 import { scheduleAnimalNotifications, cancelAllNotifications } from '../../utils/notifications';
 import { useAuth } from '../../context/AuthContext';
@@ -454,6 +455,22 @@ export default function ParametresScreen() {
 
       <AccordionCard id="urgence" icon="🆘" iconBg="#fee2e2" title="Contacts d'urgence" expanded={expanded} onToggle={setExpanded}>
         <Text style={styles.hint}>Enregistrez vos contacts d'urgence (véto habituel, antipoison, pension…)</Text>
+        <Text style={styles.sectionLabel}>Numéros officiels</Text>
+        {URGENCES_OFFICIELS.map((c) => (
+          <View key={c.id} style={[styles.contactRow, { backgroundColor: c.couleurBg, marginBottom: spacing.xs }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contactNom}>{c.nom}</Text>
+              <Text style={[styles.contactTel, { color: c.couleur }]} onPress={() => Linking.openURL(`tel:${c.telBrut}`)}>
+                {c.telAffiche}
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 2 }}>{c.info}</Text>
+            </View>
+            <View style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.7)' }}>
+              <Text style={{ fontSize: 10, color: c.couleur, fontWeight: '700' }}>Officiel</Text>
+            </View>
+          </View>
+        ))}
+        {urgenceContacts.length > 0 && <Text style={[styles.sectionLabel, { marginTop: spacing.sm }]}>Mes contacts</Text>}
         {urgenceContacts.map((c) => (
           <View key={c.id} style={styles.contactRow}>
             <View style={{ flex: 1 }}>

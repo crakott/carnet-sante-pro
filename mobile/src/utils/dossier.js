@@ -32,6 +32,7 @@ export const DOSSIER_CARDS = [
   { id: 'Documents', emoji: '📄', label: 'Documents', color: colors.indigo, bg: colors.indigoLight, group: 'Quotidien' },
   { id: 'Galerie', emoji: '📷', label: 'Photos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
   { id: 'Videos', emoji: '🎥', label: 'Vidéos', color: colors.pink, bg: colors.pinkLight, group: 'Quotidien' },
+  { id: 'Securite', emoji: '🚨', label: 'Sécurité & Urgences', color: colors.red, bg: colors.redLight, group: 'Quotidien' },
   { id: 'Planning', emoji: '📅', label: 'Rendez-vous', color: colors.primary, bg: colors.greenLight, group: 'Administratif' },
   { id: 'Budget', emoji: '💰', label: 'Budget', color: colors.yellow, bg: colors.yellowLight, group: 'Administratif' },
 ];
@@ -94,6 +95,8 @@ export const getDossierCardStatus = (animal, cardId, videoCount = 0) => {
         + (animal.medicaments || []).length + (animal.poids || []).length + (animal.observations || []).length;
       return n > 0 ? { text: `${n} souvenir(s)`, iconColor: colors.pink } : { text: 'Aucun souvenir', ...none };
     }
+    case 'Securite':
+      return { text: 'Urgences & premiers secours', iconColor: colors.red };
     case 'Planning': {
       const rdvs = animal.rdvs || [];
       const now = new Date();

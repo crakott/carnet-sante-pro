@@ -161,53 +161,28 @@ export default function VeterinairesScreen() {
   };
 
   const handleEmergency = async () => {
-    // Try to find vets with Urgences specialty
     if (nearbyVets && nearbyVets.length > 0) {
       const urgences = nearbyVets.filter((v) => (v.specialites || []).includes('Urgences'));
-      if (urgences.length > 0) {
-        const vet = urgences[0];
-        Alert.alert(
-          '🚨 Urgence vétérinaire',
-          `${vet.nom}\n${vet.telephone ? `📞 ${vet.telephone}` : ''}`,
-          [
-            { text: 'Annuler', style: 'cancel' },
-            vet.telephone ? { text: '📞 Appeler', onPress: () => Linking.openURL(`tel:${vet.telephone}`) } : null,
-          ].filter(Boolean)
-        );
-        return;
-      }
-    }
-    // From example vets
-    const urgences = VETERINAIRES.filter((v) => (v.specialites || []).includes('Urgences'));
-    if (urgences.length > 0 && !userPos) {
-      const vet = urgences[0];
+      const vet = urgences[0] || nearbyVets[0];
       Alert.alert(
         '🚨 Urgence vétérinaire',
-        `${vet.nom}\n${vet.telephone ? `📞 ${vet.telephone}` : ''}`,
+        `${vet.nom}${vet.telephone ? `\n📞 ${vet.telephone}` : ''}`,
         [
           { text: 'Annuler', style: 'cancel' },
-          vet.telephone ? { text: '📞 Appeler', onPress: () => Linking.openURL(`tel:${vet.telephone}`) } : null,
+          { text: '📞 3115 (gratuit)', onPress: () => Linking.openURL('tel:3115') },
+          vet.telephone ? { text: '📞 Appeler la clinique', onPress: () => Linking.openURL(`tel:${vet.telephone}`) } : null,
         ].filter(Boolean)
       );
       return;
     }
-    // Fallback: open Google Maps
-    if (userPos) {
-      Linking.openURL(`https://www.google.com/maps/search/urgence+vétérinaire/@${userPos.lat},${userPos.lng},13z`);
-    } else {
-      // Try to geolocate first
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        try {
-          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          Linking.openURL(`https://www.google.com/maps/search/urgence+vétérinaire/@${pos.coords.latitude},${pos.coords.longitude},13z`);
-        } catch {
-          Linking.openURL(`https://www.google.com/maps/search/urgence+vétérinaire`);
-        }
-      } else {
-        Linking.openURL(`https://www.google.com/maps/search/urgence+vétérinaire`);
-      }
-    }
+    Alert.alert(
+      '🚨 Urgence vétérinaire',
+      '3115 — numéro gratuit, 24h/24, 7j/7\n\nCentres antipoison :\n• CAPAE (Nantes) : 02 40 68 77 40\n• CNITV (Lyon) : 04 78 87 10 40',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: '📞 Appeler le 3115', onPress: () => Linking.openURL('tel:3115') },
+      ]
+    );
   };
 
   const handleAssign = (animal, vet) => {
@@ -258,6 +233,14 @@ export default function VeterinairesScreen() {
           color={colors.darkBlue}
           style={{ marginBottom: spacing.md }}
         />
+      ) : null}
+
+      {showFallback ? (
+        <View style={styles.demoInfo}>
+          <Text style={styles.demoInfoText}>
+            📋 Sélection de cliniques d'urgence 24h/7j de référence en France — géolocalisez-vous pour trouver les vétérinaires autour de vous
+          </Text>
+        </View>
       ) : null}
 
       {vetsStatus !== 'loading' && vets.map((vet) => (
@@ -404,4 +387,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#374151',
   },
+  demoInfo: { backgroundColor: '#eff6ff', borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: '#bfdbfe' },
+  demoInfoText: { fontSize: 12, color: '#1d4ed8', lineHeight: 17 },
 });
