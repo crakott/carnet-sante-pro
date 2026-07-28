@@ -868,6 +868,13 @@
         const openDossierReport = (animal) => {
             const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
             const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const chirurgies = [...(animal.chirurgies || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const antiparasitaires = [...(animal.antiparasitaires || [])].sort((a, b) => new Date(b.prochainTraitement || b.dernierTraitement) - new Date(a.prochainTraitement || a.dernierTraitement));
+            const vermifuges = [...(animal.vermifuges || [])].sort((a, b) => new Date(b.prochainTraitement || b.dernierTraitement) - new Date(a.prochainTraitement || a.dernierTraitement));
+            const rdvs = [...(animal.rdvs || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const poids = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const budget = (animal.budget || []).reduce((s, b) => s + (parseFloat(b.montant) || 0), 0);
+            const generatedDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
             const win = window.open('', '_blank');
             if (!win) return;
 
@@ -881,6 +888,30 @@
                     </div>`).join('')
                 : '<p>Aucune observation enregistrée</p>';
 
+            const chirHtml = chirurgies.length > 0
+                ? chirurgies.map(c => `<div class="obs"><p class="obs-head"><strong>${escapeHtml(c.nom)}</strong> — ${escapeHtml(c.date)}</p>${c.notes ? `<p>${escapeHtml(c.notes)}</p>` : ''}</div>`).join('')
+                : '<p>Aucune chirurgie enregistrée</p>';
+
+            const apHtml = antiparasitaires.length > 0
+                ? antiparasitaires.map(a => `<div class="obs"><p class="obs-head"><strong>🦟 ${escapeHtml(a.nom)}</strong></p><p>Dernier : ${escapeHtml(a.dernierTraitement)} — Prochain : ${escapeHtml(a.prochainTraitement)}</p></div>`).join('')
+                : '<p>Aucun antiparasitaire enregistré</p>';
+
+            const vfHtml = vermifuges.length > 0
+                ? vermifuges.map(v => `<div class="obs"><p class="obs-head"><strong>🪱 ${escapeHtml(v.nom)}</strong></p><p>Dernier : ${escapeHtml(v.dernierTraitement)} — Prochain : ${escapeHtml(v.prochainTraitement)}</p></div>`).join('')
+                : '<p>Aucun vermifuge enregistré</p>';
+
+            const rdvHtml = rdvs.length > 0
+                ? rdvs.map(r => `<div class="obs"><p class="obs-head"><strong>${escapeHtml(r.motif)}</strong> — ${escapeHtml(r.date)}${r.heure ? ' à ' + escapeHtml(r.heure) : ''}</p>${r.lieu ? `<p>📍 ${escapeHtml(r.lieu)}</p>` : ''}${r.notesConsultation ? `<p><em>Notes : ${escapeHtml(r.notesConsultation)}</em></p>` : ''}</div>`).join('')
+                : '<p>Aucun rendez-vous enregistré</p>';
+
+            const poidsHtml = poids.length > 0
+                ? `<table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#f3f4f6"><th style="padding:6px 10px;text-align:left">Date</th><th style="padding:6px 10px;text-align:left">Poids (kg)</th></tr>${poids.map((p, i) => `<tr style="background:${i%2?'#f9fafb':'white'}"><td style="padding:6px 10px">${escapeHtml(p.date)}</td><td style="padding:6px 10px">${escapeHtml(String(p.valeur))}</td></tr>`).join('')}</table>`
+                : '<p>Aucune pesée enregistrée</p>';
+
+            const assurHtml = animal.assurance && animal.assurance.compagnie
+                ? `<div class="obs"><p><strong>Compagnie :</strong> ${escapeHtml(animal.assurance.compagnie)}</p>${animal.assurance.numeroContrat ? `<p><strong>N° contrat :</strong> ${escapeHtml(animal.assurance.numeroContrat)}</p>` : ''}${animal.assurance.telephone ? `<p><strong>Téléphone :</strong> ${escapeHtml(animal.assurance.telephone)}</p>` : ''}${animal.assurance.dateDebut ? `<p><strong>Du</strong> ${escapeHtml(animal.assurance.dateDebut)}${animal.assurance.dateFin ? ` <strong>au</strong> ${escapeHtml(animal.assurance.dateFin)}` : ''}</p>` : ''}${animal.assurance.franchise ? `<p><strong>Franchise :</strong> ${escapeHtml(String(animal.assurance.franchise))} €</p>` : ''}${animal.assurance.plafondAnnuel ? `<p><strong>Plafond annuel :</strong> ${escapeHtml(String(animal.assurance.plafondAnnuel))} €</p>` : ''}${animal.assurance.notes ? `<p><em>${escapeHtml(animal.assurance.notes)}</em></p>` : ''}</div>`
+                : null;
+
             win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dossier santé - ${escapeHtml(animal.nom)}</title>
                 <style>
                     body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 800px; margin: 0 auto; }
@@ -891,19 +922,34 @@
                     img { max-width: 320px; display: block; margin-top: 8px; border-radius: 6px; }
                     audio { margin-top: 8px; display: block; }
                     .print-btn { padding: 10px 18px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 20px; }
+                    .stamp { font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
                     @media print { .print-btn { display: none; } }
                 </style></head>
                 <body>
                     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+                    <p class="stamp">Généré le ${generatedDate}</p>
                     <h1>🐾 Dossier santé de ${escapeHtml(animal.nom)}</h1>
                     <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
                     ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
+                    ${animal.identifiant ? `<p><strong>Identifiant :</strong> ${escapeHtml(animal.identifiant)}</p>` : ''}
                     <h2>💉 Vaccins</h2>
                     <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
-                    <h2>⚖️ Poids actuel</h2>
-                    <p>${lastWeight ? `${escapeHtml(lastWeight.valeur)} kg (mesuré le ${escapeHtml(lastWeight.date)})` : 'Non renseigné'}</p>
                     <h2>💊 Traitements en cours</h2>
                     <p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
+                    <h2>🔪 Chirurgies & interventions</h2>
+                    ${chirHtml}
+                    <h2>🦟 Antiparasitaires</h2>
+                    ${apHtml}
+                    <h2>🪱 Vermifuges</h2>
+                    ${vfHtml}
+                    <h2>📅 Rendez-vous vétérinaires</h2>
+                    ${rdvHtml}
+                    ${assurHtml ? '<h2>🛡️ Assurance</h2>' + assurHtml : ''}
+                    <h2>⚖️ Historique de poids</h2>
+                    ${poidsHtml}
+                    ${lastWeight ? `<p>Poids actuel : <strong>${escapeHtml(lastWeight.valeur)} kg</strong> (mesuré le ${escapeHtml(lastWeight.date)})</p>` : ''}
+                    <h2>💰 Budget total</h2>
+                    <p>${budget > 0 ? `${budget.toFixed(2)} €` : 'Aucune dépense enregistrée'}</p>
                     <h2>📋 Observations</h2>
                     ${obsHtml}
                 </body></html>`);
@@ -1925,6 +1971,8 @@
             { id: 'veterinaires', label: '🏥 Vétérinaires' },
             { id: 'urgences', label: '🆘 Urgences & Santé' },
             { id: 'planning', label: '📅 Planning' },
+            { id: 'calendrier', label: '📆 Calendrier' },
+            { id: 'voyage', label: '✈️ Voyage' },
             { id: 'rappels', label: '⚠️ Rappels' },
             { id: 'parametres', label: '⚙️ Paramètres' }
         ];
@@ -1951,6 +1999,8 @@
             { key: 'admin', header: 'Administratif', items: [
                 { id: 'budget', label: '💰 Budget' },
                 { id: 'planning', label: '📅 Planning' },
+                { id: 'calendrier', label: '📆 Calendrier' },
+                { id: 'voyage', label: '✈️ Voyage' },
             ]},
             { key: null, header: null, items: [
                 { id: 'veterinaires', label: '🏥 Vétérinaires' },
@@ -2256,6 +2306,10 @@
                 return <UrgencesTab setActiveTab={props.setActiveTab} />;
             } else if (activeTab === 'planning') {
                 return <PlanningTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
+            } else if (activeTab === 'calendrier') {
+                return <CalendrierTab animals={animals} />;
+            } else if (activeTab === 'voyage') {
+                return <VoyageTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} saveAnimal={saveAnimal} />;
             } else if (activeTab === 'rappels') {
                 return <RappelsTab {...props} />;
             } else if (activeTab === 'parametres') {
@@ -2466,6 +2520,9 @@
             const [videoCount, setVideoCount] = React.useState(0);
             const [email, setEmail] = React.useState('');
             const [shareLinkCopied, setShareLinkCopied] = React.useState(false);
+            const [editAssurance, setEditAssurance] = React.useState(false);
+            const emptyAssurance = { compagnie: '', numeroContrat: '', telephone: '', dateDebut: '', dateFin: '', franchise: '', plafondAnnuel: '', notes: '' };
+            const [assuranceForm, setAssuranceForm] = React.useState(animal.assurance || emptyAssurance);
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
@@ -2565,6 +2622,65 @@
                             </div>
                         )}
                     </div>
+
+                    {(() => {
+                        const a = animal.assurance || {};
+                        const renewalWarning = (() => {
+                            if (!a.dateFin) return null;
+                            const days = Math.ceil((new Date(a.dateFin) - new Date()) / 86400000);
+                            return days >= 0 && days <= 30 ? days : null;
+                        })();
+                        return (
+                            <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h4 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>🛡️ Assurance animale</h4>
+                                    <button onClick={() => { setAssuranceForm(animal.assurance || emptyAssurance); setEditAssurance(e => !e); }} style={{ padding: '4px 10px', background: '#f3f4f6', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                        {editAssurance ? 'Annuler' : (a.compagnie ? '✏️ Modifier' : '➕ Ajouter')}
+                                    </button>
+                                </div>
+                                {renewalWarning !== null && (
+                                    <div style={{ background: '#fef3c7', color: '#92400e', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', marginBottom: '10px' }}>
+                                        ⚠️ Renouvellement dans {renewalWarning} jour{renewalWarning !== 1 ? 's' : ''} !
+                                    </div>
+                                )}
+                                {editAssurance ? (
+                                    <div style={{ display: 'grid', gap: '10px' }}>
+                                        <input type="text" placeholder="Compagnie d\'assurance" value={assuranceForm.compagnie} onChange={e => setAssuranceForm(f => ({ ...f, compagnie: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <input type="text" placeholder="N° de contrat" value={assuranceForm.numeroContrat} onChange={e => setAssuranceForm(f => ({ ...f, numeroContrat: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <input type="tel" placeholder="Téléphone assistance" value={assuranceForm.telephone} onChange={e => setAssuranceForm(f => ({ ...f, telephone: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <div>
+                                                <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Début contrat</label>
+                                                <input type="date" value={assuranceForm.dateDebut} onChange={e => setAssuranceForm(f => ({ ...f, dateDebut: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Fin / renouvellement</label>
+                                                <input type="date" value={assuranceForm.dateFin} onChange={e => setAssuranceForm(f => ({ ...f, dateFin: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }} />
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <input type="number" placeholder="Franchise (€)" value={assuranceForm.franchise} onChange={e => setAssuranceForm(f => ({ ...f, franchise: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                            <input type="number" placeholder="Plafond annuel (€)" value={assuranceForm.plafondAnnuel} onChange={e => setAssuranceForm(f => ({ ...f, plafondAnnuel: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        </div>
+                                        <textarea placeholder="Notes (garanties, exclusions...)" value={assuranceForm.notes} onChange={e => setAssuranceForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical' }} />
+                                        <button onClick={() => { saveAnimal({ ...animal, assurance: assuranceForm }); setEditAssurance(false); }} style={{ padding: '9px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>💾 Enregistrer</button>
+                                    </div>
+                                ) : a.compagnie ? (
+                                    <div style={{ fontSize: '13px', display: 'grid', gap: '4px' }}>
+                                        <p><strong>Compagnie :</strong> {a.compagnie}</p>
+                                        {a.numeroContrat && <p><strong>N° contrat :</strong> {a.numeroContrat}</p>}
+                                        {a.telephone && <p><strong>Tél :</strong> <a href={`tel:${a.telephone}`} style={{ color: '#10b981' }}>{a.telephone}</a></p>}
+                                        {a.dateDebut && <p><strong>Du</strong> {formatDate(a.dateDebut)}{a.dateFin ? <span> <strong>au</strong> {formatDate(a.dateFin)}</span> : ''}</p>}
+                                        {a.franchise && <p><strong>Franchise :</strong> {a.franchise} €</p>}
+                                        {a.plafondAnnuel && <p><strong>Plafond :</strong> {a.plafondAnnuel} €/an</p>}
+                                        {a.notes && <p style={{ color: '#6b7280', fontStyle: 'italic' }}>{a.notes}</p>}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '13px', color: '#9ca3af' }}>Aucune assurance enregistrée. Cliquez sur "Ajouter" pour saisir les informations de votre contrat.</p>
+                                )}
+                            </div>
+                        );
+                    })()}
                 </div>
             );
         }
@@ -4079,12 +4195,12 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
             const [showForm, setShowForm] = React.useState(false);
-            const [newRdv, setNewRdv] = React.useState({ date: todayStr, heure: '', motif: '', lieu: '', recurrence: 'aucune' });
+            const [newRdv, setNewRdv] = React.useState({ date: todayStr, heure: '', motif: '', lieu: '', recurrence: 'aucune', notesConsultation: '' });
 
             const handleAdd = () => {
                 if (newRdv.date && newRdv.motif) {
                     addAnimalItem(animal, 'rdvs', { ...newRdv });
-                    setNewRdv({ date: todayStr, heure: '', motif: '', lieu: '', recurrence: 'aucune' });
+                    setNewRdv({ date: todayStr, heure: '', motif: '', lieu: '', recurrence: 'aucune', notesConsultation: '' });
                     setShowForm(false);
                 }
             };
@@ -4107,7 +4223,8 @@
                                 { key: 'date', label: 'Date', type: 'date' },
                                 { key: 'heure', label: 'Heure', type: 'time' },
                                 { key: 'lieu', label: 'Lieu' },
-                                { key: 'recurrence', label: 'Récurrence', type: 'select', options: [{value:'aucune',label:'Aucune'},{value:'mensuelle',label:'Mensuelle'},{value:'trimestrielle',label:'Trimestrielle'},{value:'semestrielle',label:'Semestrielle'},{value:'annuelle',label:'Annuelle'}] }
+                                { key: 'recurrence', label: 'Récurrence', type: 'select', options: [{value:'aucune',label:'Aucune'},{value:'mensuelle',label:'Mensuelle'},{value:'trimestrielle',label:'Trimestrielle'},{value:'semestrielle',label:'Semestrielle'},{value:'annuelle',label:'Annuelle'}] },
+                                { key: 'notesConsultation', label: 'Notes / check-list', type: 'textarea' }
                             ]}
                             onSave={(vals) => updateAnimalItem(animal, 'rdvs', r.id, vals)}
                             onDelete={() => deleteAnimalItem(animal, 'rdvs', r.id)}
@@ -4119,6 +4236,7 @@
                             <p style={{ color: '#6b7280', fontSize: '14px' }}>📅 {formatDate(r.date)}{r.heure ? ` à ${r.heure}` : ''}</p>
                             {r.lieu && <p style={{ color: '#6b7280', fontSize: '14px' }}>📍 {r.lieu}</p>}
                             {r.recurrence && r.recurrence !== 'aucune' && <p style={{ color: '#10b981', fontSize: '13px', fontWeight: '600' }}>🔁 {r.recurrence.charAt(0).toUpperCase() + r.recurrence.slice(1)}</p>}
+                            {r.notesConsultation && <p style={{ color: '#374151', fontSize: '13px', marginTop: '4px', fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>✅ {r.notesConsultation}</p>}
                         </EditableRow>
                     </div>
                 );
@@ -4146,6 +4264,7 @@
                                     <option value="semestrielle">Tous les 6 mois</option>
                                     <option value="annuelle">Annuelle</option>
                                 </select>
+                                <textarea placeholder="✅ Check-list / notes de consultation (optionnel)" value={newRdv.notesConsultation} onChange={(e) => setNewRdv({ ...newRdv, notesConsultation: e.target.value })} rows={3} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', resize: 'vertical', fontSize: '14px' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
@@ -4344,6 +4463,217 @@
                             ))
                         )}
                     </div>
+                </div>
+            );
+        }
+
+        function CalendrierTab({ animals }) {
+            const now = new Date();
+            const [ym, setYm] = React.useState({ year: now.getFullYear(), month: now.getMonth() });
+            const { year, month } = ym;
+            const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
+            const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+            const monthName = new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startOffset = (firstDay.getDay() + 6) % 7;
+            const totalCells = startOffset + lastDay.getDate();
+            const cells = Array.from({ length: Math.ceil(totalCells / 7) * 7 });
+
+            const eventsByDate = {};
+            animals.forEach((animal, ai) => {
+                const color = COLORS[ai % COLORS.length];
+                const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
+                const addEvent = (date, label) => {
+                    if (!date) return;
+                    const key = date.slice(0, 10);
+                    if (!eventsByDate[key]) eventsByDate[key] = [];
+                    eventsByDate[key].push({ label: `${emoji} ${label}`, color });
+                };
+                (animal.vaccins || []).forEach(v => addEvent(v.prochaineDate, v.nom));
+                (animal.antiparasitaires || []).forEach(a => addEvent(a.prochainTraitement, a.nom));
+                (animal.vermifuges || []).forEach(v => addEvent(v.prochainTraitement, v.nom));
+                (animal.rdvs || []).forEach(r => addEvent(r.date, r.motif));
+                (animal.medicaments || []).filter(m => m.prochaineDate).forEach(m => addEvent(m.prochaineDate, m.nom));
+            });
+
+            const todayStr = now.toISOString().slice(0, 10);
+            const [selectedDay, setSelectedDay] = React.useState(null);
+
+            const prevMonth = () => setYm(({ year: y, month: m }) => m === 0 ? { year: y - 1, month: 11 } : { year: y, month: m - 1 });
+            const nextMonth = () => setYm(({ year: y, month: m }) => m === 11 ? { year: y + 1, month: 0 } : { year: y, month: m + 1 });
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>📆 Calendrier multi-animaux</h2>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <button onClick={prevMonth} style={{ padding: '6px 14px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '16px' }}>‹</button>
+                        <span style={{ fontWeight: '700', fontSize: '15px', textTransform: 'capitalize' }}>{monthName}</span>
+                        <button onClick={nextMonth} style={{ padding: '6px 14px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '16px' }}>›</button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
+                        {JOURS.map(j => <div key={j} style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#9ca3af', padding: '4px 0' }}>{j}</div>)}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+                        {cells.map((_, i) => {
+                            const dayNum = i - startOffset + 1;
+                            if (dayNum < 1 || dayNum > lastDay.getDate()) return <div key={i} />;
+                            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                            const events = eventsByDate[dateStr] || [];
+                            const isToday = dateStr === todayStr;
+                            const isSelected = selectedDay === dateStr;
+                            return (
+                                <div key={i} onClick={() => setSelectedDay(isSelected ? null : dateStr)} style={{ minHeight: '52px', padding: '4px', background: isSelected ? '#d1fae5' : isToday ? '#ecfdf5' : 'white', border: isToday ? '2px solid #10b981' : '1px solid #f3f4f6', borderRadius: '6px', cursor: events.length ? 'pointer' : 'default', position: 'relative' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: isToday ? '700' : '500', color: isToday ? '#10b981' : '#374151' }}>{dayNum}</span>
+                                    <div style={{ marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                        {events.slice(0, 2).map((ev, ei) => (
+                                            <div key={ei} style={{ fontSize: '10px', background: ev.color + '22', color: ev.color, borderRadius: '3px', padding: '1px 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '600' }}>{ev.label}</div>
+                                        ))}
+                                        {events.length > 2 && <div style={{ fontSize: '10px', color: '#9ca3af' }}>+{events.length - 2}</div>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {selectedDay && eventsByDate[selectedDay] && (
+                        <div style={{ marginTop: '16px', background: 'white', padding: '14px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                            <h4 style={{ fontWeight: '700', fontSize: '14px', marginBottom: '10px' }}>
+                                {new Date(selectedDay + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                            </h4>
+                            {eventsByDate[selectedDay].map((ev, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: i < eventsByDate[selectedDay].length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: ev.color, flexShrink: 0 }} />
+                                    <span style={{ fontSize: '14px' }}>{ev.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {animals.length > 0 && (
+                        <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {animals.map((a, i) => (
+                                <span key={a.id} style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '12px', background: COLORS[i % COLORS.length] + '22', color: COLORS[i % COLORS.length], fontWeight: '600' }}>
+                                    {EMOJIS_ESPECE[a.espece] || '🐾'} {a.nom}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function VoyageTab({ animal, animals, selectedAnimal, setSelectedAnimal, saveAnimal }) {
+            if (!animal) return <div style={{ padding: '20px' }}>Sélectionnez un animal</div>;
+
+            const [destination, setDestination] = React.useState(animal.voyageDestination || 'france');
+            const [notes, setNotes] = React.useState(animal.voyageNotes || '');
+            const [checked, setChecked] = React.useState(animal.voyageChecked || {});
+            const [saved, setSaved] = React.useState(false);
+
+            const LISTES = {
+                france: [
+                    { id: 'carnet', label: 'Carnet de santé / carnet vaccinal', requis: true },
+                    { id: 'puce', label: 'Puce électronique (identification)', requis: true },
+                    { id: 'traitements', label: 'Médicaments en cours avec ordonnance', requis: false },
+                    { id: 'vaccin_rage', label: 'Vaccin rage à jour', requis: false },
+                    { id: 'antiparasitaire', label: 'Antiparasitaire récent (puces/tiques)', requis: false },
+                    { id: 'gamelle', label: 'Gamelles eau et nourriture', requis: false },
+                    { id: 'litiere', label: 'Litière / coussin / cage de transport', requis: false },
+                    { id: 'jouets', label: 'Jouets et accessoires familiers', requis: false },
+                    { id: 'urgences', label: 'Numéro vétérinaire de garde', requis: false },
+                ],
+                europe: [
+                    { id: 'passeport', label: 'Passeport européen pour animaux', requis: true },
+                    { id: 'puce', label: 'Puce électronique ISO 11784/11785', requis: true },
+                    { id: 'vaccin_rage', label: 'Vaccin antirabique en cours de validité', requis: true },
+                    { id: 'attestation_sante', label: 'Certificat sanitaire (selon pays)', requis: false },
+                    { id: 'traitements', label: 'Médicaments + ordonnances traduits si besoin', requis: false },
+                    { id: 'antiparasitaire', label: 'Traitement antiparasitaire (règlement PETS)', requis: false },
+                    { id: 'assurance', label: 'Assurance voyage animaux', requis: false },
+                    { id: 'gamelle', label: 'Gamelles et nourriture habituelle', requis: false },
+                    { id: 'transport', label: 'Cage de transport homologuée (avion/train)', requis: false },
+                ],
+                international: [
+                    { id: 'passeport', label: 'Passeport européen pour animaux', requis: true },
+                    { id: 'puce', label: 'Puce ISO 11784/11785', requis: true },
+                    { id: 'vaccin_rage', label: 'Vaccin antirabique + test sérologique si requis', requis: true },
+                    { id: 'attestation_sante', label: 'Certificat sanitaire officiel visé (TRACES)', requis: true },
+                    { id: 'traitement_parasites', label: 'Traitement antiparasitaire documenté', requis: true },
+                    { id: 'permis_import', label: 'Permis d\'importation du pays de destination', requis: true },
+                    { id: 'traitements', label: 'Médicaments + ordonnances traduits', requis: false },
+                    { id: 'assurance', label: 'Assurance voyage internationale animaux', requis: false },
+                    { id: 'transport', label: 'Transport homologué (cage IATA)', requis: false },
+                    { id: 'urgences', label: 'Vétérinaires locaux (destination)', requis: false },
+                ],
+            };
+
+            const items = LISTES[destination] || LISTES.france;
+            const doneCount = items.filter(it => checked[it.id]).length;
+            const pct = Math.round((doneCount / items.length) * 100);
+
+            const toggle = (id) => setChecked(c => ({ ...c, [id]: !c[id] }));
+
+            const handleSave = () => {
+                saveAnimal({ ...animal, voyageDestination: destination, voyageNotes: notes, voyageChecked: checked });
+                setSaved(true);
+                setTimeout(() => setSaved(false), 2000);
+            };
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
+                    <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
+                    <AnimalProfileCard animal={animal} />
+
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '12px' }}>✈️ Fiche voyage</h3>
+
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                        {[['france','🇫🇷 France'],['europe','🇪🇺 Europe'],['international','🌍 International']].map(([val, lbl]) => (
+                            <button key={val} onClick={() => { setDestination(val); setChecked(animal.voyageChecked || {}); }}
+                                style={{ flex: 1, padding: '8px 4px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '12px', cursor: 'pointer', background: destination === val ? '#10b981' : '#f3f4f6', color: destination === val ? 'white' : '#374151' }}>
+                                {lbl}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '16px', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', fontWeight: '600' }}>
+                            <span>Préparation</span>
+                            <span style={{ color: pct === 100 ? '#10b981' : '#374151' }}>{doneCount}/{items.length} — {pct}%</span>
+                        </div>
+                        <div style={{ height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden', marginBottom: '16px' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? '#10b981' : '#3b82f6', borderRadius: '4px', transition: 'width 0.3s' }} />
+                        </div>
+
+                        {items.map(it => (
+                            <div key={it.id} onClick={() => toggle(it.id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }}>
+                                <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: checked[it.id] ? 'none' : '2px solid #d1d5db', background: checked[it.id] ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    {checked[it.id] && <span style={{ color: 'white', fontSize: '13px', fontWeight: '700' }}>✓</span>}
+                                </div>
+                                <span style={{ flex: 1, fontSize: '14px', color: checked[it.id] ? '#9ca3af' : '#374151', textDecoration: checked[it.id] ? 'line-through' : 'none' }}>{it.label}</span>
+                                {it.requis && <span style={{ fontSize: '10px', fontWeight: '700', background: '#fee2e2', color: '#ef4444', padding: '2px 6px', borderRadius: '4px' }}>REQUIS</span>}
+                            </div>
+                        ))}
+                    </div>
+
+                    {pct === 100 && (
+                        <div style={{ background: '#d1fae5', color: '#065f46', padding: '12px 16px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', textAlign: 'center', marginBottom: '16px' }}>
+                            ✅ Tout est prêt pour le voyage !
+                        </div>
+                    )}
+
+                    <div style={{ background: 'white', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', padding: '16px', marginBottom: '16px' }}>
+                        <label style={{ fontSize: '13px', fontWeight: '600', display: 'block', marginBottom: '6px' }}>📝 Notes de voyage</label>
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Coordonnées vétérinaire sur place, adresse hébergement, allergies, comportement en voiture..." rows={4} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
+                    </div>
+
+                    <button onClick={handleSave} style={{ width: '100%', padding: '12px', background: saved ? '#d1fae5' : '#10b981', color: saved ? '#10b981' : 'white', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                        {saved ? '✅ Sauvegardé !' : '💾 Sauvegarder la fiche voyage'}
+                    </button>
                 </div>
             );
         }
