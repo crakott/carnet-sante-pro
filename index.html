@@ -4530,36 +4530,50 @@
                         </div>
                     ))}
 
-                    {/* Aliments dangereux */}
-                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '24px 4px 10px' }}>Aliments dangereux</p>
-                    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '8px' }}>
-                        {ALIMENTS_DANGEREUX.map((a, i) => (
-                            <div key={a.nom} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: lvBg(a.level) }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '700', fontSize: '14px', color: lvColor(a.level), marginBottom: '3px' }}>🍽️ {a.nom}</div>
-                                        <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5 }}>{a.risque}</div>
+                    {/* Aliments dangereux — accordéon */}
+                    <div style={{ marginBottom: '8px' }}>
+                        <button onClick={() => toggle('aliments')} style={{ width: '100%', background: 'white', border: '1px solid #e5e7eb', borderRadius: openSection === 'aliments' ? '10px 10px 0 0' : '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
+                            <span style={{ fontWeight: '700', fontSize: '14px' }}>🍽️ Aliments dangereux <span style={{ fontWeight: '400', color: '#9ca3af', fontSize: '12px' }}>({ALIMENTS_DANGEREUX.length} aliments)</span></span>
+                            <span style={{ fontSize: '16px', color: '#9ca3af' }}>{openSection === 'aliments' ? '▲' : '▼'}</span>
+                        </button>
+                        {openSection === 'aliments' && (
+                            <div style={{ border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                                {ALIMENTS_DANGEREUX.map((a, i) => (
+                                    <div key={a.nom} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: lvBg(a.level) }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '700', fontSize: '14px', color: lvColor(a.level), marginBottom: '3px' }}>🍽️ {a.nom}</div>
+                                                <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5 }}>{a.risque}</div>
+                                            </div>
+                                            <span style={{ fontSize: '10px', fontWeight: '700', color: lvColor(a.level), whiteSpace: 'nowrap', marginTop: '2px' }}>{lvBadge(a.level)}</span>
+                                        </div>
                                     </div>
-                                    <span style={{ fontSize: '10px', fontWeight: '700', color: lvColor(a.level), whiteSpace: 'nowrap', marginTop: '2px' }}>{lvBadge(a.level)}</span>
-                                </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
                     </div>
 
-                    {/* Plantes toxiques */}
-                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '24px 4px 10px' }}>Plantes toxiques</p>
-                    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '24px' }}>
-                        {PLANTES_TOXIQUES.map((p, i) => (
-                            <div key={p.nom} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: lvBg(p.level) }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '700', fontSize: '14px', color: lvColor(p.level), marginBottom: '3px' }}>🌿 {p.nom}</div>
-                                        <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5 }}>{p.risque}</div>
+                    {/* Plantes toxiques — accordéon */}
+                    <div style={{ marginBottom: '24px' }}>
+                        <button onClick={() => toggle('plantes')} style={{ width: '100%', background: 'white', border: '1px solid #e5e7eb', borderRadius: openSection === 'plantes' ? '10px 10px 0 0' : '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
+                            <span style={{ fontWeight: '700', fontSize: '14px' }}>🌿 Plantes toxiques <span style={{ fontWeight: '400', color: '#9ca3af', fontSize: '12px' }}>({PLANTES_TOXIQUES.length} plantes)</span></span>
+                            <span style={{ fontSize: '16px', color: '#9ca3af' }}>{openSection === 'plantes' ? '▲' : '▼'}</span>
+                        </button>
+                        {openSection === 'plantes' && (
+                            <div style={{ border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                                {PLANTES_TOXIQUES.map((p, i) => (
+                                    <div key={p.nom} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: lvBg(p.level) }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '700', fontSize: '14px', color: lvColor(p.level), marginBottom: '3px' }}>🌿 {p.nom}</div>
+                                                <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5 }}>{p.risque}</div>
+                                            </div>
+                                            <span style={{ fontSize: '10px', fontWeight: '700', color: lvColor(p.level), whiteSpace: 'nowrap', marginTop: '2px' }}>{lvBadge(p.level)}</span>
+                                        </div>
                                     </div>
-                                    <span style={{ fontSize: '10px', fontWeight: '700', color: lvColor(p.level), whiteSpace: 'nowrap', marginTop: '2px' }}>{lvBadge(p.level)}</span>
-                                </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
                     </div>
 
                     <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center' }}>
@@ -5182,41 +5196,44 @@
                         )}
                     </CollapsibleSection>
 
-                    {/* ── Contacts d'urgence ── */}
+                    {/* ── Carnet de contacts ── */}
                     <div style={{ background: 'white', borderRadius: '10px', padding: '20px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                        <h3 style={{ fontWeight: '700', marginBottom: '16px', fontSize: '16px' }}>📞 Contacts d\'urgence</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                            <div style={{ background: '#fef3c7', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <p style={{ fontWeight: '600', fontSize: '14px' }}>🆘 Antipoison national</p>
-                                    <p style={{ color: '#6b7280', fontSize: '13px' }}>Service national d\'information</p>
-                                </div>
-                                <a href="tel:+33140054848" style={{ fontWeight: '700', color: '#d97706', textDecoration: 'none', fontSize: '15px' }}>01 40 05 48 48</a>
-                            </div>
+                        <h3 style={{ fontWeight: '700', marginBottom: '4px', fontSize: '16px' }}>📒 Carnet de contacts</h3>
+                        <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Votre vétérinaire habituel, la pension, le toiletteur… Appel en un tap.</p>
+                        {contacts.length === 0 && !showContactForm && (
+                            <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '12px', fontStyle: 'italic' }}>Aucun contact enregistré.</p>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: contacts.length > 0 || showContactForm ? '16px' : '0' }}>
                             {contacts.map(c => (
-                                <div key={c.id} style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
-                                        <p style={{ fontWeight: '600', fontSize: '14px' }}>{c.nom}</p>
-                                        <p style={{ color: '#6b7280', fontSize: '13px' }}>{c.role}</p>
+                                <div key={c.id} style={{ background: '#f9fafb', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontWeight: '600', fontSize: '14px', margin: 0 }}>{c.nom}</p>
+                                        <p style={{ color: '#6b7280', fontSize: '12px', margin: '2px 0 0' }}>{c.role}</p>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {c.tel && <a href={`tel:${c.tel.replace(/\s/g,'')}`} style={{ fontWeight: '700', color: '#10b981', textDecoration: 'none', fontSize: '15px' }}>{c.tel}</a>}
-                                        <button onClick={() => deleteContact(c.id)} style={{ padding: '4px 8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                        {c.tel && (
+                                            <a href={`tel:${c.tel.replace(/\s/g, '')}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: '#d1fae5', color: '#059669', borderRadius: '6px', textDecoration: 'none', fontWeight: '700', fontSize: '13px' }}>
+                                                📞 {c.tel}
+                                            </a>
+                                        )}
+                                        <button onClick={() => deleteContact(c.id)} style={{ padding: '6px 9px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>✕</button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                         {showContactForm ? (
                             <div style={{ display: 'grid', gap: '8px' }}>
-                                <select value={newContact.role} onChange={(e) => setNewContact({ ...newContact, role: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                <select value={newContact.role} onChange={(e) => setNewContact({ ...newContact, role: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }}>
                                     <option>Vétérinaire habituel</option>
                                     <option>Clinique urgence</option>
                                     <option>Pension / Garderie</option>
                                     <option>Toiletteur</option>
+                                    <option>Comportementaliste</option>
+                                    <option>Ostéopathe vétérinaire</option>
                                     <option>Autre</option>
                                 </select>
-                                <input type="text" placeholder="Nom / cabinet" value={newContact.nom} onChange={(e) => setNewContact({ ...newContact, nom: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <input type="tel" placeholder="Numéro de téléphone" value={newContact.tel} onChange={(e) => setNewContact({ ...newContact, tel: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="text" placeholder="Nom / cabinet" value={newContact.nom} onChange={(e) => setNewContact({ ...newContact, nom: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} />
+                                <input type="tel" placeholder="Numéro de téléphone" value={newContact.tel} onChange={(e) => setNewContact({ ...newContact, tel: e.target.value })} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} />
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={addContact} style={{ padding: '8px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
                                     <button onClick={() => setShowContactForm(false)} style={{ padding: '8px 16px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Annuler</button>
