@@ -8,6 +8,47 @@ import { getDistanceKm, fetchNearbyVets } from '../../utils/vets';
 import { VETERINAIRES } from '../../constants';
 import { colors, spacing, radius } from '../../theme';
 
+const REGION_ORDER = [
+  'Paris & Île-de-France',
+  'Lyon & Auvergne-Rhône-Alpes',
+  'Marseille & PACA',
+  'Toulouse & Occitanie',
+  'Bordeaux & Nouvelle-Aquitaine',
+  'Grand Est & Bourgogne',
+  'Hauts-de-France',
+  'Bretagne & Pays de la Loire',
+  'Normandie',
+];
+
+function groupVetsByRegion(vets) {
+  const map = {};
+  vets.forEach((v) => {
+    const r = v.region || 'Autres';
+    if (!map[r]) map[r] = [];
+    map[r].push(v);
+  });
+  return REGION_ORDER.filter((r) => map[r]).map((r) => ({ region: r, vets: map[r] }));
+}
+
+function RegionAccordion({ region, vets, animals, onAssign }) {
+  const [open, setOpen] = useState(false);
+  const has24h = vets.some((v) => (v.horaires || '').includes('24h'));
+  return (
+    <View style={styles.accordionWrapper}>
+      <TouchableOpacity style={styles.accordionHeader} onPress={() => setOpen((o) => !o)} activeOpacity={0.75}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.accordionTitle}>{region}</Text>
+          <Text style={styles.accordionSub}>{vets.length} clinique{vets.length > 1 ? 's' : ''}{has24h ? ' · 24h disponible' : ''}</Text>
+        </View>
+        <Text style={styles.accordionChevron}>{open ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+      {open && vets.map((vet) => (
+        <VetCard key={vet.id} vet={vet} animals={animals} onAssign={onAssign} nested />
+      ))}
+    </View>
+  );
+}
+
 function StarRating({ rating }) {
   const full = Math.round(rating || 0);
   return (
@@ -33,9 +74,9 @@ function SpecTag({ label }) {
   );
 }
 
-function VetCard({ vet, animals, onAssign }) {
+function VetCard({ vet, animals, onAssign, nested }) {
   return (
-    <View style={styles.vetCard}>
+    <View style={[styles.vetCard, nested && styles.vetCardNested]}>
       <View style={styles.vetCardHeader}>
         <View style={styles.vetIconBox}>
           <Text style={{ fontSize: 26 }}>🏥</Text>
@@ -236,16 +277,27 @@ export default function VeterinairesScreen() {
       ) : null}
 
       {showFallback ? (
-        <View style={styles.demoInfo}>
-          <Text style={styles.demoInfoText}>
-            📋 Sélection de cliniques d'urgence 24h/7j de référence en France — géolocalisez-vous pour trouver les vétérinaires autour de vous
-          </Text>
-        </View>
-      ) : null}
-
-      {vetsStatus !== 'loading' && vets.map((vet) => (
-        <VetCard key={vet.id} vet={vet} animals={animals} onAssign={handleAssign} />
-      ))}
+        <>
+          <View style={styles.demoInfo}>
+            <Text style={styles.demoInfoText}>
+              📋 Cliniques d'urgence de référence par région — géolocalisez-vous pour trouver les vétérinaires autour de vous
+            </Text>
+          </View>
+          {groupVetsByRegion(VETERINAIRES).map(({ region, vets: regionVets }) => (
+            <RegionAccordion
+              key={region}
+              region={region}
+              vets={regionVets}
+              animals={animals}
+              onAssign={handleAssign}
+            />
+          ))}
+        </>
+      ) : (
+        vetsStatus !== 'loading' && vets.map((vet) => (
+          <VetCard key={vet.id} vet={vet} animals={animals} onAssign={handleAssign} />
+        ))
+      )}
     </Screen>
   );
 }
@@ -389,4 +441,47 @@ const styles = StyleSheet.create({
   },
   demoInfo: { backgroundColor: '#eff6ff', borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: '#bfdbfe' },
   demoInfoText: { fontSize: 12, color: '#1d4ed8', lineHeight: 17 },
+  accordionWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: '#f9fafb',
+  },
+  accordionTitle: {
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#1f2937',
+    marginBottom: 2,
+  },
+  accordionSub: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  accordionChevron: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginLeft: spacing.sm,
+  },
+  vetCardNested: {
+    borderRadius: 0,
+    borderWidth: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    shadowOpacity: 0,
+    elevation: 0,
+    marginBottom: 0,
+  },
 });
