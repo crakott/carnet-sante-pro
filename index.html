@@ -304,13 +304,24 @@
         // Cliniques d'urgence vétérinaire réelles (24h/24, 7j/7) — fallback si CNOV et OSM sont indisponibles
         const VETERINAIRES = [
             { id: 'alfort', nom: 'EnvA Alfort — Urgences chiens/chats/NAC', lat: 48.8139, lng: 2.4234, telephone: '01 43 96 72 72', horaires: '24h/24, 7j/7', adresse: '7 av. du Général de Gaulle, 94700 Maisons-Alfort', specialites: ['Urgences', 'NAC', 'Chiens', 'Chats'], emergency: true },
+            { id: 'clinique-alfort2', nom: 'Clinique Urgences Vétérinaires — Maisons-Alfort', lat: 48.8132, lng: 2.4321, telephone: '01 48 45 94 59', horaires: 'Nuits + WE + jours fériés', adresse: '199 Av. de la République, 94700 Maisons-Alfort', specialites: ['Urgences'], emergency: true },
             { id: 'ucvet', nom: 'UCVet Paris 20e', lat: 48.8598, lng: 2.4012, telephone: '01 71 19 70 10', horaires: '24h/24, 7j/7', adresse: '54 rue Stendhal, 75020 Paris', specialites: ['Urgences'], emergency: true },
-            { id: 'vetinparis', nom: 'VetInParis 11e', lat: 48.8536, lng: 2.3728, telephone: '01 43 07 01 06', horaires: '24h/24, 7j/7', adresse: '89 rue du Fgb Saint-Antoine, 75011 Paris', specialites: ['Urgences'], emergency: true },
+            { id: 'vetinparis', nom: 'Vet\'in Paris 11e', lat: 48.8536, lng: 2.3728, telephone: '01 43 07 01 06', horaires: '24h/24, 7j/7', adresse: '89 rue du Faubourg Saint-Antoine, 75011 Paris', specialites: ['Urgences'], emergency: true },
+            { id: 'lebail', nom: 'Dr. Le Bail — Paris 15e', lat: 48.8426, lng: 2.3064, telephone: '01 45 31 30 98', horaires: '24h/24, 7j/7', adresse: '24 Rue de l\'Abbé Groult, 75015 Paris', specialites: ['Urgences'], emergency: true },
             { id: 'vetoadom', nom: 'VetoAdom — Urgences à domicile (Paris/IDF)', lat: 48.8178, lng: 2.3153, telephone: '01 47 46 09 09', horaires: '24h/24, 7j/7', adresse: 'Tout Paris et Île-de-France', specialites: ['Urgences', 'Domicile'], emergency: true },
             { id: 'onlyvet', nom: 'Onlyvet (Lyon)', lat: 45.7234, lng: 4.9501, telephone: '04 27 04 00 27', horaires: '24h/24, 7j/7', adresse: '7 rue Jean Zay, 69800 Saint-Priest', specialites: ['Urgences'], emergency: true },
             { id: 'marseille', nom: 'Urgences vétérinaires Marseille', lat: 43.2805, lng: 5.4229, telephone: '04 91 13 44 44', horaires: '24h/24, 7j/7', adresse: '227 route des 3 Lucs, 13011 Marseille', specialites: ['Urgences'], emergency: true },
+            { id: 'veturgentys', nom: 'VET-URGENTYS Toulouse', lat: 43.5933, lng: 1.4609, telephone: '05 61 11 21 31', horaires: '24h/24, 7j/7', adresse: '112 Bd de Suisse, 31200 Toulouse', specialites: ['Urgences'], emergency: true },
             { id: 'toulouse', nom: 'Urgences vétérinaires Toulouse', lat: 43.6047, lng: 1.4442, telephone: '05 32 09 39 90', horaires: '24h/24, 7j/7', adresse: 'Toulouse', specialites: ['Urgences'], emergency: true },
             { id: 'montpellier', nom: 'Urgences vétérinaires Montpellier', lat: 43.6108, lng: 3.8767, telephone: '04 48 20 20 28', horaires: '24h/24, 7j/7', adresse: 'Montpellier', specialites: ['Urgences'], emergency: true },
+            { id: 'bordeaux', nom: 'Clinique Alliance Bordeaux', lat: 44.8503, lng: -0.5888, telephone: '05 56 39 15 48', horaires: '24h/24, 7j/7', adresse: '8 Boulevard Godard, 33300 Bordeaux', specialites: ['Urgences'], emergency: true },
+            { id: 'nantes', nom: 'Clinique Vét. de l\'Arche (Nantes)', lat: 47.2368, lng: -1.6218, telephone: '02 40 63 44 44', horaires: '24h/24, 7j/7', adresse: '243 route de Vannes, 44800 Saint-Herblain', specialites: ['Urgences'], emergency: true },
+            { id: 'strasbourg', nom: 'Maison des Urgences Vétérinaires (Strasbourg)', lat: 48.5734, lng: 7.7521, telephone: '03 68 71 83 00', horaires: 'Nuits (19h–7h) + WE + jours fériés', adresse: 'Strasbourg (67)', specialites: ['Urgences'], emergency: true },
+            { id: 'lille', nom: 'V2TU Lesquin (Lille)', lat: 50.5622, lng: 3.1082, telephone: '03 67 34 08 34', horaires: 'Nuits + WE + jours fériés', adresse: '11 Rue Paul Dubrule, 59810 Lesquin', specialites: ['Urgences'], emergency: true },
+            { id: 'rennes', nom: 'V2TU Rennes', lat: 48.1173, lng: -1.6778, telephone: '02 99 41 16 46', horaires: 'Nuits + week-ends', adresse: '6 rue du Bourg Nouveau, 35000 Rennes', specialites: ['Urgences'], emergency: true },
+            { id: 'grenoble', nom: 'Maison des Urgences Vétérinaires — Échirolles', lat: 45.1402, lng: 5.7172, telephone: '04 80 42 33 23', horaires: '19h30–7h30 sem. / 12h+ sam. / 24h/24 dim. & fériés', adresse: '32 rue de Comboire, 38130 Échirolles', specialites: ['Urgences'], emergency: true },
+            { id: 'rouen', nom: 'V2TU Tourville-la-Rivière (Rouen)', lat: 49.3442, lng: 1.0842, telephone: '02 35 87 94 94', horaires: 'Nuits + WE', adresse: '5 rue Parc en Seine, 76410 Tourville-la-Rivière', specialites: ['Urgences'], emergency: true },
+            { id: 'clermont', nom: 'V2TU Clermont-Ferrand', lat: 45.7797, lng: 3.0862, telephone: '04 88 60 20 50', horaires: 'Nuits + WE', adresse: '1 rue Roland Moreno, 63100 Clermont-Ferrand', specialites: ['Urgences'], emergency: true },
         ];
         const TYPE_LABELS = {
             comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
@@ -4725,8 +4736,10 @@
             const URGENCES_VILLES = [
                 { ville: 'Paris / Île-de-France', cliniques: [
                     { nom: 'EnvA Alfort — Urgences chiens/chats/NAC', tel: '01 43 96 72 72', horaires: '24h/24, 7j/7', adresse: '7 av. du Général de Gaulle, 94700 Maisons-Alfort' },
+                    { nom: 'Clinique Urgences Vétérinaires — Maisons-Alfort', tel: '01 48 45 94 59', horaires: 'Nuits + WE + jours fériés', adresse: '199 Av. de la République, 94700 Maisons-Alfort' },
                     { nom: 'UCVet Paris 20e', tel: '01 71 19 70 10', horaires: '24h/24, 7j/7', adresse: '54 rue Stendhal, 75020 Paris' },
-                    { nom: 'VetInParis 11e', tel: '01 43 07 01 06', horaires: '24h/24, 7j/7', adresse: '89 rue du Fgb Saint-Antoine, 75011 Paris' },
+                    { nom: 'Vet\'in Paris 11e', tel: '01 43 07 01 06', horaires: '24h/24, 7j/7', adresse: '89 rue du Faubourg Saint-Antoine, 75011 Paris' },
+                    { nom: 'Dr. Le Bail — 15e', tel: '01 45 31 30 98', horaires: '24h/24, 7j/7', adresse: '24 Rue de l\'Abbé Groult, 75015 Paris' },
                     { nom: 'VetoAdom (à domicile — tout Paris/IDF)', tel: '01 47 46 09 09', horaires: '24h/24, 7j/7', adresse: 'Tout Paris et Île-de-France' },
                 ]},
                 { ville: 'Lyon', cliniques: [
@@ -4739,7 +4752,32 @@
                     { nom: 'Urgences vétérinaires Montpellier', tel: '04 48 20 20 28', horaires: '24h/24, 7j/7', adresse: '' },
                 ]},
                 { ville: 'Toulouse', cliniques: [
+                    { nom: 'VET-URGENTYS', tel: '05 61 11 21 31', horaires: '24h/24, 7j/7', adresse: '112 Bd de Suisse, 31200 Toulouse' },
                     { nom: 'Urgences vétérinaires Toulouse', tel: '05 32 09 39 90', horaires: '24h/24, 7j/7', adresse: '' },
+                ]},
+                { ville: 'Bordeaux', cliniques: [
+                    { nom: 'Clinique Alliance Bordeaux', tel: '05 56 39 15 48', horaires: '24h/24, 7j/7', adresse: '8 Boulevard Godard, 33300 Bordeaux' },
+                ]},
+                { ville: 'Nantes', cliniques: [
+                    { nom: 'Clinique Vét. de l\'Arche', tel: '02 40 63 44 44', horaires: '24h/24, 7j/7', adresse: '243 route de Vannes, 44800 Saint-Herblain' },
+                ]},
+                { ville: 'Strasbourg', cliniques: [
+                    { nom: 'Maison des Urgences Vétérinaires', tel: '03 68 71 83 00', horaires: 'Nuits (19h–7h) + WE + jours fériés', adresse: 'Strasbourg (67)' },
+                ]},
+                { ville: 'Lille', cliniques: [
+                    { nom: 'V2TU Lesquin', tel: '03 67 34 08 34', horaires: 'Nuits + WE + jours fériés', adresse: '11 Rue Paul Dubrule, 59810 Lesquin' },
+                ]},
+                { ville: 'Rennes', cliniques: [
+                    { nom: 'V2TU Rennes', tel: '02 99 41 16 46', horaires: 'Nuits + week-ends', adresse: '6 rue du Bourg Nouveau, 35000 Rennes' },
+                ]},
+                { ville: 'Grenoble', cliniques: [
+                    { nom: 'Maison des Urgences Vétérinaires — Échirolles', tel: '04 80 42 33 23', horaires: '19h30–7h30 sem. / 12h+ sam. / 24h/24 dim. & fériés', adresse: '32 rue de Comboire, 38130 Échirolles' },
+                ]},
+                { ville: 'Rouen', cliniques: [
+                    { nom: 'V2TU Tourville-la-Rivière', tel: '02 35 87 94 94', horaires: 'Nuits + WE', adresse: '5 rue Parc en Seine, 76410 Tourville-la-Rivière' },
+                ]},
+                { ville: 'Clermont-Ferrand', cliniques: [
+                    { nom: 'V2TU Clermont', tel: '04 88 60 20 50', horaires: 'Nuits + WE', adresse: '1 rue Roland Moreno, 63100 Clermont-Ferrand' },
                 ]},
             ];
 
