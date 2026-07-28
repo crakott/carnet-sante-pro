@@ -190,7 +190,7 @@ export default function VeterinairesScreen() {
 
   const usingRealVets = nearbyVets !== null && nearbyVets.length > 0;
   const showFallback = geoStatus === 'idle';
-  const vets = usingRealVets ? nearbyVets : (showFallback ? VETERINAIRES : []);
+  const vets = usingRealVets ? nearbyVets : [];
   const mapsUrl = userPos
     ? `https://www.google.com/maps/search/vétérinaire/@${userPos.lat},${userPos.lng},13z`
     : null;
