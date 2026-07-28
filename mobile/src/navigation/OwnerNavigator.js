@@ -57,6 +57,19 @@ function HomeButton({ navigation }) {
   );
 }
 
+function BackAndHomeButtons({ navigation }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+      <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12} style={{ paddingHorizontal: 6 }}>
+        <Text style={{ fontSize: 26, color: '#111827', lineHeight: 30 }}>‹</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate('Accueil', { screen: 'AccueilMain' })} hitSlop={12} style={{ paddingHorizontal: 4 }}>
+        <Text style={{ fontSize: 22 }}>🏠</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function AccueilStack() {
   return (
     <AccueilStackNav.Navigator screenOptions={stackOptions}>
@@ -71,23 +84,24 @@ function AccueilStack() {
 
 function DossierStack() {
   const hb = (nav) => ({ headerLeft: () => <HomeButton navigation={nav} /> });
+  const bhb = (nav) => ({ headerLeft: () => <BackAndHomeButtons navigation={nav} /> });
   return (
     <DossierStackNav.Navigator screenOptions={stackOptions}>
       <DossierStackNav.Screen name="DossierMain" component={DossierScreen} options={({ navigation }) => ({ title: APP_TITLE, ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Vaccins" component={VaccinsScreen} options={({ navigation }) => ({ title: '💉 Vaccins', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Medicaments" component={MedicamentsScreen} options={({ navigation }) => ({ title: '💊 Traitements', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Chirurgies" component={ChirurgiesScreen} options={({ navigation }) => ({ title: '🔪 Chirurgies', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Aliment" component={AlimentScreen} options={({ navigation }) => ({ title: '🍎 Alimentation', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Notes" component={NotesScreen} options={({ navigation }) => ({ title: '📋 Observations', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Messages" component={MessagesScreen} options={({ navigation }) => ({ title: '💬 Messagerie', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Journal" component={JournalScreen} options={({ navigation }) => ({ title: '📖 Journal de vie', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Documents" component={DocumentsScreen} options={({ navigation }) => ({ title: '📄 Documents', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Videos" component={VideosScreen} options={({ navigation }) => ({ title: '🎥 Vidéos', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Poids" component={PoidsScreen} options={({ navigation }) => ({ title: '⚖️ Poids', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Planning" component={PlanningScreen} options={({ navigation }) => ({ title: '📅 Rendez-vous', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Budget" component={BudgetScreen} options={({ navigation }) => ({ title: '💰 Budget', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Galerie" component={GalerieScreen} options={({ navigation }) => ({ title: '📷 Photos', ...hb(navigation) })} />
-      <DossierStackNav.Screen name="Assurance" component={AssuranceScreen} options={({ navigation }) => ({ title: '🛡️ Assurance', ...hb(navigation) })} />
+      <DossierStackNav.Screen name="Vaccins" component={VaccinsScreen} options={({ navigation }) => ({ title: '💉 Vaccins', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Medicaments" component={MedicamentsScreen} options={({ navigation }) => ({ title: '💊 Traitements', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Chirurgies" component={ChirurgiesScreen} options={({ navigation }) => ({ title: '🔪 Chirurgies', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Aliment" component={AlimentScreen} options={({ navigation }) => ({ title: '🍎 Alimentation', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Notes" component={NotesScreen} options={({ navigation }) => ({ title: '📋 Observations', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Messages" component={MessagesScreen} options={({ navigation }) => ({ title: '💬 Messagerie', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Journal" component={JournalScreen} options={({ navigation }) => ({ title: '📖 Journal de vie', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Documents" component={DocumentsScreen} options={({ navigation }) => ({ title: '📄 Documents', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Videos" component={VideosScreen} options={({ navigation }) => ({ title: '🎥 Vidéos', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Poids" component={PoidsScreen} options={({ navigation }) => ({ title: '⚖️ Poids', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Planning" component={PlanningScreen} options={({ navigation }) => ({ title: '📅 Rendez-vous', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Budget" component={BudgetScreen} options={({ navigation }) => ({ title: '💰 Budget', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Galerie" component={GalerieScreen} options={({ navigation }) => ({ title: '📷 Photos', ...bhb(navigation) })} />
+      <DossierStackNav.Screen name="Assurance" component={AssuranceScreen} options={({ navigation }) => ({ title: '🛡️ Assurance', ...bhb(navigation) })} />
     </DossierStackNav.Navigator>
   );
 }

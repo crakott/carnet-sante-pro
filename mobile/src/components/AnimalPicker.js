@@ -1,25 +1,35 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { colors, radius, spacing } from '../theme';
-import { EMOJIS_ESPECE } from '../constants';
+import { View, Text, TouchableOpacity, ScrollView, Image, StyleSheet } from 'react-native';
+import { colors, spacing } from '../theme';
 
-// Horizontal chip selector used at the top of per-animal screens (Vaccins, Médicaments, etc.)
 export default function AnimalPicker({ animals, selectedAnimal, onSelect }) {
-  if (!animals || animals.length === 0) return null;
+  if (!animals || animals.length <= 1) return null;
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
       {animals.map((animal) => {
         const isSelected = animal.id === selectedAnimal;
         return (
           <TouchableOpacity
             key={animal.id}
             onPress={() => onSelect(animal.id)}
-            style={[styles.chip, isSelected ? styles.chipSelected : null]}
+            style={[styles.chip, isSelected && styles.chipSelected]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.chipText, isSelected ? styles.chipTextSelected : null]}>
-              {EMOJIS_ESPECE[animal.espece] || '🐾'} {animal.nom}
+            {animal.photo ? (
+              <Image source={{ uri: animal.photo }} style={styles.photo} />
+            ) : (
+              <View style={[styles.photo, styles.photoFallback]}>
+                <Text style={styles.photoEmoji}>{animal.espece?.[0] || '🐾'}</Text>
+              </View>
+            )}
+            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+              {animal.nom}
             </Text>
           </TouchableOpacity>
         );
@@ -33,28 +43,49 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   content: {
-    gap: spacing.sm,
+    flexDirection: 'row',
     paddingRight: spacing.md,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radius.xl,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs,
   },
   chipSelected: {
-    backgroundColor: colors.primary,
     borderColor: colors.primary,
+    backgroundColor: '#f0fdf4',
+  },
+  photo: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  photoFallback: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoEmoji: {
+    fontSize: 13,
+    color: '#fff',
   },
   chipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text,
+    color: '#374151',
   },
   chipTextSelected: {
-    color: colors.white,
+    color: colors.primary,
+    fontWeight: '700',
   },
 });
