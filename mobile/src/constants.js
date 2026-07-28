@@ -44,9 +44,16 @@ export const MEDICAMENTS_CATEGORIES = [
 ];
 
 export const VETERINAIRES = [
-  { id: 1, nom: 'Clinique Saint-Germain', distance: '2.3 km', lat: 48.8539, lng: 2.3340, telephone: '01 23 45 67 89', horaires: 'Lun-Ven: 9h-19h', specialites: ['Chiens', 'Chats'], rating: 4.8 },
-  { id: 2, nom: 'Vétérinaire 24h/24', distance: '5.1 km', lat: 48.8907, lng: 2.3617, telephone: '01 98 76 54 32', horaires: '24h/24, 7j/7', specialites: ['Urgences'], rating: 4.6 },
-  { id: 3, nom: 'Clinique Exotiques', distance: '3.8 km', lat: 48.8330, lng: 2.3708, telephone: '01 45 23 12 34', horaires: 'Lun-Ven: 10h-18h', specialites: ['Reptiles', 'Oiseaux'], rating: 4.9 },
+  { id: 'paris-1', nom: "Vet'in Paris (11e)", adresse: '89 Rue du Faubourg Saint-Antoine, 75011 Paris', telephone: '01 43 07 01 06', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats'] },
+  { id: 'paris-2', nom: 'Dr. Le Bail (15e)', adresse: '24 Rue de l\'Abbé Groult, 75015 Paris', telephone: '01 45 31 30 98', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats'] },
+  { id: 'maisons-alfort', nom: 'Clinique Urgences Vétérinaires', adresse: '199 Av. de la République, 94700 Maisons-Alfort', telephone: '01 48 45 94 59', horaires: 'Nuits + week-ends + jours fériés', specialites: ['Urgences'] },
+  { id: 'lyon-1', nom: 'Onlyvet — Saint-Priest (Lyon)', adresse: '7 rue Jean Zay, 69800 Saint-Priest', telephone: '04 27 04 00 27', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats', 'NAC'] },
+  { id: 'marseille-1', nom: 'Urgences Vétérinaires Marseille', adresse: '227 route des 3 Lucs, 13011 Marseille', telephone: '04 91 13 44 44', horaires: '24h/24, 7j/7', specialites: ['Urgences'] },
+  { id: 'toulouse-1', nom: 'VET-URGENTYS Toulouse', adresse: '112 Bd de Suisse, 31200 Toulouse', telephone: '05 61 11 21 31', horaires: '24h/24, 7j/7', specialites: ['Urgences'] },
+  { id: 'bordeaux-1', nom: 'Clinique Alliance Bordeaux', adresse: '8 Boulevard Godard, 33300 Bordeaux', telephone: '05 56 39 15 48', horaires: '24h/24, 7j/7', specialites: ['Urgences'] },
+  { id: 'strasbourg-1', nom: 'Maison des Urgences Vétérinaires', adresse: 'Strasbourg (67)', telephone: '03 68 71 83 00', horaires: 'Nuits (19h–7h) + WE + jours fériés', specialites: ['Urgences'] },
+  { id: 'rennes-1', nom: 'V2TU Rennes', adresse: '6 rue du Bourg Nouveau, 35000 Rennes', telephone: '02 99 41 16 46', horaires: 'Nuits + week-ends', specialites: ['Urgences'] },
+  { id: 'montpellier-1', nom: 'V2TU Montpellier', adresse: '137 rue Claude Balbastre, 34070 Montpellier', telephone: '04 67 45 46 84', horaires: 'Nuits + week-ends', specialites: ['Urgences'] },
 ];
 
 export const TYPE_LABELS = {
