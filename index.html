@@ -301,10 +301,16 @@
             { group: 'DIABÈTE', items: ['Insuline', 'Humuline', 'Lantus', 'Minidiab', 'Humalog'] },
             { group: 'DENTAIRE ET AUTRES', items: ['Hibitane', 'Fluoridex'] },
         ];
+        // Cliniques d'urgence vétérinaire réelles (24h/24, 7j/7) — fallback si CNOV et OSM sont indisponibles
         const VETERINAIRES = [
-            { id: 1, nom: "Clinique Saint-Germain", distance: "2.3 km", lat: 48.8539, lng: 2.3340, telephone: "01 23 45 67 89", horaires: "Lun-Ven: 9h-19h", specialites: ["Chiens", "Chats"], rating: 4.8 },
-            { id: 2, nom: "Vétérinaire 24h/24", distance: "5.1 km", lat: 48.8907, lng: 2.3617, telephone: "01 98 76 54 32", horaires: "24h/24, 7j/7", specialites: ["Urgences"], rating: 4.6 },
-            { id: 3, nom: "Clinique Exotiques", distance: "3.8 km", lat: 48.8330, lng: 2.3708, telephone: "01 45 23 12 34", horaires: "Lun-Ven: 10h-18h", specialites: ["Reptiles", "Oiseaux"], rating: 4.9 },
+            { id: 'alfort', nom: 'EnvA Alfort — Urgences chiens/chats/NAC', lat: 48.8139, lng: 2.4234, telephone: '01 43 96 72 72', horaires: '24h/24, 7j/7', adresse: '7 av. du Général de Gaulle, 94700 Maisons-Alfort', specialites: ['Urgences', 'NAC', 'Chiens', 'Chats'], emergency: true },
+            { id: 'ucvet', nom: 'UCVet Paris 20e', lat: 48.8598, lng: 2.4012, telephone: '01 71 19 70 10', horaires: '24h/24, 7j/7', adresse: '54 rue Stendhal, 75020 Paris', specialites: ['Urgences'], emergency: true },
+            { id: 'vetinparis', nom: 'VetInParis 11e', lat: 48.8536, lng: 2.3728, telephone: '01 43 07 01 06', horaires: '24h/24, 7j/7', adresse: '89 rue du Fgb Saint-Antoine, 75011 Paris', specialites: ['Urgences'], emergency: true },
+            { id: 'vetoadom', nom: 'VetoAdom — Urgences à domicile (Paris/IDF)', lat: 48.8178, lng: 2.3153, telephone: '01 47 46 09 09', horaires: '24h/24, 7j/7', adresse: 'Tout Paris et Île-de-France', specialites: ['Urgences', 'Domicile'], emergency: true },
+            { id: 'onlyvet', nom: 'Onlyvet (Lyon)', lat: 45.7234, lng: 4.9501, telephone: '04 27 04 00 27', horaires: '24h/24, 7j/7', adresse: '7 rue Jean Zay, 69800 Saint-Priest', specialites: ['Urgences'], emergency: true },
+            { id: 'marseille', nom: 'Urgences vétérinaires Marseille', lat: 43.2805, lng: 5.4229, telephone: '04 91 13 44 44', horaires: '24h/24, 7j/7', adresse: '227 route des 3 Lucs, 13011 Marseille', specialites: ['Urgences'], emergency: true },
+            { id: 'toulouse', nom: 'Urgences vétérinaires Toulouse', lat: 43.6047, lng: 1.4442, telephone: '05 32 09 39 90', horaires: '24h/24, 7j/7', adresse: 'Toulouse', specialites: ['Urgences'], emergency: true },
+            { id: 'montpellier', nom: 'Urgences vétérinaires Montpellier', lat: 43.6108, lng: 3.8767, telephone: '04 48 20 20 28', horaires: '24h/24, 7j/7', adresse: 'Montpellier', specialites: ['Urgences'], emergency: true },
         ];
         const TYPE_LABELS = {
             comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
@@ -532,7 +538,7 @@
             const findEmergencyVets = () => {
                 if (!navigator.geolocation) {
                     setStatus('error');
-                    setError("La géolocalisation n'est pas disponible sur cet appareil.");
+                    setError("La géolocalisation n\'est pas disponible sur cet appareil.");
                     return;
                 }
                 setStatus('loading');
@@ -552,8 +558,8 @@
                             candidates = VETERINAIRES.filter(isEmergencyVet);
                         }
                         candidates = candidates
-                            .map(v => ({ ...v, distanceKm: getDistanceKm(lat, lng, v.lat, v.lng) }))
-                            .sort((a, b) => a.distanceKm - b.distanceKm)
+                            .map(v => ({ ...v, distanceKm: v.lat != null ? getDistanceKm(lat, lng, v.lat, v.lng) : null }))
+                            .sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999))
                             .slice(0, 5);
                         if (candidates.length > 0) {
                             setVets(candidates);
@@ -565,60 +571,97 @@
                     (err) => {
                         setStatus('error');
                         setError(err.code === err.PERMISSION_DENIED
-                            ? "Localisation refusée : activez la géolocalisation de votre appareil (paramètres de localisation/GPS du téléphone) et autorisez ce site à accéder à votre position, puis réessayez."
-                            : "Impossible de récupérer votre position pour le moment. Vérifiez que la géolocalisation est activée sur votre appareil.");
+                            ? "Localisation refusée. Activez la géolocalisation et autorisez ce site, puis réessayez."
+                            : "Impossible de récupérer votre position. Vérifiez que la géolocalisation est activée.");
                     },
                     { enableHighAccuracy: true, timeout: 10000 }
                 );
             };
 
-            // Lance automatiquement la recherche dès l'ouverture de l'onglet
             React.useEffect(() => { findEmergencyVets(); }, []);
-
-            if (status === 'done' && vets.length > 0) {
-                return (
-                    <div style={{ marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>🚨 Urgences vétérinaires à proximité</p>
-                            <button onClick={() => setStatus('idle')} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Fermer</button>
-                        </div>
-                        <div style={{ display: 'grid', gap: '10px' }}>
-                            {vets.map(vet => (
-                                <div key={vet.id} style={{ background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '10px', padding: '14px' }}>
-                                    <p style={{ fontWeight: '700', fontSize: '15px' }}>{vet.nom}</p>
-                                    {vet.adresse && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🏠 {vet.adresse}</p>}
-                                    {vet.horaires && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🕐 {vet.horaires}</p>}
-                                    <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>📍 à {vet.distanceKm.toFixed(1)} km</p>
-                                    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                                        {vet.telephone ? (
-                                            <a href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
-                                                style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#dc2626', color: 'white' }}>
-                                                📞 {vet.telephone}
-                                            </a>
-                                        ) : (
-                                            <p style={{ color: '#9ca3af', fontSize: '13px', flex: 1, margin: 0, display: 'flex', alignItems: 'center' }}>Numéro non disponible</p>
-                                        )}
-                                        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${vet.nom} ${vet.adresse || ''}`.trim())}`}
-                                            target="_blank" rel="noopener noreferrer"
-                                            style={{ padding: '12px 16px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#fee2e2', color: '#dc2626' }}>
-                                            🗺️ Itinéraire
-                                        </a>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
 
             return (
                 <div style={{ marginBottom: '20px' }}>
-                    <button onClick={findEmergencyVets} disabled={status === 'loading'}
-                        style={{ width: '100%', padding: '14px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '10px', cursor: status === 'loading' ? 'default' : 'pointer', fontWeight: '700', fontSize: '15px', opacity: status === 'loading' ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        {status === 'loading' ? '📍 Recherche en cours…' : '🚨 Urgences vétérinaires à proximité'}
-                    </button>
-                    {status === 'error' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#ef4444' }}>⚠️ {error}</p>}
-                    {status === 'none' && <p style={{ marginTop: '8px', fontSize: '13px', color: '#d97706' }}>⚠️ Aucun vétérinaire d'urgence référencé près de chez vous. Consultez la liste ci-dessous pour les vétérinaires à proximité.</p>}
+                    {/* Numéros permanents : 3115 + antipoison */}
+                    <div style={{ display: 'grid', gap: '10px', marginBottom: '14px' }}>
+                        <a href="tel:3115" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '10px', padding: '14px 16px', textDecoration: 'none' }}>
+                            <span style={{ fontSize: '24px' }}>🚨</span>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: '700', fontSize: '15px', color: '#dc2626' }}>Vétérinaire de garde national</div>
+                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>24h/24 · 7j/7 · gratuit · donne le code postal</div>
+                            </div>
+                            <span style={{ fontSize: '22px', fontWeight: '800', color: '#dc2626' }}>3115</span>
+                        </a>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            <a href="tel:0478871040" style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '10px 12px', textDecoration: 'none' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#7c3aed' }}>☠️ Antipoison — Lyon</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#4c1d95' }}>04 78 87 10 40</span>
+                                <span style={{ fontSize: '10px', color: '#9ca3af' }}>CNITV · 8h30–minuit</span>
+                            </a>
+                            <a href="tel:0240687740" style={{ display: 'flex', flexDirection: 'column', gap: '2px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '10px', padding: '10px 12px', textDecoration: 'none' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#7c3aed' }}>☠️ Antipoison — Nantes</span>
+                                <span style={{ fontSize: '13px', fontWeight: '700', color: '#4c1d95' }}>02 40 68 77 40</span>
+                                <span style={{ fontSize: '10px', color: '#9ca3af' }}>CAPAE · 8h30–minuit</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* Cliniques d'urgence à proximité */}
+                    {status === 'idle' && (
+                        <button onClick={findEmergencyVets}
+                            style={{ width: '100%', padding: '12px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            📍 Cliniques d\'urgence autour de moi
+                        </button>
+                    )}
+                    {status === 'loading' && (
+                        <div style={{ padding: '12px', background: '#fee2e2', borderRadius: '10px', textAlign: 'center', fontSize: '14px', color: '#dc2626', fontWeight: '600' }}>
+                            📍 Localisation en cours…
+                        </div>
+                    )}
+                    {status === 'error' && (
+                        <div style={{ padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px' }}>
+                            <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#7f1d1d' }}>⚠️ {error}</p>
+                            <button onClick={findEmergencyVets} style={{ fontSize: '12px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: '600' }}>🔄 Réessayer</button>
+                        </div>
+                    )}
+                    {status === 'none' && (
+                        <p style={{ fontSize: '13px', color: '#d97706', margin: '8px 0 0' }}>⚠️ Aucune clinique d\'urgence référencée près de vous. Appelez le 3115 (gratuit, 24h/24).</p>
+                    )}
+                    {status === 'done' && vets.length > 0 && (
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <p style={{ fontSize: '12px', fontWeight: '700', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>Cliniques d\'urgence les plus proches</p>
+                                <button onClick={() => setStatus('idle')} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer', padding: 0 }}>Fermer</button>
+                            </div>
+                            <div style={{ display: 'grid', gap: '10px' }}>
+                                {vets.map(vet => (
+                                    <div key={vet.id} style={{ background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '10px', padding: '14px' }}>
+                                        <p style={{ fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}>{vet.nom}</p>
+                                        {vet.adresse && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🏠 {vet.adresse}</p>}
+                                        {vet.horaires && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>🕐 {vet.horaires}</p>}
+                                        {vet.distanceKm != null && <p style={{ color: '#6b7280', fontSize: '13px', margin: '4px 0' }}>📍 à {vet.distanceKm.toFixed(1)} km</p>}
+                                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                            {vet.telephone ? (
+                                                <a href={`tel:${vet.telephone.replace(/\s+/g, '')}`}
+                                                    style={{ flex: 1, padding: '12px', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#dc2626', color: 'white' }}>
+                                                    📞 {vet.telephone}
+                                                </a>
+                                            ) : (
+                                                <p style={{ color: '#9ca3af', fontSize: '13px', flex: 1, margin: 0, display: 'flex', alignItems: 'center' }}>Numéro non disponible</p>
+                                            )}
+                                            <a href={vet.lat && vet.lng
+                                                    ? `https://www.google.com/maps/dir/?api=1&destination=${vet.lat},${vet.lng}`
+                                                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((vet.nom + ' ' + (vet.adresse || '')).trim())}`}
+                                                target="_blank" rel="noopener noreferrer"
+                                                style={{ padding: '12px 16px', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', background: '#fee2e2', color: '#dc2626' }}>
+                                                🗺️
+                                            </a>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -1880,6 +1923,7 @@
             { id: 'poids', label: '⚖️ Poids' },
             { id: 'budget', label: '💰 Budget' },
             { id: 'veterinaires', label: '🏥 Vétérinaires' },
+            { id: 'urgences', label: '🆘 Urgences & Santé' },
             { id: 'planning', label: '📅 Planning' },
             { id: 'rappels', label: '⚠️ Rappels' },
             { id: 'parametres', label: '⚙️ Paramètres' }
@@ -1910,6 +1954,7 @@
             ]},
             { key: null, header: null, items: [
                 { id: 'veterinaires', label: '🏥 Vétérinaires' },
+                { id: 'urgences', label: '🆘 Urgences & Santé' },
                 { id: 'rappels', label: '⚠️ Rappels' },
                 { id: 'parametres', label: '⚙️ Paramètres' },
             ]},
@@ -2121,7 +2166,7 @@
         // Mobile bottom navigation bar
         const BOTTOM_NAV_TABS = [
             { id: 'dossier', icon: '📋', label: 'Dossier' },
-            { id: 'veterinaires', icon: '🐾', label: 'Vétérinaires' },
+            { id: 'urgences', icon: '🆘', label: 'Urgences' },
             { id: 'rappels', icon: '⏰', label: 'Rappels' },
             { id: 'parametres', icon: '⚙️', label: 'Paramètres' },
         ];
@@ -2207,6 +2252,8 @@
                 return <BudgetTab animal={animal} animals={animals} budgetFilter={budgetFilter} setBudgetFilter={setBudgetFilter} getFilteredBudget={getFilteredBudget} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'veterinaires') {
                 return <VeterinairesTab animals={animals} saveAnimal={saveAnimal} />;
+            } else if (activeTab === 'urgences') {
+                return <UrgencesTab setActiveTab={props.setActiveTab} />;
             } else if (activeTab === 'planning') {
                 return <PlanningTab animal={animal} animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />;
             } else if (activeTab === 'rappels') {
@@ -4297,6 +4344,227 @@
                             ))
                         )}
                     </div>
+                </div>
+            );
+        }
+
+        function UrgencesTab({ setActiveTab }) {
+            const [openSection, setOpenSection] = React.useState(null);
+            const toggle = (key) => setOpenSection(openSection === key ? null : key);
+
+            const URGENCES_VILLES = [
+                { ville: 'Paris / Île-de-France', cliniques: [
+                    { nom: 'EnvA Alfort — Urgences chiens/chats/NAC', tel: '01 43 96 72 72', horaires: '24h/24, 7j/7', adresse: '7 av. du Général de Gaulle, 94700 Maisons-Alfort' },
+                    { nom: 'UCVet Paris 20e', tel: '01 71 19 70 10', horaires: '24h/24, 7j/7', adresse: '54 rue Stendhal, 75020 Paris' },
+                    { nom: 'VetInParis 11e', tel: '01 43 07 01 06', horaires: '24h/24, 7j/7', adresse: '89 rue du Fgb Saint-Antoine, 75011 Paris' },
+                    { nom: 'VetoAdom (à domicile — tout Paris/IDF)', tel: '01 47 46 09 09', horaires: '24h/24, 7j/7', adresse: 'Tout Paris et Île-de-France' },
+                ]},
+                { ville: 'Lyon', cliniques: [
+                    { nom: 'Onlyvet', tel: '04 27 04 00 27', horaires: '24h/24, 7j/7', adresse: '7 rue Jean Zay, 69800 Saint-Priest' },
+                ]},
+                { ville: 'Marseille', cliniques: [
+                    { nom: 'Urgences vétérinaires Marseille', tel: '04 91 13 44 44', horaires: '24h/24, 7j/7', adresse: '227 route des 3 Lucs, 13011 Marseille' },
+                ]},
+                { ville: 'Montpellier', cliniques: [
+                    { nom: 'Urgences vétérinaires Montpellier', tel: '04 48 20 20 28', horaires: '24h/24, 7j/7', adresse: '' },
+                ]},
+                { ville: 'Toulouse', cliniques: [
+                    { nom: 'Urgences vétérinaires Toulouse', tel: '05 32 09 39 90', horaires: '24h/24, 7j/7', adresse: '' },
+                ]},
+            ];
+
+            const PREMIERS_SECOURS = [
+                { icon: '☠️', type: 'Intoxication / Empoisonnement', steps: [
+                    'Appeler immédiatement le CNITV (04 78 87 10 40) ou CAPAE (02 40 68 77 40)',
+                    'Conserver l\'emballage du produit ingéré',
+                    'NE PAS faire vomir l\'animal sauf instruction expresse d\'un professionnel',
+                    'Maintenir l\'animal calme, à l\'écart de la source toxique',
+                    'Symptômes d\'alerte : salivation abondante, vomissements, convulsions, difficultés respiratoires',
+                ]},
+                { icon: '⚡', type: 'Convulsions', steps: [
+                    'Dégager l\'espace autour de l\'animal (retirer les objets dangereux)',
+                    'NE PAS immobiliser l\'animal, ne rien mettre dans la gueule',
+                    'Éloigner les autres animaux',
+                    'Noter la durée de la crise',
+                    'Appeler le vétérinaire dès la fin de la crise',
+                ]},
+                { icon: '🩸', type: 'Hémorragie / Saignement', steps: [
+                    'Appuyer fermement un linge propre ou compresse sur la plaie',
+                    'Maintenir la pression plusieurs minutes sans retirer',
+                    'Élever le membre au-dessus du cœur si possible',
+                    'Consulter immédiatement si saignement de la bouche, nez, zone génitale ou dans les urines/selles',
+                ]},
+                { icon: '🌡️', type: 'Coup de chaleur', steps: [
+                    'Déplacer immédiatement dans un endroit frais ou climatisé',
+                    'Mouiller avec de l\'eau fraîche (PAS glacée)',
+                    'Proposer de petites quantités d\'eau à boire',
+                    'NE PAS immerger dans l\'eau très froide',
+                    'Consulter rapidement même si l\'animal semble récupérer',
+                ]},
+                { icon: '🦴', type: 'Fracture / Traumatisme', steps: [
+                    'Minimiser les mouvements de l\'animal',
+                    'Transporter en soutenant avec une serviette ou couverture en hamac',
+                    'NE PAS improviser une attelle',
+                    'Appeler le vétérinaire ou le 3115 avant de déplacer l\'animal si possible',
+                ]},
+                { icon: '🫁', type: 'Détresse respiratoire / Étouffement', steps: [
+                    'Vérifier les voies aériennes sans enfoncer profondément les doigts',
+                    'Si corps étranger visible : tête vers le bas, 4 compressions fermes sur l\'abdomen',
+                    'En cas d\'exposition à fumée ou vapeurs : air frais immédiatement',
+                    'Appeler le 3115 ou foncer à la clinique d\'urgence',
+                ]},
+                { icon: '💔', type: 'Inconscience / Arrêt cardiaque', steps: [
+                    'Placer l\'animal sur le côté droit, voies aériennes libres',
+                    'Vérifier la respiration et le pouls (face interne de la cuisse)',
+                    'Si arrêt cardiaque : compressions sur le côté gauche du thorax, 100–120/min',
+                    'Bouche-à-museau si nécessaire (former joint étanche autour du museau)',
+                    'Appeler le 3115 immédiatement',
+                ]},
+                { icon: '🚨', type: 'Rétention urinaire (urgence chat)', steps: [
+                    'Urgence absolue — notamment chez le chat mâle',
+                    'Signes : efforts répétés sans uriner, cris, inconfort, abdomen tendu',
+                    'Aller à la clinique d\'urgence SANS ATTENDRE',
+                    'Risque vital en quelques heures si non traité',
+                ]},
+            ];
+
+            const ALIMENTS_DANGEREUX = [
+                { nom: 'Chocolat (surtout noir)', risque: 'Toxique chiens et chats — stimulant cardiaque et neurologique. Urgence selon la quantité.', level: 'red' },
+                { nom: 'Raisins & raisins secs', risque: 'Insuffisance rénale aiguë, même en petite quantité.', level: 'red' },
+                { nom: 'Oignons, ail, ciboulette, poireau', risque: 'Anémie hémolytique (destruction des globules rouges). Danger cuits aussi.', level: 'red' },
+                { nom: 'Xylitol (édulcorant "sans sucre")', risque: 'Hypoglycémie grave et insuffisance hépatique. Présent dans chewing-gums, bonbons, certains yaourts.', level: 'red' },
+                { nom: 'Pâte crue / levure de boulanger', risque: 'Fermentation dans l\'estomac → alcool + ballonnement dangereux.', level: 'red' },
+                { nom: 'Café, thé, boissons énergisantes', risque: 'Caféine : stimulant cardiaque, convulsions.', level: 'red' },
+                { nom: 'Alcool', risque: 'Dépression du système nerveux central, hypoglycémie.', level: 'red' },
+                { nom: 'Noix de macadamia', risque: 'Faiblesse musculaire, hyperthermie, vomissements.', level: 'orange' },
+                { nom: 'Avocat', risque: 'Toxique pour oiseaux, lapins, cochons d\'Inde. Risque digestif chez chien/chat.', level: 'orange' },
+                { nom: 'Os cuits (poulet, lapin…)', risque: 'Esquilles tranchantes pouvant perforer l\'intestin.', level: 'orange' },
+                { nom: 'Sel en grande quantité', risque: 'Déshydratation, troubles neurologiques.', level: 'orange' },
+            ];
+
+            const PLANTES_TOXIQUES = [
+                { nom: 'Lys (toutes espèces)', risque: 'MORTEL pour le chat — insuffisance rénale aiguë même par contact avec le pollen.', level: 'red' },
+                { nom: 'If (Taxus)', risque: 'Mort rapide par alcaloïdes. Très toxique chiens et chats.', level: 'red' },
+                { nom: 'Laurier-rose / Oléandre', risque: 'Cardiotoxique — troubles cardiaques, vomissements, mort possible.', level: 'red' },
+                { nom: 'Muguet', risque: 'Vomissements, troubles cardiaques, convulsions.', level: 'red' },
+                { nom: 'Cyclamen', risque: 'Diarrhées, vomissements, convulsions, troubles cardiaques.', level: 'red' },
+                { nom: 'Azalée / Rhododendron', risque: 'Vomissements, salivation, troubles cardiaques.', level: 'red' },
+                { nom: 'Dieffenbachia / Philodendron', risque: 'Brûlures buccales intenses, risque d\'œdème laryngé.', level: 'orange' },
+                { nom: 'Ficus', risque: 'Irritations buccales et gastro-intestinales, atteintes rénales.', level: 'orange' },
+                { nom: 'Poinsettia (étoile de Noël)', risque: 'Irritations buccales et digestives.', level: 'orange' },
+                { nom: 'Aloe vera', risque: 'Vomissements, diarrhées (surtout chez les chats).', level: 'orange' },
+            ];
+
+            const lvColor = l => l === 'red' ? '#dc2626' : '#d97706';
+            const lvBg = l => l === 'red' ? '#fef2f2' : '#fffbeb';
+            const lvBadge = l => l === 'red' ? '⚠️ DANGER' : '⚠️ Attention';
+
+            return (
+                <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '6px' }}>🆘 Urgences & Santé</h2>
+                    <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '24px' }}>Numéros d\'urgence, premiers secours et toxiques courants.</p>
+
+                    {/* Numéros d'urgence */}
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 10px' }}>Numéros d\'urgence</p>
+                    <a href="tel:3115" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fef2f2', border: '2px solid #fecaca', borderRadius: '12px', padding: '16px', marginBottom: '10px', textDecoration: 'none' }}>
+                        <span style={{ fontSize: '28px' }}>🚨</span>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '700', fontSize: '15px', color: '#dc2626' }}>Vétérinaire de garde — national</div>
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>24h/24 · 7j/7 · gratuit · entrez votre code postal</div>
+                        </div>
+                        <span style={{ fontSize: '26px', fontWeight: '800', color: '#dc2626' }}>3115</span>
+                    </a>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
+                        <a href="tel:0478871040" style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '12px', padding: '14px', textDecoration: 'none' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#7c3aed' }}>☠️ Antipoison — Lyon (CNITV)</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: '#4c1d95' }}>04 78 87 10 40</span>
+                            <span style={{ fontSize: '11px', color: '#9ca3af' }}>8h30–minuit · 7j/7 · gratuit</span>
+                        </a>
+                        <a href="tel:0240687740" style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: '12px', padding: '14px', textDecoration: 'none' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#7c3aed' }}>☠️ Antipoison — Nantes (CAPAE)</span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: '#4c1d95' }}>02 40 68 77 40</span>
+                            <span style={{ fontSize: '11px', color: '#9ca3af' }}>8h30–minuit · 7j/7 · gratuit</span>
+                        </a>
+                    </div>
+
+                    {/* Cliniques d'urgence par ville */}
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 4px 10px' }}>Cliniques d\'urgence 24h/24 par ville</p>
+                    {URGENCES_VILLES.map(g => (
+                        <div key={g.ville} style={{ marginBottom: '8px' }}>
+                            <button onClick={() => toggle('v' + g.ville)} style={{ width: '100%', background: 'white', border: '1px solid #e5e7eb', borderRadius: openSection === 'v' + g.ville ? '10px 10px 0 0' : '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
+                                <span style={{ fontWeight: '700', fontSize: '14px' }}>🏙️ {g.ville}</span>
+                                <span style={{ fontSize: '16px', color: '#9ca3af' }}>{openSection === 'v' + g.ville ? '▲' : '▼'}</span>
+                            </button>
+                            {openSection === 'v' + g.ville && (
+                                <div style={{ border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+                                    {g.cliniques.map((c, i) => (
+                                        <div key={i} style={{ padding: '14px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: 'white' }}>
+                                            <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>{c.nom}</div>
+                                            {c.adresse ? <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>📍 {c.adresse}</div> : null}
+                                            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>🕐 {c.horaires}</div>
+                                            <a href={`tel:${c.tel.replace(/\s/g, '')}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: '#d1fae5', color: '#059669', borderRadius: '6px', textDecoration: 'none', fontWeight: '600', fontSize: '13px' }}>
+                                                📞 {c.tel}
+                                            </a>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Premiers secours */}
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '24px 4px 10px' }}>Premiers secours</p>
+                    {PREMIERS_SECOURS.map(ps => (
+                        <div key={ps.type} style={{ marginBottom: '8px' }}>
+                            <button onClick={() => toggle('ps' + ps.type)} style={{ width: '100%', background: 'white', border: '1px solid #e5e7eb', borderRadius: openSection === 'ps' + ps.type ? '10px 10px 0 0' : '10px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', textAlign: 'left' }}>
+                                <span style={{ fontWeight: '600', fontSize: '14px' }}>{ps.icon} {ps.type}</span>
+                                <span style={{ fontSize: '16px', color: '#9ca3af' }}>{openSection === 'ps' + ps.type ? '▲' : '▼'}</span>
+                            </button>
+                            {openSection === 'ps' + ps.type && (
+                                <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: '14px 16px' }}>
+                                    <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                                        {ps.steps.map((s, i) => <li key={i} style={{ fontSize: '13px', color: '#374151', marginBottom: '8px', lineHeight: 1.5 }}>{s}</li>)}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Aliments dangereux */}
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '24px 4px 10px' }}>Aliments dangereux</p>
+                    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '8px' }}>
+                        {ALIMENTS_DANGEREUX.map((a, i) => (
+                            <div key={a.nom} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: lvBg(a.level) }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: '700', fontSize: '14px', color: lvColor(a.level), marginBottom: '3px' }}>🍽️ {a.nom}</div>
+                                        <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5 }}>{a.risque}</div>
+                                    </div>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: lvColor(a.level), whiteSpace: 'nowrap', marginTop: '2px' }}>{lvBadge(a.level)}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Plantes toxiques */}
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '24px 4px 10px' }}>Plantes toxiques</p>
+                    <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: '24px' }}>
+                        {PLANTES_TOXIQUES.map((p, i) => (
+                            <div key={p.nom} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', background: lvBg(p.level) }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: '700', fontSize: '14px', color: lvColor(p.level), marginBottom: '3px' }}>🌿 {p.nom}</div>
+                                        <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: 1.5 }}>{p.risque}</div>
+                                    </div>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: lvColor(p.level), whiteSpace: 'nowrap', marginTop: '2px' }}>{lvBadge(p.level)}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center' }}>
+                        Sources : Ordre National des Vétérinaires · CNITV · CAPAE-Ouest · SantéVet
+                    </p>
                 </div>
             );
         }
