@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'rea
 import { colors, spacing, radius } from '../../theme';
 import { Screen, Button, Field, Input, EmptyState } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
+import { computeAge } from '../../utils/dates';
 
 const CHECKLISTS = {
   france: [
@@ -153,7 +154,24 @@ export default function VoyageScreen() {
 
       {animal && (
         <>
-          <Text style={styles.sectionTitle}>✈️ Fiche voyage — {animal.nom}</Text>
+          {/* Animal card */}
+          <View style={styles.animalCard}>
+            {animal.photo ? (
+              <Image source={{ uri: animal.photo }} style={styles.animalCardPhoto} />
+            ) : (
+              <View style={[styles.animalCardPhoto, styles.animalCardPhotoFallback]}>
+                <Text style={{ fontSize: 28, color: '#fff' }}>{animal.espece?.[0] || '🐾'}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.animalCardName}>{animal.nom}</Text>
+              {computeAge(animal.dateNaissance) ? (
+                <Text style={styles.animalCardAge}>{computeAge(animal.dateNaissance)}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          <Text style={styles.sectionTitle}>✈️ Fiche voyage</Text>
 
           {/* Destination segmented control */}
           <View style={styles.destTabs}>
@@ -249,6 +267,42 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.lg,
+  },
+  animalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  animalCardPhoto: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
+  animalCardPhotoFallback: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  animalCardName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  animalCardAge: {
+    fontSize: 14,
+    color: colors.textLight,
   },
   animalPickerRow: {
     marginBottom: spacing.lg,

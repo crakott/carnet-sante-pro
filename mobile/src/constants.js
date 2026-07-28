@@ -44,32 +44,38 @@ export const MEDICAMENTS_CATEGORIES = [
 ];
 
 export const VETERINAIRES = [
-  // Paris & Île-de-France
-  { id: 'paris-1', nom: "Vet'in Paris (11e)", adresse: '89 Rue du Faubourg Saint-Antoine, 75011 Paris', telephone: '01 43 07 01 06', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats'], region: 'Paris & Île-de-France' },
-  { id: 'paris-2', nom: 'Dr. Le Bail (15e)', adresse: "24 Rue de l'Abbé Groult, 75015 Paris", telephone: '01 45 31 30 98', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats'], region: 'Paris & Île-de-France' },
-  { id: 'maisons-alfort', nom: 'Clinique Urgences Vétérinaires', adresse: '199 Av. de la République, 94700 Maisons-Alfort', telephone: '01 48 45 94 59', horaires: 'Nuits + week-ends + jours fériés', specialites: ['Urgences'], region: 'Paris & Île-de-France' },
-  // Lyon & Auvergne-Rhône-Alpes
-  { id: 'lyon-1', nom: 'Onlyvet — Saint-Priest (Lyon)', adresse: '7 rue Jean Zay, 69800 Saint-Priest', telephone: '04 27 04 00 27', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats', 'NAC'], region: 'Lyon & Auvergne-Rhône-Alpes' },
-  { id: 'grenoble-1', nom: 'Maison des Urgences Vétérinaires', adresse: '32 rue de Comboire, 38130 Échirolles', telephone: '04 80 42 33 23', horaires: 'Nuits + WE + jours fériés', specialites: ['Urgences'], region: 'Lyon & Auvergne-Rhône-Alpes' },
-  { id: 'clermont-1', nom: 'V2TU Clermont-Ferrand', adresse: '1 rue Roland Moreno, 63100 Clermont-Ferrand', telephone: '04 88 60 20 50', horaires: 'Nuits + week-ends', specialites: ['Urgences'], region: 'Lyon & Auvergne-Rhône-Alpes' },
-  // Marseille & PACA
-  { id: 'marseille-1', nom: 'Urgences Vétérinaires Marseille', adresse: '227 route des 3 Lucs, 13011 Marseille', telephone: '04 91 13 44 44', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Marseille & PACA' },
-  { id: 'nice-1', nom: "AdomVET — Nice / Côte d'Azur", adresse: 'Nice, Cannes, Monaco et agglomération', telephone: '04 22 53 05 05', horaires: 'Nuits + WE + jours fériés', specialites: ['Urgences', 'À domicile'], region: 'Marseille & PACA' },
-  // Toulouse & Occitanie
-  { id: 'toulouse-1', nom: 'VET-URGENTYS Toulouse', adresse: '112 Bd de Suisse, 31200 Toulouse', telephone: '05 61 11 21 31', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Toulouse & Occitanie' },
-  { id: 'montpellier-1', nom: 'V2TU Montpellier', adresse: '137 rue Claude Balbastre, 34070 Montpellier', telephone: '04 67 45 46 84', horaires: 'Nuits + week-ends', specialites: ['Urgences'], region: 'Toulouse & Occitanie' },
-  // Bordeaux & Nouvelle-Aquitaine
-  { id: 'bordeaux-1', nom: 'Clinique Alliance Bordeaux', adresse: '8 Boulevard Godard, 33300 Bordeaux', telephone: '05 56 39 15 48', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Bordeaux & Nouvelle-Aquitaine' },
-  // Grand Est & Bourgogne
-  { id: 'strasbourg-1', nom: 'Maison des Urgences Vétérinaires', adresse: 'Strasbourg (67)', telephone: '03 68 71 83 00', horaires: 'Nuits (19h–7h) + WE + jours fériés', specialites: ['Urgences'], region: 'Grand Est & Bourgogne' },
-  { id: 'dijon-1', nom: 'Clinique Ducs de Bourgogne', adresse: 'Dijon (21)', telephone: '03 80 51 63 16', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Grand Est & Bourgogne' },
-  // Hauts-de-France
-  { id: 'lille-1', nom: 'V2TU Lesquin', adresse: '11 Rue Paul Dubrule, 59810 Lesquin', telephone: '03 67 34 08 34', horaires: 'Nuits + week-ends + jours fériés', specialites: ['Urgences'], region: 'Hauts-de-France' },
-  // Bretagne & Pays de la Loire
-  { id: 'rennes-1', nom: 'V2TU Rennes', adresse: '6 rue du Bourg Nouveau, 35000 Rennes', telephone: '02 99 41 16 46', horaires: 'Nuits + week-ends', specialites: ['Urgences'], region: 'Bretagne & Pays de la Loire' },
-  { id: 'nantes-1', nom: "Clinique Vét. de l'Arche", adresse: '243 route de Vannes, 44800 Saint-Herblain', telephone: '02 40 63 44 44', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Bretagne & Pays de la Loire' },
-  // Normandie
-  { id: 'rouen-1', nom: 'V2TU Tourville-la-Rivière', adresse: '5 rue Parc en Seine, 76410 Tourville-la-Rivière', telephone: '02 35 87 94 94', horaires: 'Nuits + week-ends', specialites: ['Urgences'], region: 'Normandie' },
+  // Paris / Île-de-France
+  { id: 'enva-alfort', nom: 'EnvA Alfort — Urgences chiens/chats/NAC', adresse: '7 av. du Général de Gaulle, 94700 Maisons-Alfort', telephone: '01 43 96 72 72', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats', 'NAC'], region: 'Paris' },
+  { id: 'maisons-alfort', nom: 'Clinique Urgences Vétérinaires — Maisons-Alfort', adresse: '199 Av. de la République, 94700 Maisons-Alfort', telephone: '01 48 45 94 59', horaires: 'Nuits + WE + jours fériés', specialites: ['Urgences'], region: 'Paris' },
+  { id: 'ucvet-20', nom: 'UCVet Paris 20e', adresse: '54 rue Stendhal, 75020 Paris', telephone: '01 71 19 70 10', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Paris' },
+  { id: 'paris-1', nom: "Vet'in Paris 11e", adresse: '89 rue du Faubourg Saint-Antoine, 75011 Paris', telephone: '01 43 07 01 06', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats'], region: 'Paris' },
+  { id: 'paris-2', nom: 'Dr. Le Bail — 15e', adresse: "24 Rue de l'Abbé Groult, 75015 Paris", telephone: '01 45 31 30 98', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats'], region: 'Paris' },
+  { id: 'vetoadom', nom: 'VetoAdom (à domicile — tout Paris/IDF)', adresse: 'Tout Paris et Île-de-France', telephone: '01 47 46 09 09', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'À domicile'], region: 'Paris' },
+  // Lyon
+  { id: 'lyon-1', nom: 'Onlyvet', adresse: '7 rue Jean Zay, 69800 Saint-Priest', telephone: '04 27 04 00 27', horaires: '24h/24, 7j/7', specialites: ['Urgences', 'Chiens', 'Chats', 'NAC'], region: 'Lyon' },
+  // Marseille
+  { id: 'marseille-1', nom: 'Urgences vétérinaires Marseille', adresse: '227 route des 3 Lucs, 13011 Marseille', telephone: '04 91 13 44 44', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Marseille' },
+  // Montpellier
+  { id: 'montpellier-1', nom: 'Urgences vétérinaires Montpellier', adresse: null, telephone: '04 48 20 20 28', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Montpellier' },
+  // Toulouse
+  { id: 'toulouse-1', nom: 'VET-URGENTYS', adresse: '112 Bd de Suisse, 31200 Toulouse', telephone: '05 61 11 21 31', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Toulouse' },
+  { id: 'toulouse-2', nom: 'Urgences vétérinaires Toulouse', adresse: null, telephone: '05 32 09 39 90', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Toulouse' },
+  // Bordeaux
+  { id: 'bordeaux-1', nom: 'Clinique Alliance Bordeaux', adresse: '8 Boulevard Godard, 33300 Bordeaux', telephone: '05 56 39 15 48', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Bordeaux' },
+  // Nantes
+  { id: 'nantes-1', nom: "Clinique Vét. de l'Arche", adresse: '243 route de Vannes, 44800 Saint-Herblain', telephone: '02 40 63 44 44', horaires: '24h/24, 7j/7', specialites: ['Urgences'], region: 'Nantes' },
+  // Strasbourg
+  { id: 'strasbourg-1', nom: 'Maison des Urgences Vétérinaires', adresse: 'Strasbourg (67)', telephone: '03 68 71 83 00', horaires: 'Nuits (19h–7h) + WE + jours fériés', specialites: ['Urgences'], region: 'Strasbourg' },
+  // Lille
+  { id: 'lille-1', nom: 'V2TU Lesquin', adresse: '11 Rue Paul Dubrule, 59810 Lesquin', telephone: '03 67 34 08 34', horaires: 'Nuits + WE + jours fériés', specialites: ['Urgences'], region: 'Lille' },
+  // Rennes
+  { id: 'rennes-1', nom: 'V2TU Rennes', adresse: '6 rue du Bourg Nouveau, 35000 Rennes', telephone: '02 99 41 16 46', horaires: 'Nuits + week-ends', specialites: ['Urgences'], region: 'Rennes' },
+  // Grenoble
+  { id: 'grenoble-1', nom: 'Maison des Urgences Vétérinaires — Échirolles', adresse: '32 rue de Comboire, 38130 Échirolles', telephone: '04 80 42 33 23', horaires: '19h30–7h30 sem. / 12h+ sam. / 24h/24 dim. & fériés', specialites: ['Urgences'], region: 'Grenoble' },
+  // Rouen
+  { id: 'rouen-1', nom: 'V2TU Tourville-la-Rivière', adresse: '5 rue Parc en Seine, 76410 Tourville-la-Rivière', telephone: '02 35 87 94 94', horaires: 'Nuits + WE', specialites: ['Urgences'], region: 'Rouen' },
+  // Clermont-Ferrand
+  { id: 'clermont-1', nom: 'V2TU Clermont', adresse: '1 rue Roland Moreno, 63100 Clermont-Ferrand', telephone: '04 88 60 20 50', horaires: 'Nuits + WE', specialites: ['Urgences'], region: 'Clermont-Ferrand' },
 ];
 
 export const TYPE_LABELS = {

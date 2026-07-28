@@ -4,49 +4,61 @@ import { Screen } from '../../components/ui';
 import { URGENCES_OFFICIELS, ALIMENTS_DANGEREUX, PLANTES_TOXIQUES, GUIDE_PREMIERS_SECOURS, VETERINAIRES } from '../../constants';
 import { colors, spacing, radius } from '../../theme';
 
-const REGION_LABEL = {
-  'Paris & Île-de-France': 'Paris / Île-de-France',
-  'Lyon & Auvergne-Rhône-Alpes': 'Lyon',
-  'Marseille & PACA': 'Marseille',
-  'Toulouse & Occitanie': 'Toulouse',
-  'Bordeaux & Nouvelle-Aquitaine': 'Bordeaux',
-  'Grand Est & Bourgogne': 'Est & Bourgogne',
-  'Hauts-de-France': 'Hauts-de-France',
-  'Bretagne & Pays de la Loire': 'Bretagne & Loire',
-  'Normandie': 'Normandie',
-};
+const CITY_ORDER = ['Paris', 'Lyon', 'Marseille', 'Montpellier', 'Toulouse', 'Bordeaux', 'Nantes', 'Strasbourg', 'Lille', 'Rennes', 'Grenoble', 'Rouen', 'Clermont-Ferrand'];
 
-function groupVetsByRegion() {
+function groupVetsByCity() {
   const map = {};
   VETERINAIRES.forEach((v) => {
-    const r = v.region || 'Autres';
-    if (!map[r]) map[r] = [];
-    map[r].push(v);
+    const c = v.region || 'Autres';
+    if (!map[c]) map[c] = [];
+    map[c].push(v);
   });
-  return Object.entries(map).map(([region, vets]) => ({ region, label: REGION_LABEL[region] || region, vets }));
+  return CITY_ORDER
+    .filter(c => map[c])
+    .map(c => ({ city: c, vets: map[c] }));
 }
 
-function CliniqueCityAccordion({ label, vets }) {
-  const [open, setOpen] = useState(false);
+function ClinicCard({ vet }) {
   return (
-    <View style={styles.cityAccordion}>
-      <TouchableOpacity style={styles.cityAccordionHd} onPress={() => setOpen((o) => !o)} activeOpacity={0.75}>
-        <Text style={styles.cityIcon}>🏙️</Text>
-        <Text style={styles.cityTitle}>{label}</Text>
+    <View style={styles.clinicCard}>
+      <View style={styles.clinicInfo}>
+        <Text style={styles.clinicNom}>{vet.nom}</Text>
+        {vet.adresse ? <Text style={styles.clinicDetail}>📍 {vet.adresse}</Text> : null}
+        {vet.horaires ? <Text style={styles.clinicDetail}>⏰ {vet.horaires}</Text> : null}
+      </View>
+      {vet.telephone ? (
+        <TouchableOpacity
+          style={styles.clinicCallBtn}
+          onPress={() => Linking.openURL(`tel:${vet.telephone.replace(/\s/g, '')}`)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.clinicCallIcon}>📞</Text>
+          <Text style={styles.clinicCallNum}>{vet.telephone}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
+function CliniquesAccordion() {
+  const [open, setOpen] = useState(false);
+  const groups = groupVetsByCity();
+  const total = groups.length;
+  return (
+    <View style={styles.cliniquesOuter}>
+      <TouchableOpacity style={styles.cliniquesHeader} onPress={() => setOpen(o => !o)} activeOpacity={0.75}>
+        <Text style={styles.cliniquesHeaderIcon}>🏙️</Text>
+        <Text style={styles.cliniquesHeaderTitle}>Cliniques d'urgence par ville</Text>
+        <Text style={styles.cliniquesHeaderCount}>({total} villes)</Text>
         <Text style={styles.cityChevron}>{open ? '▲' : '▼'}</Text>
       </TouchableOpacity>
-      {open && vets.map((vet) => (
-        <View key={vet.id} style={styles.clinicRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.clinicNom}>{vet.nom}</Text>
-            {vet.horaires ? <Text style={styles.clinicDetail}>⏰ {vet.horaires}</Text> : null}
-            {vet.adresse ? <Text style={styles.clinicDetail}>🏠 {vet.adresse}</Text> : null}
+      {open && groups.map(({ city, vets }) => (
+        <View key={city}>
+          <View style={styles.citySectionHeader}>
+            <Text style={styles.cityIcon}>🏙️</Text>
+            <Text style={styles.citySectionTitle}>{city.toUpperCase()}</Text>
           </View>
-          {vet.telephone ? (
-            <TouchableOpacity style={styles.clinicCallBtn} onPress={() => Linking.openURL(`tel:${vet.telephone.replace(/\s/g, '')}`)}>
-              <Text style={styles.clinicCallText}>📞</Text>
-            </TouchableOpacity>
-          ) : null}
+          {vets.map(vet => <ClinicCard key={vet.id} vet={vet} />)}
         </View>
       ))}
     </View>
@@ -130,7 +142,6 @@ function SectionTitle({ children }) {
 }
 
 export default function SecuriteScreen() {
-  const clinicGroups = groupVetsByRegion();
   return (
     <Screen>
       <Text style={styles.pageTitle}>🆘 Urgences & Santé</Text>
@@ -156,10 +167,8 @@ export default function SecuriteScreen() {
       ))}
 
       {/* Cliniques d'urgence */}
-      <SectionTitle>CLINIQUES D'URGENCE 24H/24 PAR VILLE</SectionTitle>
-      {clinicGroups.map(({ region, label, vets }) => (
-        <CliniqueCityAccordion key={region} label={label} vets={vets} />
-      ))}
+      <SectionTitle>CLINIQUES D'URGENCE PAR VILLE</SectionTitle>
+      <CliniquesAccordion />
 
       {/* Premiers secours */}
       <SectionTitle>PREMIERS SECOURS</SectionTitle>
@@ -186,7 +195,7 @@ const styles = StyleSheet.create({
   pageSubtitle: { fontSize: 13, color: colors.textLight, marginBottom: spacing.md },
   sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginTop: spacing.lg, marginBottom: spacing.sm },
   sources: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg, lineHeight: 16 },
-  cityAccordion: {
+  cliniquesOuter: {
     backgroundColor: colors.white,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -194,27 +203,49 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     overflow: 'hidden',
   },
-  cityAccordionHd: {
+  cliniquesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
     gap: spacing.sm,
   },
-  cityIcon: { fontSize: 18 },
-  cityTitle: { flex: 1, fontWeight: '600', fontSize: 14, color: colors.text },
-  cityChevron: { fontSize: 10, color: colors.textMuted },
-  clinicRow: {
+  cliniquesHeaderIcon: { fontSize: 18 },
+  cliniquesHeaderTitle: { flex: 1, fontWeight: '700', fontSize: 14, color: colors.text },
+  cliniquesHeaderCount: { fontSize: 12, color: colors.textMuted },
+  cityChevron: { fontSize: 10, color: colors.textMuted, marginLeft: 4 },
+  citySectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: '#f9fafb',
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    gap: spacing.sm,
   },
-  clinicNom: { fontWeight: '600', fontSize: 13, color: colors.text, marginBottom: 2 },
-  clinicDetail: { fontSize: 11, color: colors.textLight },
-  clinicCallBtn: { backgroundColor: '#d1fae5', borderRadius: radius.sm, padding: spacing.sm, alignItems: 'center', justifyContent: 'center' },
-  clinicCallText: { fontSize: 18 },
+  cityIcon: { fontSize: 14 },
+  citySectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8 },
+  clinicCard: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  clinicInfo: { marginBottom: spacing.sm },
+  clinicNom: { fontWeight: '700', fontSize: 14, color: colors.text, marginBottom: 4 },
+  clinicDetail: { fontSize: 12, color: colors.textLight, marginBottom: 2 },
+  clinicCallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#d1fae5',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
+  },
+  clinicCallIcon: { fontSize: 16 },
+  clinicCallNum: { fontSize: 14, fontWeight: '700', color: '#065f46' },
   hint: { fontSize: 12, color: colors.textMuted, marginBottom: spacing.sm },
   urgenceCard: {
     flexDirection: 'row',
