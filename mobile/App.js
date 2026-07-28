@@ -1,11 +1,11 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import 'react-native-gesture-handler';
+import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
-import mobileAds from 'react-native-google-mobile-ads';
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
@@ -44,10 +44,6 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  useEffect(() => {
-    mobileAds().initialize();
-  }, []);
-
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
