@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import * as Print from 'expo-print';
 import * as Clipboard from 'expo-clipboard';
@@ -13,12 +13,32 @@ import { getVideosForAnimal } from '../../utils/videos';
 import { APP_URL } from '../../constants';
 import { colors, spacing } from '../../theme';
 
+const SHARE_SECTIONS = [
+  { key: 'vaccins',          emoji: '💉', label: 'Vaccins' },
+  { key: 'medicaments',      emoji: '💊', label: 'Traitements' },
+  { key: 'chirurgies',       emoji: '🔪', label: 'Chirurgies' },
+  { key: 'antiparasitaires', emoji: '🐛', label: 'Antiparas.' },
+  { key: 'vermifuges',       emoji: '🪱', label: 'Vermifuges' },
+  { key: 'poids',            emoji: '⚖️', label: 'Poids' },
+  { key: 'rdvs',             emoji: '📅', label: 'Rendez-vous' },
+  { key: 'observations',     emoji: '📋', label: 'Observations' },
+  { key: 'assurance',        emoji: '🛡️', label: 'Assurance' },
+  { key: 'budget',           emoji: '💰', label: 'Budget' },
+];
+
+const DEFAULT_SECTIONS = Object.fromEntries(SHARE_SECTIONS.map((s) => [s.key, true]));
+
 export default function DossierScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, saveAnimal } = useAnimals();
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
+  const [shareSections, setShareSections] = useState(DEFAULT_SECTIONS);
+
+  const toggleSection = useCallback((key) => {
+    setShareSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   const animal = animals.find((a) => a.id === selectedAnimal) || animals[0];
 
@@ -43,7 +63,7 @@ export default function DossierScreen() {
     if (email && email.includes('@')) {
       addAnimalItem(animal, 'partages', { email });
       const subject = `Dossier santé de ${animal.nom}`;
-      const body = buildDossierEmailBody(animal);
+      const body = buildDossierEmailBody(animal, shareSections);
       const url = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       await Linking.openURL(url);
       setEmail('');
@@ -52,7 +72,7 @@ export default function DossierScreen() {
 
   const handlePrint = async () => {
     try {
-      await Print.printAsync({ html: buildDossierHtml(animal) });
+      await Print.printAsync({ html: buildDossierHtml(animal, shareSections) });
     } catch (err) {
       Alert.alert('Erreur', "Impossible d'ouvrir le dossier.");
     }
@@ -120,9 +140,26 @@ export default function DossierScreen() {
 
       <Card style={styles.shareBlock}>
         <Text style={styles.shareTitle}>📤 Partage Vétérinaire</Text>
-        <Text style={styles.shareHint}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</Text>
+        <Text style={styles.shareHint}>Choisissez les sections à inclure dans le dossier partagé.</Text>
 
-        <Button title="🖨️ Voir / imprimer le dossier complet (avec photos et audio)" onPress={handlePrint} color={colors.border} textColor={colors.text} style={{ marginBottom: spacing.sm }} />
+        <View style={styles.sectionGrid}>
+          {SHARE_SECTIONS.map((s) => {
+            const active = !!shareSections[s.key];
+            return (
+              <TouchableOpacity
+                key={s.key}
+                onPress={() => toggleSection(s.key)}
+                activeOpacity={0.7}
+                style={[styles.sectionChip, active ? styles.sectionChipActive : styles.sectionChipOff]}
+              >
+                <Text style={styles.sectionChipEmoji}>{s.emoji}</Text>
+                <Text style={[styles.sectionChipLabel, active ? styles.sectionChipLabelActive : null]}>{s.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Button title="🖨️ Voir / imprimer le dossier sélectionné" onPress={handlePrint} color={colors.border} textColor={colors.text} style={{ marginBottom: spacing.sm }} />
 
         {dossier.vaccinNames.length === 0 && dossier.currentMedications.length === 0 && !dossier.lastWeight ? (
           <Text style={styles.shareHint}>Astuce : complétez les vaccins, le poids et les médicaments pour un dossier plus utile au vétérinaire.</Text>
@@ -231,6 +268,32 @@ const styles = StyleSheet.create({
   },
   shareTitle: { fontSize: 13, fontWeight: '700', marginBottom: 4, color: colors.text },
   shareHint: { fontSize: 11, color: colors.textMuted, marginBottom: spacing.sm },
+  sectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  sectionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1.5,
+  },
+  sectionChipActive: {
+    backgroundColor: colors.greenLight,
+    borderColor: colors.primary,
+  },
+  sectionChipOff: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+  },
+  sectionChipEmoji: { fontSize: 13 },
+  sectionChipLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+  sectionChipLabelActive: { color: colors.primaryDark },
   partageRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.greenLight, borderRadius: 4, padding: 6, marginBottom: 4 },
   partageEmail: { fontSize: 11, color: colors.text },
   partageDelete: { fontSize: 12, color: colors.red, paddingHorizontal: 6 },

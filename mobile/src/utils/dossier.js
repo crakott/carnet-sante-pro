@@ -124,38 +124,67 @@ export const getDossierCardStatus = (animal, cardId, videoCount = 0) => {
 };
 
 // Format an animal's record as plain text, ready to be sent by email to a vétérinaire
-// (mirrors buildDossierEmailBody in the web app)
-export const buildDossierEmailBody = (animal) => {
+// sections: object { vaccins, medicaments, chirurgies, antiparasitaires, vermifuges, poids, rdvs, observations, assurance, budget }
+// Pass null to include everything (backward compat).
+export const buildDossierEmailBody = (animal, sections = null) => {
+  const inc = (key) => sections === null || !!sections[key];
   const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
   const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const obsLines = observations.length > 0
-    ? observations.map((o) => {
-        const label = (TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '');
-        const attachments = [o.photo ? '📷 photo' : null, o.audio ? '🎙️ audio' : null].filter(Boolean).join(' + ');
-        return `  • [${o.date}] ${label}${o.description ? ' — ' + o.description : ''}${attachments ? ` (${attachments}, voir le dossier complet)` : ''}`;
-      })
-    : ['  • aucune observation enregistrée'];
-  const hasMedia = observations.some((o) => o.photo || o.audio);
+  const chirurgies = animal.chirurgies || [];
+  const antiparasitaires = animal.antiparasitaires || [];
+  const vermifuges = animal.vermifuges || [];
+  const rdvs = [...(animal.rdvs || [])].sort((a, b) => b.date.localeCompare(a.date));
 
-  return [
+  const lines = [
     `Dossier santé de ${animal.nom} (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece}${animal.race ? ', ' + animal.race : ''})`,
     animal.sexe ? `Sexe : ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}` : null,
     animal.dateNaissance ? `Date de naissance : ${formatDate(animal.dateNaissance)}` : null,
     '',
-    `💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`,
-    `⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`,
-    `💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map((m) => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence})`).join(', ') : 'aucun'}`,
-    '',
-    '📋 Observations :',
-    ...obsLines,
-    hasMedia ? "\nℹ️ Certaines observations contiennent des photos ou enregistrements audio : ouvrez le dossier complet (bouton « 🖨️ Dossier complet ») pour les consulter ou les joindre à cet e-mail." : null,
-    '',
-    'Envoyé depuis Carnet Santé PRO',
-  ].filter((line) => line !== null).join('\n');
+  ];
+
+  if (inc('vaccins')) lines.push(`💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`);
+  if (inc('poids')) lines.push(`⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`);
+  if (inc('medicaments')) lines.push(`💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map((m) => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence})`).join(', ') : 'aucun'}`);
+  if (inc('chirurgies')) lines.push(`🔪 Chirurgies : ${chirurgies.length > 0 ? chirurgies.map((c) => `${c.nom || c.type || 'Chirurgie'}${c.date ? ' (' + c.date + ')' : ''}`).join(', ') : 'aucune'}`);
+  if (inc('antiparasitaires')) lines.push(`🐛 Antiparasitaires : ${antiparasitaires.length > 0 ? antiparasitaires.map((a) => `${a.produit || a.nom || ''}${a.prochaine ? ' (prochain : ' + a.prochaine + ')' : ''}`).join(', ') : 'aucun'}`);
+  if (inc('vermifuges')) lines.push(`💊 Vermifuges : ${vermifuges.length > 0 ? vermifuges.map((v) => `${v.produit || v.nom || ''}${v.prochaine ? ' (prochain : ' + v.prochaine + ')' : ''}`).join(', ') : 'aucun'}`);
+
+  if (inc('rdvs') && rdvs.length > 0) {
+    lines.push('', '📅 Rendez-vous :');
+    rdvs.forEach((r) => lines.push(`  • [${r.date}${r.heure ? ' ' + r.heure : ''}] ${r.motif}${r.lieu ? ' — ' + r.lieu : ''}`));
+  }
+
+  if (inc('observations')) {
+    const obsLines = observations.length > 0
+      ? observations.map((o) => {
+          const label = (TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '');
+          const attachments = [o.photo ? '📷 photo' : null, o.audio ? '🎙️ audio' : null].filter(Boolean).join(' + ');
+          return `  • [${o.date}] ${label}${o.description ? ' — ' + o.description : ''}${attachments ? ` (${attachments}, voir le dossier complet)` : ''}`;
+        })
+      : ['  • aucune observation enregistrée'];
+    const hasMedia = observations.some((o) => o.photo || o.audio);
+    lines.push('', '📋 Observations :', ...obsLines);
+    if (hasMedia) lines.push("\nℹ️ Certaines observations contiennent des photos ou enregistrements audio : ouvrez le dossier complet pour les consulter.");
+  }
+
+  if (inc('assurance')) {
+    const ins = animal.assurance;
+    if (ins && ins.compagnie) lines.push('', `🛡️ Assurance : ${ins.compagnie}${ins.numeroContrat ? ' — N° ' + ins.numeroContrat : ''}${ins.dateFin ? ' (renouvellement : ' + ins.dateFin + ')' : ''}`);
+  }
+
+  if (inc('budget')) {
+    const total = (animal.budget || []).reduce((s, b) => s + (b.montant || 0), 0);
+    lines.push(`💰 Budget total : ${total.toFixed(2)} €`);
+  }
+
+  lines.push('', 'Envoyé depuis Carnet Santé PRO');
+  return lines.filter((line) => line !== null).join('\n');
 };
 
 // Build a standalone printable HTML report (with embedded photos/audio), used with expo-print
-export const buildDossierHtml = (animal) => {
+// sections: same shape as buildDossierEmailBody — null means include everything.
+export const buildDossierHtml = (animal, sections = null) => {
+  const inc = (key) => sections === null || !!sections[key];
   const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
   const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
   const poids = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -228,35 +257,16 @@ export const buildDossierHtml = (animal) => {
         ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
         ${animal.identifiant ? `<p>Identifiant : ${escapeHtml(animal.identifiant)}</p>` : ''}
 
-        <h2>💉 Vaccins</h2>
-        <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
-
-        <h2>💊 Médicaments en cours</h2>
-        <p>${currentMedications.length > 0 ? currentMedications.map((m) => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
-
-        <h2>🔪 Chirurgies</h2>
-        ${chirHtml}
-
-        <h2>🐛 Antiparasitaires</h2>
-        ${antiHtml}
-
-        <h2>💊 Vermifuges</h2>
-        ${vermHtml}
-
-        <h2>⚖️ Historique de poids</h2>
-        ${poidsHtml}
-
-        <h2>📅 Rendez-vous</h2>
-        ${rdvsHtml}
-
-        <h2>📋 Observations</h2>
-        ${obsHtml}
-
-        <h2>🛡️ Assurance</h2>
-        ${assuranceHtml}
-
-        <h2>💰 Budget total</h2>
-        <p>${budgetTotal.toFixed(2)} € (${budget.length} dépense${budget.length > 1 ? 's' : ''})</p>
+        ${inc('vaccins') ? `<h2>💉 Vaccins</h2><p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>` : ''}
+        ${inc('medicaments') ? `<h2>💊 Médicaments en cours</h2><p>${currentMedications.length > 0 ? currentMedications.map((m) => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>` : ''}
+        ${inc('chirurgies') ? `<h2>🔪 Chirurgies</h2>${chirHtml}` : ''}
+        ${inc('antiparasitaires') ? `<h2>🐛 Antiparasitaires</h2>${antiHtml}` : ''}
+        ${inc('vermifuges') ? `<h2>💊 Vermifuges</h2>${vermHtml}` : ''}
+        ${inc('poids') ? `<h2>⚖️ Historique de poids</h2>${poidsHtml}` : ''}
+        ${inc('rdvs') ? `<h2>📅 Rendez-vous</h2>${rdvsHtml}` : ''}
+        ${inc('observations') ? `<h2>📋 Observations</h2>${obsHtml}` : ''}
+        ${inc('assurance') ? `<h2>🛡️ Assurance</h2>${assuranceHtml}` : ''}
+        ${inc('budget') ? `<h2>💰 Budget total</h2><p>${budgetTotal.toFixed(2)} € (${budget.length} dépense${budget.length > 1 ? 's' : ''})</p>` : ''}
 
         <div class="footer">Généré le ${escapeHtml(generated)} · Carnet Santé PRO</div>
     </body></html>`;
