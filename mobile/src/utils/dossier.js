@@ -271,3 +271,118 @@ export const buildDossierHtml = (animal, sections = null) => {
         <div class="footer">Généré le ${escapeHtml(generated)} · Carnet Santé PRO</div>
     </body></html>`;
 };
+
+// ─── Étiquette collier (format carte de crédit 85.6 × 54 mm) ────────────────
+// shareUrl : URL publique de la fiche de garde (https://…/?share=id)
+export const buildCollarTagHtml = (animal, shareUrl) => {
+  const { currentMedications } = getAnimalDossier(animal);
+  const allergies = (animal.alimentationProfil?.allergies || '').trim();
+  const phone = (animal.contactPhone || '').trim();
+  const chip = (animal.identifiant || '').trim();
+  const medsText = currentMedications.length > 0
+    ? currentMedications.map((m) => `${escapeHtml(m.nom)} ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}`).join(', ')
+    : '';
+  const photoSection = animal.photo
+    ? `<img src="${escapeHtml(animal.photo)}" class="photo" />`
+    : `<div class="photo-fb">🐾</div>`;
+  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=66x66&chl=${encodeURIComponent(shareUrl)}`;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  @page { size: 85.6mm 54mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 85.6mm; height: 54mm; font-family: Arial, sans-serif; overflow: hidden; }
+  .card { display: flex; padding: 3mm; gap: 2.5mm; height: 100%; background: #fff; border: 0.3mm solid #e5e7eb; border-radius: 1.5mm; }
+  .left { flex: 1; display: flex; flex-direction: column; gap: 0.8mm; overflow: hidden; }
+  .right { display: flex; flex-direction: column; align-items: center; justify-content: space-between; width: 24mm; }
+  .photo { width: 15mm; height: 15mm; border-radius: 7.5mm; object-fit: cover; margin-bottom: 1mm; }
+  .photo-fb { width: 15mm; height: 15mm; border-radius: 7.5mm; background: #10b981; display: flex; align-items: center; justify-content: center; font-size: 9pt; color: #fff; margin-bottom: 1mm; }
+  .name { font-size: 10pt; font-weight: 700; color: #059669; }
+  .chip { font-size: 5pt; color: #6b7280; margin-top: 0.5mm; }
+  .tag { font-size: 4pt; font-weight: 700; color: #fff; padding: 0.5pt 2pt; border-radius: 1pt; display: inline-block; margin-top: 0.8mm; }
+  .tag-red { background: #dc2626; }
+  .tag-amber { background: #d97706; }
+  .info { font-size: 5pt; color: #374151; line-height: 1.3; margin-top: 0.3mm; }
+  .qr-label { font-size: 4pt; color: #9ca3af; text-align: center; margin-top: 0.5mm; }
+  .phone { font-size: 7pt; font-weight: 900; color: #059669; text-align: center; word-break: break-all; }
+  .phone-lbl { font-size: 4pt; color: #9ca3af; text-align: center; margin-bottom: 0.5mm; }
+  .logo { font-size: 4pt; color: #d1d5db; text-align: center; }
+</style></head><body>
+<div class="card">
+  <div class="left">
+    ${photoSection}
+    <div class="name">${escapeHtml(animal.nom || '')}</div>
+    ${chip ? `<div class="chip">🔢 ${escapeHtml(chip)}</div>` : ''}
+    ${medsText ? `<span class="tag tag-red">💊 Médicaments</span><div class="info">${escapeHtml(medsText)}</div>` : ''}
+    ${allergies ? `<span class="tag tag-amber">⚠️ Allergies</span><div class="info">${escapeHtml(allergies)}</div>` : ''}
+  </div>
+  <div class="right">
+    <div>
+      <img src="${qrUrl}" style="width:22mm;height:22mm;display:block;" />
+      <div class="qr-label">Fiche en ligne</div>
+    </div>
+    <div>
+      ${phone ? `<div class="phone-lbl">📞 Si trouvé(e)</div><div class="phone">${escapeHtml(phone)}</div>` : `<div class="phone-lbl">Ajoutez un n° de contact</div>`}
+    </div>
+    <div class="logo">Carnet Santé PRO</div>
+  </div>
+</div>
+</body></html>`;
+};
+
+// ─── Affiche "Animal perdu" (format A4) ──────────────────────────────────────
+// form : { date, lieu, telephone, signes }
+// shareUrl : URL publique de la fiche de garde (ou chaîne vide)
+export const buildLostPosterHtml = (animal, form, shareUrl) => {
+  const { date, lieu, telephone, signes } = form;
+  const phone = (telephone || animal.contactPhone || '').trim();
+  const photoSection = animal.photo
+    ? `<img src="${escapeHtml(animal.photo)}" style="width:100%;max-height:230px;object-fit:cover;border-radius:10px;margin:10px 0;" />`
+    : `<div style="width:100%;height:130px;background:#f3f4f6;border-radius:10px;margin:10px 0;display:flex;align-items:center;justify-content:center;font-size:64px;">🐾</div>`;
+  const qrUrl = shareUrl ? `https://chart.googleapis.com/chart?cht=qr&chs=90x90&chl=${encodeURIComponent(shareUrl)}` : '';
+  const generated = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const espaceEmoji = EMOJIS_ESPECE[animal.espece] || '🐾';
+  const desc = [espaceEmoji + ' ' + (animal.espece || ''), animal.race].filter(Boolean).join(' · ');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Animal perdu — ${escapeHtml(animal.nom)}</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  body { font-family: Arial, sans-serif; color: #1f2937; max-width: 180mm; margin: 0 auto; }
+  .hdr { background: #dc2626; color: #fff; text-align: center; padding: 16px 10px; border-radius: 10px; margin-bottom: 6px; }
+  .hdr-title { font-size: 38pt; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  .hdr-sub { font-size: 11pt; opacity: 0.88; margin-top: 4px; }
+  .animal-name { font-size: 30pt; font-weight: 900; text-align: center; margin: 4px 0 2px; }
+  .animal-desc { font-size: 13pt; color: #6b7280; text-align: center; margin-bottom: 8px; }
+  .info { font-size: 12pt; margin: 5px 0; }
+  .phone-block { background: #dc2626; color: #fff; text-align: center; padding: 16px; border-radius: 10px; margin: 14px 0; }
+  .phone-lbl { font-size: 11pt; opacity: 0.9; margin-bottom: 3px; }
+  .phone-num { font-size: 36pt; font-weight: 900; letter-spacing: 1px; line-height: 1.1; }
+  .footer { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; }
+  .footer-text { font-size: 8.5pt; color: #9ca3af; flex: 1; line-height: 1.5; }
+  hr { border: none; border-top: 2px dashed #e5e7eb; margin: 8px 0; }
+</style></head><body>
+  <div class="hdr">
+    <div class="hdr-title">🐾 ANIMAL PERDU</div>
+    <div class="hdr-sub">Merci de nous contacter si vous l'avez aperçu</div>
+  </div>
+  ${photoSection}
+  <div class="animal-name">${escapeHtml(animal.nom || '')}</div>
+  <div class="animal-desc">${escapeHtml(desc)}</div>
+  <hr />
+  ${date ? `<div class="info">📅 <strong>Disparu(e) le :</strong> ${escapeHtml(date)}</div>` : ''}
+  ${lieu ? `<div class="info">📍 <strong>Dernier lieu connu :</strong> ${escapeHtml(lieu)}</div>` : ''}
+  ${signes ? `<div class="info">🔍 <strong>Signes distinctifs :</strong> ${escapeHtml(signes)}</div>` : ''}
+  ${animal.identifiant ? `<div class="info">🔢 <strong>Puce électronique :</strong> ${escapeHtml(animal.identifiant)}</div>` : ''}
+  <div class="phone-block">
+    <div class="phone-lbl">📞 Si vous l'avez trouvé, appelez le</div>
+    <div class="phone-num">${escapeHtml(phone || 'Numéro non renseigné')}</div>
+  </div>
+  <div class="footer">
+    ${qrUrl ? `<img src="${qrUrl}" style="width:70px;height:70px;" />` : ''}
+    <div class="footer-text">
+      ${shareUrl ? `<strong>Fiche complète en ligne :</strong><br>${escapeHtml(shareUrl)}<br>` : ''}
+      Généré le ${escapeHtml(generated)} via Carnet Santé PRO
+    </div>
+  </div>
+</body></html>`;
+};

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
 import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useNavigation } from '@react-navigation/native';
 import { Screen, EmptyState, Card, Button, Input, Avatar, ListGroup, ListRow, GroupLabel } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
 import { getAnimalDossier } from '../../utils/reminders';
-import { buildDossierEmailBody, buildDossierHtml, DOSSIER_GROUPS, DOSSIER_CARDS, getDossierCardStatus, getDossierStatusPillStyle } from '../../utils/dossier';
+import { buildDossierEmailBody, buildDossierHtml, buildCollarTagHtml, buildLostPosterHtml, DOSSIER_GROUPS, DOSSIER_CARDS, getDossierCardStatus, getDossierStatusPillStyle } from '../../utils/dossier';
 import { computeAge } from '../../utils/dates';
 import { getVideosForAnimal } from '../../utils/videos';
 import { APP_URL } from '../../constants';
@@ -29,12 +30,18 @@ const SHARE_SECTIONS = [
 const DEFAULT_SECTIONS = Object.fromEntries(SHARE_SECTIONS.map((s) => [s.key, true]));
 
 export default function DossierScreen() {
-  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, saveAnimal } = useAnimals();
+  const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, saveAnimal, updateAnimalFields } = useAnimals();
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
   const [shareSections, setShareSections] = useState(DEFAULT_SECTIONS);
+  const [contactPhone, setContactPhone] = useState('');
+  const [lostDate, setLostDate] = useState('');
+  const [lostLieu, setLostLieu] = useState('');
+  const [lostTel, setLostTel] = useState('');
+  const [lostSignes, setLostSignes] = useState('');
+  const [showLostForm, setShowLostForm] = useState(false);
 
   const toggleSection = useCallback((key) => {
     setShareSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -45,6 +52,8 @@ export default function DossierScreen() {
   useEffect(() => {
     if (!animal) return;
     getVideosForAnimal(animal.id).then((list) => setVideoCount(list.length)).catch(() => setVideoCount(0));
+    setContactPhone(animal.contactPhone || '');
+    setLostTel(animal.contactPhone || '');
   }, [animal?.id]);
 
   if (animals.length === 0) {
@@ -85,6 +94,29 @@ export default function DossierScreen() {
     await Clipboard.setStringAsync(shareUrl);
     setShareLinkCopied(true);
     setTimeout(() => setShareLinkCopied(false), 2000);
+  };
+
+  const handleSaveContactPhone = () => updateAnimalFields(animal, { contactPhone: contactPhone.trim() });
+
+  const handleCollarTag = async () => {
+    try {
+      const html = buildCollarTagHtml(animal, shareUrl);
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Étiquette collier — ${animal.nom}`, UTI: 'com.adobe.pdf' });
+    } catch {
+      Alert.alert('Erreur', "Impossible de générer l'étiquette collier.");
+    }
+  };
+
+  const handleLostPoster = async () => {
+    try {
+      const form = { date: lostDate, lieu: lostLieu, telephone: lostTel, signes: lostSignes };
+      const html = buildLostPosterHtml(animal, form, animal.shareEnabled ? shareUrl : '');
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Affiche perdu — ${animal.nom}`, UTI: 'com.adobe.pdf' });
+    } catch {
+      Alert.alert('Erreur', "Impossible de générer l'affiche.");
+    }
   };
 
   return (
@@ -185,13 +217,29 @@ export default function DossierScreen() {
       <Card style={styles.shareBlock}>
         <Text style={styles.shareTitle}>🔗 Fiche de garde</Text>
         <Text style={styles.shareHint}>
-          Générez un lien (ou QR code) en lecture seule avec les infos essentielles de {animal.nom} (vaccins, traitements, poids, alimentation…), à partager avec un pet-sitter, un proche ou un vétérinaire — sans connexion requise.
+          Lien en lecture seule avec les infos essentielles de {animal.nom}, à partager avec un pet-sitter ou un vétérinaire — sans connexion requise.
         </Text>
+
+        {/* Numéro de contact */}
+        <Text style={styles.fieldLabel}>📞 N° si trouvé / perdu</Text>
+        <View style={styles.phoneRow}>
+          <Input
+            value={contactPhone}
+            onChangeText={setContactPhone}
+            placeholder="06 12 34 56 78"
+            keyboardType="phone-pad"
+            style={{ flex: 1 }}
+          />
+          <Button title="Sauv." onPress={handleSaveContactPhone} style={{ marginLeft: spacing.sm, paddingHorizontal: spacing.sm }} />
+        </View>
+        <Text style={styles.shareHint}>Utilisé sur l'étiquette collier et l'affiche perdu.</Text>
+
         <Button
           title={animal.shareEnabled ? '🔒 Désactiver le partage' : '🔗 Activer le partage'}
           onPress={toggleShare}
           color={animal.shareEnabled ? colors.redLight : colors.primary}
           textColor={animal.shareEnabled ? colors.red : colors.white}
+          style={{ marginTop: spacing.sm }}
         />
         {animal.shareEnabled ? (
           <View style={styles.qrBlock}>
@@ -203,8 +251,41 @@ export default function DossierScreen() {
               textColor={shareLinkCopied ? colors.primary : colors.text}
               style={{ marginTop: spacing.md }}
             />
+            <Button
+              title="🏷️ Générer l'étiquette collier (PDF)"
+              onPress={handleCollarTag}
+              color="#0369a1"
+              style={{ marginTop: spacing.sm }}
+            />
+            <Text style={[styles.shareHint, { marginTop: 4, textAlign: 'center' }]}>
+              Carte format crédit · nom, puce, médicaments, allergies, QR code et n° de contact
+            </Text>
           </View>
         ) : null}
+      </Card>
+
+      {/* Affiche Animal perdu */}
+      <Card style={styles.shareBlock}>
+        <TouchableOpacity onPress={() => setShowLostForm((v) => !v)} activeOpacity={0.7} style={styles.lostHeader}>
+          <Text style={styles.shareTitle}>🔍 Affiche "Animal perdu"</Text>
+          <Text style={styles.accordionArrow}>{showLostForm ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+        {!showLostForm && (
+          <Text style={styles.shareHint}>Générez une affiche imprimable en rouge avec la photo de {animal.nom} et votre numéro en grand.</Text>
+        )}
+        {showLostForm && (
+          <View style={{ marginTop: spacing.sm }}>
+            <Text style={styles.fieldLabel}>📅 Date de disparition</Text>
+            <Input value={lostDate} onChangeText={setLostDate} placeholder="ex : 15 juillet 2025" style={{ marginBottom: spacing.sm }} />
+            <Text style={styles.fieldLabel}>📍 Dernier lieu connu</Text>
+            <Input value={lostLieu} onChangeText={setLostLieu} placeholder="ex : Parc de la Mairie, Lyon 3e" style={{ marginBottom: spacing.sm }} />
+            <Text style={styles.fieldLabel}>📞 Téléphone de contact</Text>
+            <Input value={lostTel} onChangeText={setLostTel} placeholder="06 12 34 56 78" keyboardType="phone-pad" style={{ marginBottom: spacing.sm }} />
+            <Text style={styles.fieldLabel}>🔍 Signes distinctifs</Text>
+            <Input value={lostSignes} onChangeText={setLostSignes} placeholder="ex : Tache blanche sur la patte droite, collier rouge…" multiline style={{ marginBottom: spacing.md, minHeight: 60 }} />
+            <Button title="📤 Générer et partager l'affiche" onPress={handleLostPoster} color="#dc2626" />
+          </View>
+        )}
       </Card>
     </Screen>
   );
@@ -300,4 +381,8 @@ const styles = StyleSheet.create({
   noPartage: { fontSize: 11, color: colors.textMuted },
   shareRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
   qrBlock: { alignItems: 'center', marginTop: spacing.md },
+  phoneRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', color: colors.textLight, marginBottom: 4, marginTop: spacing.sm },
+  lostHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  accordionArrow: { fontSize: 12, color: colors.textMuted },
 });
