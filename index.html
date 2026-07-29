@@ -4844,8 +4844,16 @@
                         <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
                         <p class="stamp">Généré le ${generatedDate}</p>
                         <h1>✈️ Fiche voyage — ${escapeHtml(animal.nom)}</h1>
-                        <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}</p>
-                        <p><strong>Destination :</strong> ${destLabel}</p>
+                        <table style="margin:8px 0 16px;border-collapse:collapse;width:100%">
+                            <tr>
+                                <td style="padding:6px 12px 6px 0;font-size:13px;color:#6b7280;white-space:nowrap">Animal</td>
+                                <td style="padding:6px 0;font-size:14px;font-weight:700">${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.nom)}${animal.espece ? ' — ' + escapeHtml(animal.espece) : ''}${animal.race ? ' (' + escapeHtml(animal.race) + ')' : ''}</td>
+                            </tr>
+                            ${animal.sexe ? `<tr><td style="padding:4px 12px 4px 0;font-size:13px;color:#6b7280">Sexe</td><td style="padding:4px 0;font-size:14px">${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}</td></tr>` : ''}
+                            ${animal.dateNaissance ? `<tr><td style="padding:4px 12px 4px 0;font-size:13px;color:#6b7280">Né(e) le</td><td style="padding:4px 0;font-size:14px">${escapeHtml(formatDate(animal.dateNaissance))}</td></tr>` : ''}
+                            ${animal.identifiant ? `<tr><td style="padding:4px 12px 4px 0;font-size:13px;color:#6b7280">Identifiant</td><td style="padding:4px 0;font-size:14px;font-family:monospace">${escapeHtml(animal.identifiant)}</td></tr>` : ''}
+                            <tr><td style="padding:4px 12px 4px 0;font-size:13px;color:#6b7280">Destination</td><td style="padding:4px 0;font-size:14px;font-weight:600">${destLabel}</td></tr>
+                        </table>
                         <h2>Check-list de préparation</h2>
                         <div class="progress"><div class="progress-bar"></div></div>
                         <p style="font-size:13px;color:#6b7280">${doneCount} / ${items.length} éléments — ${pct}%</p>
