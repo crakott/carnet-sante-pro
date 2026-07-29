@@ -3591,25 +3591,6 @@
                         )}
                     </div>
 
-                    <TraitementSection
-                        title="Antiparasitaires"
-                        emoji="🦟"
-                        color="#7c3aed"
-                        items={animal.antiparasitaires}
-                        onAdd={item => addAnimalItem(animal, 'antiparasitaires', item)}
-                        onUpdate={(id, vals) => updateAnimalItem(animal, 'antiparasitaires', id, vals)}
-                        onDelete={id => deleteAnimalItem(animal, 'antiparasitaires', id)}
-                    />
-
-                    <TraitementSection
-                        title="Vermifuges"
-                        emoji="🪱"
-                        color="#b45309"
-                        items={animal.vermifuges}
-                        onAdd={item => addAnimalItem(animal, 'vermifuges', item)}
-                        onUpdate={(id, vals) => updateAnimalItem(animal, 'vermifuges', id, vals)}
-                        onDelete={id => deleteAnimalItem(animal, 'vermifuges', id)}
-                    />
                 </div>
             );
         }
@@ -3734,9 +3715,29 @@
                                 );
                             })
                         ) : (
-                            <EmptyList emoji="🦟" text="Aucun antiparasitaire / vermifuge enregistré" hint="Appuyez sur + pour ajouter un traitement" />
+                            <EmptyList emoji="💊" text="Aucun traitement médicamenteux enregistré" hint="Appuyez sur + pour ajouter un traitement" />
                         )}
                     </div>
+
+                    <TraitementSection
+                        title="Antiparasitaires"
+                        emoji="🦟"
+                        color="#7c3aed"
+                        items={animal.antiparasitaires}
+                        onAdd={item => addAnimalItem(animal, 'antiparasitaires', item)}
+                        onUpdate={(id, vals) => updateAnimalItem(animal, 'antiparasitaires', id, vals)}
+                        onDelete={id => deleteAnimalItem(animal, 'antiparasitaires', id)}
+                    />
+
+                    <TraitementSection
+                        title="Vermifuges"
+                        emoji="🪱"
+                        color="#b45309"
+                        items={animal.vermifuges}
+                        onAdd={item => addAnimalItem(animal, 'vermifuges', item)}
+                        onUpdate={(id, vals) => updateAnimalItem(animal, 'vermifuges', id, vals)}
+                        onDelete={id => deleteAnimalItem(animal, 'vermifuges', id)}
+                    />
                 </div>
             );
         }
