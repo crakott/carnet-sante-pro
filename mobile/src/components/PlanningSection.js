@@ -2,22 +2,22 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Card, Button, Field, Input, IconButton } from './ui';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr, getCountdown } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput, getCountdown } from '../utils/dates';
 
 // Upcoming/past appointments for one animal (mirrors PlanningTab in the web app)
 export default function PlanningSection({ animal, addAnimalItem, deleteAnimalItem }) {
   const [showForm, setShowForm] = useState(false);
   const [motif, setMotif] = useState('');
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState(isoToDisplay(todayStr()));
   const [heure, setHeure] = useState('');
   const [lieu, setLieu] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleAdd = () => {
     if (motif && date) {
-      addAnimalItem(animal, 'rdvs', { motif, date, heure, lieu, notes });
+      addAnimalItem(animal, 'rdvs', { motif, date: displayToIso(date), heure, lieu, notes });
       setMotif('');
-      setDate(todayStr());
+      setDate(isoToDisplay(todayStr()));
       setHeure('');
       setLieu('');
       setNotes('');
@@ -65,7 +65,13 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
             <Input value={motif} onChangeText={setMotif} placeholder="ex. Vaccination, Consultation…" />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input
+              value={date}
+              onChangeText={(v) => setDate(formatDateInput(v))}
+              placeholder="JJ/MM/AAAA"
+              keyboardType="numeric"
+              maxLength={10}
+            />
           </Field>
           <Field label="Heure">
             <Input value={heure} onChangeText={setHeure} placeholder="HH:MM" />
