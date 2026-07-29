@@ -6,6 +6,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Screen, ScreenTitle, Card, Button, Field, Input, Select, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
 import AdBanner from '../../components/AdBanner';
 import TutorialOverlay from '../../components/TutorialOverlay';
+import SearchModal from '../../components/SearchModal';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
@@ -69,8 +70,13 @@ export default function AccueilScreen() {
   }, []);
 
   const reminders = getReminders(animals, reminderSettings);
+  const q = search.toLowerCase();
   const filteredAnimals = search.trim()
-    ? animals.filter((a) => a.nom?.toLowerCase().includes(search.toLowerCase()))
+    ? animals.filter((a) =>
+        a.nom?.toLowerCase().includes(q) ||
+        a.espece?.toLowerCase().includes(q) ||
+        a.race?.toLowerCase().includes(q)
+      )
     : animals;
 
   const handleAddAnimal = async () => {
@@ -113,12 +119,12 @@ export default function AccueilScreen() {
         </Card>
       )}
 
-      {animals.length > 3 && (
+      {animals.length > 0 && (
         <TextInput
           style={styles.searchInput}
           value={search}
           onChangeText={setSearch}
-          placeholder="🔍 Rechercher un animal..."
+          placeholder="🔍 Rechercher un animal…"
           placeholderTextColor={colors.textMuted}
           clearButtonMode="while-editing"
         />
@@ -190,6 +196,7 @@ export default function AccueilScreen() {
         visible={showTutorial}
         onDone={() => setShowTutorial(false)}
       />
+      <SearchModal />
     </Screen>
   );
 }

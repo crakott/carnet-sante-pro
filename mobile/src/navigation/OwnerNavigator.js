@@ -4,6 +4,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
+import { SearchProvider, useSearch } from '../context/SearchContext';
+import OfflineBanner from '../components/OfflineBanner';
 
 import AccueilScreen from '../screens/owner/AccueilScreen';
 import DossierScreen from '../screens/owner/DossierScreen';
@@ -70,13 +72,26 @@ function BackAndHomeButtons({ navigation }) {
   );
 }
 
+function SearchHeaderButton() {
+  const { setOpen } = useSearch();
+  return (
+    <TouchableOpacity onPress={() => setOpen(true)} hitSlop={12} style={{ marginRight: 12 }}>
+      <Text style={{ fontSize: 22 }}>🔍</Text>
+    </TouchableOpacity>
+  );
+}
+
 function AccueilStack() {
   return (
     <AccueilStackNav.Navigator screenOptions={stackOptions}>
       <AccueilStackNav.Screen
         name="AccueilMain"
         component={AccueilScreen}
-        options={{ title: APP_TITLE, headerLeft: () => <Text style={{ fontSize: 22, marginLeft: 8 }}>🏠</Text> }}
+        options={{
+          title: APP_TITLE,
+          headerLeft: () => <Text style={{ fontSize: 22, marginLeft: 8 }}>🏠</Text>,
+          headerRight: () => <SearchHeaderButton />,
+        }}
       />
     </AccueilStackNav.Navigator>
   );
@@ -220,17 +235,22 @@ function CustomTabBar({ state, navigation }) {
 
 export default function OwnerNavigator() {
   return (
-    <Tab.Navigator
-      initialRouteName="Accueil"
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tab.Screen name="Dossier" component={DossierStack} />
-      <Tab.Screen name="Urgences" component={UrgencesStack} />
-      <Tab.Screen name="Accueil" component={AccueilStack} />
-      <Tab.Screen name="Rappels" component={RappelsStack} />
-      <Tab.Screen name="Plus" component={PlusStack} />
-    </Tab.Navigator>
+    <SearchProvider>
+      <View style={{ flex: 1 }}>
+        <OfflineBanner />
+        <Tab.Navigator
+          initialRouteName="Accueil"
+          tabBar={(props) => <CustomTabBar {...props} />}
+          screenOptions={{ headerShown: false }}
+        >
+          <Tab.Screen name="Dossier" component={DossierStack} />
+          <Tab.Screen name="Urgences" component={UrgencesStack} />
+          <Tab.Screen name="Accueil" component={AccueilStack} />
+          <Tab.Screen name="Rappels" component={RappelsStack} />
+          <Tab.Screen name="Plus" component={PlusStack} />
+        </Tab.Navigator>
+      </View>
+    </SearchProvider>
   );
 }
 

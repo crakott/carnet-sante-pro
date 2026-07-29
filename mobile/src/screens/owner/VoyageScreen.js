@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Image, Alert } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { colors, spacing, radius } from '../../theme';
 import { Screen, Button, Field, Input, EmptyState } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
@@ -51,6 +53,53 @@ const DEST_LABELS = {
 };
 
 const DEST_KEYS = ['france', 'europe', 'international'];
+
+function buildVoyageHtml(animal, dest, checklist, completed, notes) {
+  const destName = { france: 'France', europe: 'Europe', international: 'International' }[dest] || dest;
+  const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  const totalDone = checklist.filter((_, i) => completed.has(i)).length;
+  const rows = checklist.map((item, i) => {
+    const checked = completed.has(i);
+    return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f9fafb'}">
+      <td style="padding:8px 12px;font-size:15px;text-align:center;">${checked ? '✅' : '☐'}</td>
+      <td style="padding:8px 12px;font-size:13px;color:${checked ? '#9ca3af' : '#1f2937'};${checked ? 'text-decoration:line-through;' : ''}">${item.label}</td>
+      <td style="padding:8px 12px;text-align:center;">${item.requis ? '<span style="background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;">REQUIS</span>' : ''}</td>
+    </tr>`;
+  }).join('');
+  const safeNotes = notes.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<style>
+  body{font-family:Arial,sans-serif;padding:28px;color:#1f2937;max-width:680px;margin:0 auto}
+  h1{color:#059669;font-size:22px;margin:0 0 4px}
+  .meta{color:#6b7280;font-size:11px;margin-bottom:20px}
+  .card{background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:14px;margin-bottom:20px}
+  .name{font-size:18px;font-weight:700;color:#059669}
+  .sub{color:#6b7280;font-size:13px;margin-top:2px}
+  .dest{display:inline-block;background:#10b981;color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;margin-top:6px}
+  .prog{color:#6b7280;font-size:12px;margin-top:6px}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+  th{background:#059669;color:#fff;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .notes{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin-bottom:20px}
+  .nt{font-weight:700;color:#1f2937;margin-bottom:8px;font-size:14px}
+  .nb{color:#374151;line-height:1.6;white-space:pre-wrap;font-size:13px}
+  .footer{border-top:1px solid #e5e7eb;padding-top:12px;color:#9ca3af;font-size:10px;text-align:center}
+</style></head><body>
+<h1>✈️ Fiche Voyage</h1>
+<div class="meta">Générée le ${today} · Carnet Santé PRO</div>
+<div class="card">
+  <div class="name">${animal.nom || 'Animal'}</div>
+  ${animal.espece ? `<div class="sub">${animal.espece}${animal.race ? ` · ${animal.race}` : ''}</div>` : ''}
+  <div class="dest">${destName}</div>
+  <div class="prog">${totalDone}/${checklist.length} éléments complétés</div>
+</div>
+<table>
+  <thead><tr><th style="width:40px;text-align:center;"></th><th>Élément de la checklist</th><th style="width:80px;text-align:center;">Requis</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+${safeNotes.trim() ? `<div class="notes"><div class="nt">📝 Notes de voyage</div><div class="nb">${safeNotes}</div></div>` : ''}
+<div class="footer">Carnet Santé PRO — Fiche voyage de ${animal.nom || "l'animal"}</div>
+</body></html>`;
+}
 
 export default function VoyageScreen() {
   const { animals, selectedAnimal, updateAnimalFields } = useAnimals();
@@ -111,6 +160,21 @@ export default function VoyageScreen() {
   const saveNotes = () => {
     if (!animal) return;
     updateAnimalFields(animal, { voyage: buildVoyageUpdate(completed, notes) });
+  };
+
+  const handleShareVoyage = async () => {
+    if (!animal) return;
+    try {
+      const html = buildVoyageHtml(animal, selectedDest, checklist, completed, notes);
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: `Fiche voyage — ${animal.nom}`,
+        UTI: 'com.adobe.pdf',
+      });
+    } catch {
+      Alert.alert('Erreur', 'Impossible de générer la fiche voyage.');
+    }
   };
 
   return (
@@ -238,6 +302,13 @@ export default function VoyageScreen() {
               );
             })}
           </View>
+
+          {/* Share / Print */}
+          <Button
+            title="🖨️ Partager / Imprimer la fiche"
+            onPress={handleShareVoyage}
+            style={styles.shareBtn}
+          />
 
           {/* Notes */}
           <Text style={styles.notesTitle}>📝 Notes de voyage</Text>
@@ -466,6 +537,10 @@ const styles = StyleSheet.create({
     color: colors.red,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  shareBtn: {
+    marginBottom: spacing.lg,
+    backgroundColor: '#0369a1',
   },
   notesTitle: {
     fontSize: 16,
