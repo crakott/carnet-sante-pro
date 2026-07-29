@@ -3,26 +3,26 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Card, Button, Field, Input, IconButton, Row } from './ui';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 
-const emptyForm = { nom: '', date: todayStr(), notes: '', photo: '' };
+const freshForm = () => ({ nom: '', date: isoToDisplay(todayStr()), notes: '', photo: '' });
 
 export default function ChirurgiesSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(freshForm());
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
   const openAdd = () => {
     setEditingId(null);
-    setForm({ ...emptyForm, date: todayStr() });
+    setForm(freshForm());
     setShowForm(true);
   };
 
   const openEdit = (c) => {
     setEditingId(c.id);
-    setForm({ nom: c.nom, date: c.date, notes: c.notes || '', photo: '' });
+    setForm({ nom: c.nom, date: isoToDisplay(c.date), notes: c.notes || '', photo: '' });
     setShowForm(true);
   };
 
@@ -38,7 +38,7 @@ export default function ChirurgiesSection({ animal, addAnimalItem, deleteAnimalI
 
   const handleSave = () => {
     if (!form.nom || !form.date) return;
-    const payload = { nom: form.nom, date: form.date, notes: form.notes };
+    const payload = { nom: form.nom, date: displayToIso(form.date), notes: form.notes };
     if (form.photo) payload.photo = form.photo;
     if (editingId) {
       if (!form.photo) delete payload.photo;
@@ -48,7 +48,7 @@ export default function ChirurgiesSection({ animal, addAnimalItem, deleteAnimalI
     }
     setShowForm(false);
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(freshForm());
   };
 
   const sortedDesc = [...(animal.chirurgies || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -63,7 +63,7 @@ export default function ChirurgiesSection({ animal, addAnimalItem, deleteAnimalI
             <Input value={form.nom} onChangeText={(v) => set('nom', v)} placeholder="ex. Stérilisation, Détartrage…" />
           </Field>
           <Field label="Date">
-            <Input value={form.date} onChangeText={(v) => set('date', v)} placeholder="AAAA-MM-JJ" />
+            <Input value={form.date} onChangeText={(v) => set('date', formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
           <Field label="Notes">
             <Input

@@ -2,25 +2,26 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Card, Button, Field, Input, IconButton } from './ui';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr, addMonths } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput, addMonths } from '../utils/dates';
 
 // Antiparasitaires / Vermifuges section (mirrors TraitementSection in the web app)
 export default function TraitementSection({ title, emoji, color, items, onAdd, onDelete }) {
   const [showForm, setShowForm] = useState(false);
   const [nom, setNom] = useState('');
-  const [dernierTraitement, setDernierTraitement] = useState(todayStr());
+  const [dernierTraitement, setDernierTraitement] = useState(isoToDisplay(todayStr()));
   const [intervalMois, setIntervalMois] = useState('3');
 
   const handleAdd = () => {
     if (dernierTraitement) {
+      const dernierIso = displayToIso(dernierTraitement);
       onAdd({
         nom: nom || title,
-        dernierTraitement,
+        dernierTraitement: dernierIso,
         intervalMois: parseInt(intervalMois, 10),
-        prochainTraitement: addMonths(dernierTraitement, intervalMois),
+        prochainTraitement: addMonths(dernierIso, intervalMois),
       });
       setNom('');
-      setDernierTraitement(todayStr());
+      setDernierTraitement(isoToDisplay(todayStr()));
       setIntervalMois('3');
       setShowForm(false);
     }
@@ -36,9 +37,9 @@ export default function TraitementSection({ title, emoji, color, items, onAdd, o
             <Input value={nom} onChangeText={setNom} placeholder="ex. Frontline, Milbemax…" />
           </Field>
           <Field label="Date du dernier traitement">
-            <Input value={dernierTraitement} onChangeText={setDernierTraitement} placeholder="AAAA-MM-JJ" />
+            <Input value={dernierTraitement} onChangeText={(v) => setDernierTraitement(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
-          <Field label="Fréquence (tous les X mois)" hint={`Prochain traitement calculé : ${formatDate(addMonths(dernierTraitement, intervalMois))}`}>
+          <Field label="Fréquence (tous les X mois)" hint={`Prochain traitement calculé : ${formatDate(addMonths(displayToIso(dernierTraitement), intervalMois))}`}>
             <Input value={intervalMois} onChangeText={setIntervalMois} keyboardType="numeric" />
           </Field>
           <View style={styles.actions}>

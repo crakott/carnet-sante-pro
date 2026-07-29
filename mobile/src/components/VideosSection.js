@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Card, Button, Field, Input } from './ui';
 import { colors, spacing, radius } from '../theme';
-import { formatDate, todayStr } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 import { getVideosForAnimal, addVideoToDB, deleteVideoFromDB, formatVideoSize, MAX_VIDEO_SIZE } from '../utils/videos';
 
 // Videos for one animal, stored locally on this device (mirrors VideosTab in the web app)
@@ -12,7 +12,7 @@ export default function VideosSection({ animal }) {
   const [videos, setVideos] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [nom, setNom] = useState('');
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState(isoToDisplay(todayStr()));
   const [pickedAsset, setPickedAsset] = useState(null);
   const [fileError, setFileError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -25,7 +25,7 @@ export default function VideosSection({ animal }) {
 
   const resetForm = () => {
     setNom('');
-    setDate(todayStr());
+    setDate(isoToDisplay(todayStr()));
     setPickedAsset(null);
     setFileError('');
     setShowForm(false);
@@ -51,7 +51,7 @@ export default function VideosSection({ animal }) {
     try {
       await addVideoToDB(animal.id, {
         nom,
-        date,
+        date: displayToIso(date),
         uri: pickedAsset.uri,
         mimeType: pickedAsset.mimeType || 'video/mp4',
         size: pickedAsset.fileSize || 0,
@@ -86,7 +86,7 @@ export default function VideosSection({ animal }) {
             <Input value={nom} onChangeText={setNom} placeholder="Description..." />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input value={date} onChangeText={(v) => setDate(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
           <Field label={`🎥 Choisir une vidéo (max ${MAX_VIDEO_SIZE / (1024 * 1024)} Mo)`}>
             <Button title="Choisir une vidéo" onPress={pickVideo} color={colors.pink} outline />

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, ScrollView } 
 import { colors, spacing, radius } from '../../theme';
 import { Screen, Button, Field, Input, EmptyState } from '../../components/ui';
 import { useAnimals } from '../../context/AnimalsContext';
+import { isoToDisplay, displayToIso, formatDateInput } from '../../utils/dates';
 
 const EMPTY_FORM = {
   compagnie: '',
@@ -38,8 +39,8 @@ export default function AssuranceScreen() {
       compagnie: ins.compagnie || '',
       numeroContrat: ins.numeroContrat || '',
       telephone: ins.telephone || '',
-      dateDebut: ins.dateDebut || '',
-      dateFin: ins.dateFin || '',
+      dateDebut: ins.dateDebut ? isoToDisplay(ins.dateDebut) : '',
+      dateFin: ins.dateFin ? isoToDisplay(ins.dateFin) : '',
       franchise: ins.franchise || '',
       plafond: ins.plafond || '',
       notes: ins.notes || '',
@@ -52,7 +53,7 @@ export default function AssuranceScreen() {
 
   const renewalWarning = useMemo(() => {
     if (!form.dateFin) return null;
-    const finDate = new Date(form.dateFin);
+    const finDate = new Date(displayToIso(form.dateFin));
     if (isNaN(finDate.getTime())) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -67,7 +68,7 @@ export default function AssuranceScreen() {
     if (!animal) return;
     setSaving(true);
     try {
-      await updateAnimalFields(animal, { assurance: form });
+      await updateAnimalFields(animal, { assurance: { ...form, dateDebut: displayToIso(form.dateDebut), dateFin: displayToIso(form.dateFin) } });
     } catch {
       Alert.alert('Erreur', 'Impossible de sauvegarder les informations.');
     } finally {
@@ -169,23 +170,23 @@ export default function AssuranceScreen() {
               </View>
             </Field>
 
-            <Field label="Date de début (AAAA-MM-JJ)">
+            <Field label="Date de début">
               <Input
                 value={form.dateDebut}
-                onChangeText={set('dateDebut')}
-                placeholder="2024-01-01"
-                autoCapitalize="none"
-                keyboardType="numbers-and-punctuation"
+                onChangeText={(v) => set('dateDebut')(formatDateInput(v))}
+                placeholder="JJ/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
               />
             </Field>
 
-            <Field label="Date de renouvellement (AAAA-MM-JJ)">
+            <Field label="Date de renouvellement">
               <Input
                 value={form.dateFin}
-                onChangeText={set('dateFin')}
-                placeholder="2025-01-01"
-                autoCapitalize="none"
-                keyboardType="numbers-and-punctuation"
+                onChangeText={(v) => set('dateFin')(formatDateInput(v))}
+                placeholder="JJ/MM/AAAA"
+                keyboardType="numeric"
+                maxLength={10}
               />
             </Field>
 

@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Card, Button, Field, Input, Select, IconButton, Row } from './ui';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 import { DOCUMENT_TYPES, MAX_DOCUMENT_PDF_SIZE } from '../constants';
 
 // Documents (carnet de vaccination, ordonnances, certificats...) for one animal (mirrors DocumentsTab in the web app)
@@ -15,7 +15,7 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
   const [editingId, setEditingId] = useState(null);
   const [type, setType] = useState('vaccin');
   const [nom, setNom] = useState('');
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState(isoToDisplay(todayStr()));
   const [photoBase64, setPhotoBase64] = useState('');
   const [fileError, setFileError] = useState('');
 
@@ -23,7 +23,7 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
     setEditingId(null);
     setType('vaccin');
     setNom('');
-    setDate(todayStr());
+    setDate(isoToDisplay(todayStr()));
     setPhotoBase64('');
     setFileError('');
     setShowForm(false);
@@ -33,7 +33,7 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
     setEditingId(d.id);
     setType(d.type || 'vaccin');
     setNom(d.nom || '');
-    setDate(d.date || todayStr());
+    setDate(isoToDisplay(d.date) || isoToDisplay(todayStr()));
     setPhotoBase64('');
     setFileError('');
     setShowForm(true);
@@ -78,12 +78,12 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
 
   const handleSave = () => {
     if (editingId) {
-      const updates = { type, nom, date };
+      const updates = { type, nom, date: displayToIso(date) };
       if (photoBase64) updates.photo = photoBase64;
       updateAnimalItem(animal, 'documents', editingId, updates);
       resetForm();
     } else if (photoBase64) {
-      addAnimalItem(animal, 'documents', { type, nom, date, photo: photoBase64 });
+      addAnimalItem(animal, 'documents', { type, nom, date: displayToIso(date), photo: photoBase64 });
       resetForm();
     }
   };
@@ -118,7 +118,7 @@ export default function DocumentsSection({ animal, addAnimalItem, deleteAnimalIt
             <Input value={nom} onChangeText={setNom} placeholder="Description..." />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input value={date} onChangeText={(v) => setDate(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
 
           <Field label={`📷 Scanner une photo ou 📄 importer un PDF (max ${Math.round(MAX_DOCUMENT_PDF_SIZE / 1024)} Ko)`}>

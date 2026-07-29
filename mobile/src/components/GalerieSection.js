@@ -3,20 +3,20 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-na
 import * as ImagePicker from 'expo-image-picker';
 import { Card, Button, Field, Input, Row } from './ui';
 import { colors, spacing, radius } from '../theme';
-import { todayStr, formatDate } from '../utils/dates';
+import { todayStr, formatDate, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 import CropModal from './CropModal';
 
 export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const [showForm, setShowForm] = useState(false);
   const [caption, setCaption] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState(isoToDisplay(todayStr()));
   const [cropTarget, setCropTarget] = useState(null);
 
   const resetForm = () => {
     setCaption('');
     setPhotoBase64('');
-    setDate(todayStr());
+    setDate(isoToDisplay(todayStr()));
     setShowForm(false);
   };
 
@@ -40,7 +40,7 @@ export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem
 
   const handleSave = () => {
     if (!photoBase64) return;
-    addAnimalItem(animal, 'photos', { photo: photoBase64, caption, date });
+    addAnimalItem(animal, 'photos', { photo: photoBase64, caption, date: displayToIso(date) });
     resetForm();
   };
 
@@ -70,7 +70,7 @@ export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem
             <Input value={caption} onChangeText={setCaption} placeholder="Décrivez ce moment…" />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input value={date} onChangeText={(v) => setDate(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
           <Row style={{ gap: spacing.sm }}>
             <Button title="➕ Ajouter" onPress={handleSave} color={colors.pink} style={{ flex: 1 }} disabled={!photoBase64} />

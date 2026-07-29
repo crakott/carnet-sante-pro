@@ -6,7 +6,7 @@ import * as Sharing from 'expo-sharing';
 import { useAudioRecorder, useAudioPlayer, AudioModule, RecordingPresets } from 'expo-audio';
 import { Card, Button, Field, Input, Select, IconButton, Row } from './ui';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 import { TYPE_LABELS } from '../constants';
 
 // Observations for one animal: text, photo and audio recording (mirrors NotesTab in the web app)
@@ -14,7 +14,7 @@ export default function NotesSection({ animal, addAnimalItem, deleteAnimalItem }
   const [showForm, setShowForm] = useState(false);
   const [type, setType] = useState('comportement');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState(isoToDisplay(todayStr()));
   const [photo, setPhoto] = useState('');
   const [audio, setAudio] = useState('');
   const [fileError, setFileError] = useState('');
@@ -22,7 +22,7 @@ export default function NotesSection({ animal, addAnimalItem, deleteAnimalItem }
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const resetForm = () => {
-    setType('comportement'); setDescription(''); setDate(todayStr());
+    setType('comportement'); setDescription(''); setDate(isoToDisplay(todayStr()));
     setPhoto(''); setAudio(''); setFileError(''); setShowForm(false);
   };
 
@@ -63,7 +63,7 @@ export default function NotesSection({ animal, addAnimalItem, deleteAnimalItem }
 
   const handleAdd = () => {
     if (description || photo || audio) {
-      addAnimalItem(animal, 'observations', { type, description, date, photo, audio });
+      addAnimalItem(animal, 'observations', { type, description, date: displayToIso(date), photo, audio });
       resetForm();
     }
   };
@@ -96,7 +96,7 @@ export default function NotesSection({ animal, addAnimalItem, deleteAnimalItem }
             <Input value={description} onChangeText={setDescription} placeholder="Description..." multiline numberOfLines={4} style={{ minHeight: 90, textAlignVertical: 'top' }} />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input value={date} onChangeText={(v) => setDate(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
 
           <Field label="📸 Photo">

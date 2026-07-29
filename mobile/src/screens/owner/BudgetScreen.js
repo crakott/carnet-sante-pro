@@ -5,7 +5,7 @@ import * as Sharing from 'expo-sharing';
 import { Screen, ScreenTitle, EmptyState, Card, Button, Field, Input, Select, IconButton, Row } from '../../components/ui';
 import BudgetChart from '../../components/BudgetChart';
 import { useAnimals } from '../../context/AnimalsContext';
-import { formatDate, todayStr } from '../../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../../utils/dates';
 import { EMOJIS_ESPECE, CATEGORIES_BUDGET, CATEGORY_EMOJIS } from '../../constants';
 import { colors, spacing, radius } from '../../theme';
 
@@ -21,7 +21,7 @@ export default function BudgetScreen() {
   const [showForm, setShowForm] = useState(false);
   const [type, setType] = useState('Vétérinaire');
   const [montant, setMontant] = useState('');
-  const [date, setDate] = useState(todayStr());
+  const [date, setDate] = useState(isoToDisplay(todayStr()));
   const [budgetAnimalFilter, setBudgetAnimalFilter] = useState('tous');
 
   if (animals.length === 0) {
@@ -36,8 +36,8 @@ export default function BudgetScreen() {
     const m = parseFloat(montant);
     if (type && m) {
       const animal = animals.find((a) => a.id === budgetAnimalFilter) || animals[0];
-      addAnimalItem(animal, 'budget', { type, montant: m, date });
-      setMontant(''); setDate(todayStr()); setShowForm(false);
+      addAnimalItem(animal, 'budget', { type, montant: m, date: displayToIso(date) });
+      setMontant(''); setDate(isoToDisplay(todayStr())); setShowForm(false);
     }
   };
 
@@ -123,7 +123,7 @@ export default function BudgetScreen() {
             <Input value={montant} onChangeText={setMontant} placeholder="Montant (€)" keyboardType="numeric" />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input value={date} onChangeText={(v) => setDate(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
           <Row style={{ gap: spacing.sm }}>
             <Button title="➕ Ajouter" onPress={handleAdd} color={colors.yellow} style={{ flex: 1 }} />

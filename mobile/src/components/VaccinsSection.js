@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Card, Button, Field, Input, Select, IconButton, Row } from './ui';
 import TraitementSection from './TraitementSection';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr, addDays } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput, addDays } from '../utils/dates';
 import { VACCINS_COURANTS } from '../constants';
 
 const RAPPEL_INTERVALS = [
@@ -14,18 +14,18 @@ const RAPPEL_INTERVALS = [
   { label: '3 ans', value: 1095 },
 ];
 
-const emptyForm = { nom: '', date: todayStr(), intervalDays: 365 };
+const freshForm = () => ({ nom: '', date: isoToDisplay(todayStr()), intervalDays: 365 });
 
 export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(freshForm());
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
   const openAdd = () => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(freshForm());
     setShowForm(true);
   };
 
@@ -34,21 +34,22 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
     const intervalDays = v.rappel
       ? Math.round((new Date(v.rappel) - new Date(v.date)) / 86400000)
       : 365;
-    setForm({ nom: v.nom, date: v.date, intervalDays });
+    setForm({ nom: v.nom, date: isoToDisplay(v.date), intervalDays });
     setShowForm(true);
   };
 
   const handleSave = () => {
     if (!form.nom || !form.date) return;
-    const rappel = addDays(form.date, form.intervalDays);
+    const dateIso = displayToIso(form.date);
+    const rappel = addDays(dateIso, form.intervalDays);
     if (editingId) {
-      updateAnimalItem(animal, 'vaccins', editingId, { nom: form.nom, date: form.date, rappel });
+      updateAnimalItem(animal, 'vaccins', editingId, { nom: form.nom, date: dateIso, rappel });
     } else {
-      addAnimalItem(animal, 'vaccins', { nom: form.nom, date: form.date, rappel });
+      addAnimalItem(animal, 'vaccins', { nom: form.nom, date: dateIso, rappel });
     }
     setShowForm(false);
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(freshForm());
   };
 
   const vaccinsCourants = VACCINS_COURANTS[animal.espece] || [];
@@ -73,7 +74,7 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
             <Input value={form.nom} onChangeText={(v) => set('nom', v)} placeholder="Nom du vaccin" />
           </Field>
           <Field label="Date">
-            <Input value={form.date} onChangeText={(v) => set('date', v)} placeholder="AAAA-MM-JJ" />
+            <Input value={form.date} onChangeText={(v) => set('date', formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
           <Field label="Intervalle de rappel">
             <Select

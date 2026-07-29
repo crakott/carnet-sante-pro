@@ -3,10 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Card, Button, Field, Input, IconButton, Row } from './ui';
 import PoidsChart from './PoidsChart';
 import { colors, spacing } from '../theme';
-import { formatDate, todayStr } from '../utils/dates';
+import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput } from '../utils/dates';
 
 export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
-  const today = todayStr();
+  const today = isoToDisplay(todayStr());
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [valeur, setValeur] = useState('');
@@ -25,17 +25,18 @@ export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem, 
   const openEdit = (p) => {
     setEditingId(p.id);
     setValeur(String(p.valeur));
-    setDate(p.date);
+    setDate(isoToDisplay(p.date));
     setShowForm(true);
   };
 
   const handleSave = () => {
     const val = parseFloat(valeur);
     if (!val) return;
+    const dateIso = displayToIso(date);
     if (editingId) {
-      updateAnimalItem(animal, 'poids', editingId, { valeur: val, date });
+      updateAnimalItem(animal, 'poids', editingId, { valeur: val, date: dateIso });
     } else {
-      addAnimalItem(animal, 'poids', { valeur: val, date });
+      addAnimalItem(animal, 'poids', { valeur: val, date: dateIso });
     }
     setValeur('');
     setDate(today);
@@ -53,7 +54,7 @@ export default function PoidsSection({ animal, addAnimalItem, deleteAnimalItem, 
             <Input value={valeur} onChangeText={setValeur} placeholder="Poids (kg)" keyboardType="numeric" />
           </Field>
           <Field label="Date">
-            <Input value={date} onChangeText={setDate} placeholder="AAAA-MM-JJ" />
+            <Input value={date} onChangeText={(v) => setDate(formatDateInput(v))} placeholder="JJ/MM/AAAA" keyboardType="numeric" maxLength={10} />
           </Field>
           <Row style={{ gap: spacing.sm }}>
             <Button title={editingId ? '✏️ Modifier' : '➕ Ajouter'} onPress={handleSave} color={colors.primary} style={{ flex: 1 }} />
