@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,6 +7,7 @@ import { Screen, ScreenTitle, Card, Button, Field, Input, Select, ModalSheet, Av
 import AdBanner from '../../components/AdBanner';
 import TutorialOverlay from '../../components/TutorialOverlay';
 import SearchModal from '../../components/SearchModal';
+import CropModal from '../../components/CropModal';
 import { useAnimals } from '../../context/AnimalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing } from '../../theme';
@@ -233,6 +234,7 @@ export default function AccueilScreen() {
 
 function AnimalForm({ animal, setAnimal }) {
   const [photoError, setPhotoError] = useState('');
+  const [showCrop, setShowCrop] = useState(false);
 
   const pickPhoto = async () => {
     setPhotoError('');
@@ -241,9 +243,7 @@ function AnimalForm({ animal, setAnimal }) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       base64: true,
-      quality: 0.5,
-      allowsEditing: true,
-      aspect: [1, 1],
+      quality: 0.7,
     });
     if (!result.canceled && result.assets?.[0]?.base64) {
       setAnimal({ ...animal, photo: `data:image/jpeg;base64,${result.assets[0].base64}` });
@@ -255,15 +255,26 @@ function AnimalForm({ animal, setAnimal }) {
       <Field label="📷 Photo (optionnel)">
         <View style={styles.photoRow}>
           <Avatar animal={animal} size={48} />
-          <Button title={animal.photo ? 'Changer la photo' : 'Choisir une photo'} onPress={pickPhoto} color={colors.blueLight} textColor={colors.blue} style={{ flex: 1 }} />
+          <Button title={animal.photo ? 'Changer' : 'Choisir une photo'} onPress={pickPhoto} color={colors.blueLight} textColor={colors.blue} style={{ flex: 1 }} />
           {animal.photo ? (
-              <TouchableOpacity onPress={() => setAnimal({ ...animal, photo: '' })} style={{ padding: 8, borderRadius: 6, backgroundColor: colors.redLight }}>
-                <Text style={{ color: colors.red, fontWeight: '700' }}>✕</Text>
-              </TouchableOpacity>
-            ) : null}
+            <TouchableOpacity onPress={() => setShowCrop(true)} style={{ padding: 8, borderRadius: 6, backgroundColor: '#f3f4f6' }}>
+              <Text style={{ fontSize: 16 }}>✂️</Text>
+            </TouchableOpacity>
+          ) : null}
+          {animal.photo ? (
+            <TouchableOpacity onPress={() => setAnimal({ ...animal, photo: '' })} style={{ padding: 8, borderRadius: 6, backgroundColor: colors.redLight }}>
+              <Text style={{ color: colors.red, fontWeight: '700' }}>✕</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
         {photoError ? <Text style={styles.error}>{photoError}</Text> : null}
       </Field>
+      <CropModal
+        visible={showCrop}
+        photo={animal.photo}
+        onSave={(cropped) => { setAnimal({ ...animal, photo: cropped }); setShowCrop(false); }}
+        onCancel={() => setShowCrop(false)}
+      />
       <Field label="Nom">
         <Input value={animal.nom} onChangeText={(v) => setAnimal({ ...animal, nom: v })} placeholder="Nom" />
       </Field>

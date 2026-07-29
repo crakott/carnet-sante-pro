@@ -4,7 +4,7 @@ import GalerieSection from '../../components/GalerieSection';
 import { useAnimals } from '../../context/AnimalsContext';
 
 export default function GalerieScreen() {
-  const { animals, selectedAnimal, addAnimalItem, deleteAnimalItem } = useAnimals();
+  const { animals, selectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem } = useAnimals();
   const animal = animals.find((a) => a.id === selectedAnimal) || animals[0];
 
   if (!animal) {
@@ -17,7 +17,7 @@ export default function GalerieScreen() {
 
   return (
     <Screen>
-      <GalerieSection animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} />
+      <GalerieSection animal={animal} addAnimalItem={addAnimalItem} deleteAnimalItem={deleteAnimalItem} updateAnimalItem={updateAnimalItem} />
     </Screen>
   );
 }

@@ -4,12 +4,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { Card, Button, Field, Input, Row } from './ui';
 import { colors, spacing, radius } from '../theme';
 import { todayStr, formatDate } from '../utils/dates';
+import CropModal from './CropModal';
 
-export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem }) {
+export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
   const [showForm, setShowForm] = useState(false);
   const [caption, setCaption] = useState('');
   const [photoBase64, setPhotoBase64] = useState('');
   const [date, setDate] = useState(todayStr());
+  const [cropTarget, setCropTarget] = useState(null);
 
   const resetForm = () => {
     setCaption('');
@@ -84,6 +86,11 @@ export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem
           {photos.map((p, i) => (
             <View key={p.id || i} style={styles.gridItem}>
               <Image source={{ uri: p.photo }} style={styles.gridImage} />
+              {p.id && updateAnimalItem ? (
+                <TouchableOpacity style={styles.cropBtn} onPress={() => setCropTarget(p)}>
+                  <Text style={styles.cropBtnText}>✂️</Text>
+                </TouchableOpacity>
+              ) : null}
               {p.id ? (
                 <TouchableOpacity style={styles.deleteBtn} onPress={() => confirmDelete(p.id)}>
                   <Text style={styles.deleteBtnText}>✕</Text>
@@ -97,6 +104,18 @@ export default function GalerieSection({ animal, addAnimalItem, deleteAnimalItem
       ) : (
         <Text style={styles.empty}>Aucune photo enregistrée pour {animal.nom}</Text>
       )}
+
+      <CropModal
+        visible={!!cropTarget}
+        photo={cropTarget?.photo}
+        onSave={(cropped) => {
+          if (cropTarget && updateAnimalItem) {
+            updateAnimalItem(animal, 'photos', cropTarget.id, { ...cropTarget, photo: cropped });
+          }
+          setCropTarget(null);
+        }}
+        onCancel={() => setCropTarget(null)}
+      />
     </View>
   );
 }
@@ -114,6 +133,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   gridImage: { width: '100%', height: 150, resizeMode: 'cover' },
+  cropBtn: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cropBtnText: { fontSize: 13 },
   deleteBtn: {
     position: 'absolute',
     top: 6,
