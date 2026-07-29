@@ -1028,6 +1028,21 @@
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 1024);
             const [budgetFilter, setBudgetFilter] = React.useState('tout');
             const [householdId, setHouseholdId] = React.useState(null);
+            const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+            const [syncState, setSyncState] = React.useState('synced'); // 'synced' | 'offline' | 'syncing'
+            const [showSearch, setShowSearch] = React.useState(false);
+
+            React.useEffect(() => {
+                const onOnline = () => {
+                    setIsOnline(true);
+                    setSyncState('syncing');
+                    setTimeout(() => setSyncState('synced'), 3000);
+                };
+                const onOffline = () => { setIsOnline(false); setSyncState('offline'); };
+                window.addEventListener('online', onOnline);
+                window.addEventListener('offline', onOffline);
+                return () => { window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
+            }, []);
 
             // Auth State
             React.useEffect(() => {
@@ -1302,10 +1317,26 @@
 
             return (
                 <div style={{ display: 'flex', height: '100vh', background: '#f9fafb' }}>
-                    {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={navigateTo} user={user} auth={auth} />}
+                    {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={navigateTo} user={user} auth={auth} onSearchOpen={() => setShowSearch(true)} syncState={syncState} />}
 
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', paddingBottom: isDesktop ? 0 : '70px' }}>
-                        {!isDesktop && <MobileHeader navigateTo={navigateTo} goBack={goBack} canGoBack={tabHistory.length > 0} />}
+                        {!isDesktop && <MobileHeader navigateTo={navigateTo} goBack={goBack} canGoBack={tabHistory.length > 0} onSearchOpen={() => setShowSearch(true)} />}
+
+                        {syncState === 'offline' && (
+                            <div style={{ background: '#fef3c7', borderBottom: '1px solid #f59e0b', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#92400e' }}>
+                                <span>📴</span>
+                                <span>Hors connexion — tes modifications sont sauvegardées localement et seront synchronisées à la reconnexion.</span>
+                            </div>
+                        )}
+                        {syncState === 'syncing' && (
+                            <div style={{ background: '#eff6ff', borderBottom: '1px solid #3b82f6', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#1d4ed8' }}>
+                                <span>🔄</span>
+                                <span>Reconnecté — synchronisation en cours…</span>
+                            </div>
+                        )}
+                        {syncState === 'synced' && !isOnline && null}
+
+                        {showSearch && <SearchOverlay animals={animals} onClose={() => setShowSearch(false)} navigateTo={navigateTo} setSelectedAnimal={setSelectedAnimal} />}
 
                         <NotificationPrompt animals={animals} reminders={reminders} />
 
@@ -2047,7 +2078,7 @@
         }
 
         // Sidebar (desktop navigation)
-        function Sidebar({ activeTab, setActiveTab, user, auth }) {
+        function Sidebar({ activeTab, setActiveTab, user, auth, onSearchOpen, syncState }) {
             const activeGroupKey = SIDEBAR_GROUPS.find(g => g.key && g.items.some(i => i.id === activeTab))?.key || null;
             const [openGroups, setOpenGroups] = React.useState(() => new Set(activeGroupKey ? [activeGroupKey] : []));
 
@@ -2069,6 +2100,11 @@
                             <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#064e3b' }}>Carnet Santé</h2>
                         </div>
                         <p style={{ fontSize: '11px', color: '#9ca3af', wordBreak: 'break-all' }}>{user?.email}</p>
+                        {syncState === 'offline' && <p style={{ fontSize: '11px', color: '#d97706', fontWeight: '600', marginTop: '4px' }}>📴 Hors connexion</p>}
+                        {syncState === 'syncing' && <p style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '600', marginTop: '4px' }}>🔄 Synchronisation…</p>}
+                        <button onClick={onSearchOpen} style={{ marginTop: '10px', width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: '#f3f4f6', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#6b7280', fontSize: '13px' }}>
+                            🔍 <span>Rechercher…</span>
+                        </button>
                     </div>
 
                     <nav style={{ flex: 1, padding: '10px 10px' }}>
@@ -2104,7 +2140,110 @@
         }
 
         // Mobile header with home + optional back button
-        function MobileHeader({ navigateTo, goBack, canGoBack }) {
+        const SEARCH_TYPE_META = {
+            animal:      { icon: '🐾', label: 'Animal',       tab: 'dossier' },
+            vaccin:      { icon: '💉', label: 'Vaccin',        tab: 'vaccins' },
+            medicament:  { icon: '💊', label: 'Traitement',    tab: 'medicaments' },
+            chirurgie:   { icon: '🔪', label: 'Chirurgie',     tab: 'chirurgies' },
+            rdv:         { icon: '📅', label: 'Rendez-vous',   tab: 'planning' },
+            observation: { icon: '📋', label: 'Observation',   tab: 'notes' },
+            document:    { icon: '📄', label: 'Document',      tab: 'documents' },
+            antiparasitaire: { icon: '🦟', label: 'Antiparasitaire', tab: 'rappels' },
+            vermifuge:   { icon: '🪱', label: 'Vermifuge',     tab: 'rappels' },
+            poids:       { icon: '⚖️', label: 'Pesée',         tab: 'poids' },
+        };
+
+        function SearchOverlay({ animals, onClose, navigateTo, setSelectedAnimal }) {
+            const [query, setQuery] = React.useState('');
+            const inputRef = React.useRef(null);
+
+            React.useEffect(() => { setTimeout(() => inputRef.current && inputRef.current.focus(), 80); }, []);
+
+            const results = React.useMemo(() => {
+                const q = query.trim().toLowerCase();
+                if (q.length < 2) return [];
+                const hits = [];
+                animals.forEach(animal => {
+                    const push = (type, label, sub) => hits.push({ type, label: label || '', sub: sub || animal.nom, animalId: animal.id });
+                    if (animal.nom.toLowerCase().includes(q)) push('animal', animal.nom, EMOJIS_ESPECE[animal.espece] + ' ' + (animal.espece || ''));
+                    (animal.vaccins || []).forEach(v => v.nom && v.nom.toLowerCase().includes(q) && push('vaccin', v.nom));
+                    (animal.medicaments || []).forEach(m => m.nom && m.nom.toLowerCase().includes(q) && push('medicament', m.nom));
+                    (animal.chirurgies || []).forEach(c => c.nom && c.nom.toLowerCase().includes(q) && push('chirurgie', c.nom));
+                    (animal.rdvs || []).forEach(r => (r.motif && r.motif.toLowerCase().includes(q)) && push('rdv', r.motif, animal.nom + (r.date ? ' • ' + r.date : '')));
+                    (animal.observations || []).forEach(o => o.description && o.description.toLowerCase().includes(q) && push('observation', o.description.slice(0, 60), animal.nom));
+                    (animal.documents || []).forEach(d => d.nom && d.nom.toLowerCase().includes(q) && push('document', d.nom));
+                    (animal.antiparasitaires || []).forEach(a => a.nom && a.nom.toLowerCase().includes(q) && push('antiparasitaire', a.nom));
+                    (animal.vermifuges || []).forEach(v => v.nom && v.nom.toLowerCase().includes(q) && push('vermifuge', v.nom));
+                    (animal.poids || []).forEach(p => String(p.valeur).includes(q) && push('poids', p.valeur + ' kg', animal.nom + ' • ' + p.date));
+                });
+                return hits.slice(0, 25);
+            }, [query, animals]);
+
+            const handleSelect = (hit) => {
+                const meta = SEARCH_TYPE_META[hit.type] || {};
+                setSelectedAnimal(hit.animalId);
+                navigateTo(meta.tab || 'dossier');
+                onClose();
+            };
+
+            const grouped = results.reduce((acc, hit) => {
+                const key = SEARCH_TYPE_META[hit.type]?.label || hit.type;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(hit);
+                return acc;
+            }, {});
+
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 500, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ background: 'white', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '18px' }}>🔍</span>
+                        <input
+                            ref={inputRef}
+                            type="search"
+                            placeholder="Rechercher un animal, vaccin, RDV, document…"
+                            value={query}
+                            onChange={e => setQuery(e.target.value)}
+                            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px', background: 'transparent' }}
+                        />
+                        <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280', padding: '4px' }}>✕</button>
+                    </div>
+                    <div style={{ flex: 1, overflowY: 'auto', background: '#f9fafb' }}>
+                        {query.length < 2 ? (
+                            <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔍</div>
+                                Tape au moins 2 caractères pour rechercher
+                            </div>
+                        ) : results.length === 0 ? (
+                            <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                                <div style={{ fontSize: '36px', marginBottom: '12px' }}>😕</div>
+                                Aucun résultat pour « {query} »
+                            </div>
+                        ) : (
+                            Object.entries(grouped).map(([groupLabel, hits]) => (
+                                <div key={groupLabel}>
+                                    <p style={{ fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px', padding: '12px 16px 4px' }}>{groupLabel}</p>
+                                    {hits.map((hit, i) => {
+                                        const meta = SEARCH_TYPE_META[hit.type] || {};
+                                        return (
+                                            <button key={i} onClick={() => handleSelect(hit)} style={{ width: '100%', background: 'white', border: 'none', borderBottom: '1px solid #f3f4f6', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left' }}>
+                                                <span style={{ fontSize: '20px', flexShrink: 0 }}>{meta.icon}</span>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: '600', fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.label}</div>
+                                                    <div style={{ fontSize: '12px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.sub}</div>
+                                                </div>
+                                                <span style={{ color: '#d1d5db', fontSize: '16px' }}>›</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function MobileHeader({ navigateTo, goBack, canGoBack, onSearchOpen }) {
             return (
                 <div style={{ background: 'white', padding: '12px 15px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2114,6 +2253,7 @@
                         <button onClick={() => navigateTo('accueil')} title="Accueil" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', padding: 0, lineHeight: 1 }}>🏠</button>
                         <h1 style={{ fontSize: '20px', fontWeight: 'bold', marginLeft: '4px' }}>🐾 Carnet Santé</h1>
                     </div>
+                    <button onClick={onSearchOpen} title="Rechercher" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', padding: '4px', lineHeight: 1, color: '#6b7280' }}>🔍</button>
                 </div>
             );
         }
@@ -4675,6 +4815,46 @@
                 setTimeout(() => setSaved(false), 2000);
             };
 
+            const openVoyageReport = () => {
+                const destLabel = destination === 'france' ? '🇫🇷 France' : destination === 'europe' ? '🇪🇺 Europe' : '🌍 International';
+                const generatedDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                const win = window.open('', '_blank');
+                if (!win) return;
+                const rowsHtml = items.map(it => `
+                    <tr>
+                        <td style="padding:8px 10px;width:28px;text-align:center">${checked[it.id] ? '<span style="color:#10b981;font-size:16px;font-weight:700">✓</span>' : '<span style="color:#d1d5db;font-size:16px">○</span>'}</td>
+                        <td style="padding:8px 10px;font-size:14px;color:${checked[it.id] ? '#9ca3af' : '#1f2937'};text-decoration:${checked[it.id] ? 'line-through' : 'none'}">${escapeHtml(it.label)}</td>
+                        <td style="padding:8px 10px;text-align:right">${it.requis ? '<span style="font-size:10px;font-weight:700;background:#fee2e2;color:#ef4444;padding:2px 6px;border-radius:4px">REQUIS</span>' : ''}</td>
+                    </tr>`).join('');
+                win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche voyage — ${escapeHtml(animal.nom)}</title>
+                    <style>
+                        body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 700px; margin: 0 auto; }
+                        h1 { color: #10b981; margin-bottom: 4px; }
+                        h2 { margin-top: 24px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; font-size: 16px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+                        tr:nth-child(even) { background: #f9fafb; }
+                        .stamp { font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
+                        .notes { background: #f9fafb; border-radius: 8px; padding: 14px; font-size: 14px; white-space: pre-wrap; margin-top: 8px; }
+                        .progress { height: 10px; background: #e5e7eb; border-radius: 5px; margin: 12px 0; }
+                        .progress-bar { height: 100%; background: ${pct === 100 ? '#10b981' : '#3b82f6'}; border-radius: 5px; width: ${pct}%; }
+                        .print-btn { padding: 10px 18px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 20px; }
+                        @media print { .print-btn { display: none; } }
+                    </style></head>
+                    <body>
+                        <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+                        <p class="stamp">Généré le ${generatedDate}</p>
+                        <h1>✈️ Fiche voyage — ${escapeHtml(animal.nom)}</h1>
+                        <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}</p>
+                        <p><strong>Destination :</strong> ${destLabel}</p>
+                        <h2>Check-list de préparation</h2>
+                        <div class="progress"><div class="progress-bar"></div></div>
+                        <p style="font-size:13px;color:#6b7280">${doneCount} / ${items.length} éléments — ${pct}%</p>
+                        <table>${rowsHtml}</table>
+                        ${notes ? `<h2>📝 Notes de voyage</h2><div class="notes">${escapeHtml(notes)}</div>` : ''}
+                    </body></html>`);
+                win.document.close();
+            };
+
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '700px', margin: '0 auto' }}>
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
@@ -4722,9 +4902,14 @@
                         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Coordonnées vétérinaire sur place, adresse hébergement, allergies, comportement en voiture..." rows={4} style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }} />
                     </div>
 
-                    <button onClick={handleSave} style={{ width: '100%', padding: '12px', background: saved ? '#d1fae5' : '#10b981', color: saved ? '#10b981' : 'white', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
-                        {saved ? '✅ Sauvegardé !' : '💾 Sauvegarder la fiche voyage'}
-                    </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <button onClick={handleSave} style={{ padding: '12px', background: saved ? '#d1fae5' : '#10b981', color: saved ? '#10b981' : 'white', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                            {saved ? '✅ Sauvegardé !' : '💾 Sauvegarder'}
+                        </button>
+                        <button onClick={openVoyageReport} style={{ padding: '12px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                            🖨️ Imprimer / PDF
+                        </button>
+                    </div>
                 </div>
             );
         }
