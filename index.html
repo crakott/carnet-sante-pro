@@ -2703,6 +2703,7 @@
             const [editingAnimal, setEditingAnimal] = React.useState(null);
             const [photoError, setPhotoError] = React.useState('');
             const [searchQuery, setSearchQuery] = React.useState('');
+            const [openVetId, setOpenVetId] = React.useState(null);
 
             const handlePhotoChange = (file, setter) => {
                 setPhotoError('');
@@ -2749,7 +2750,7 @@
 
                     {/* Animals List */}
                     {animals.length > 0 && (
-                        <div style={{ background: 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                             {filteredAnimals.map((animal, i) => {
                                 const age = computeAge(animal.dateNaissance);
                                 const subtitle = [animal.race, age].filter(Boolean).join(' — ');
@@ -2757,59 +2758,59 @@
                                 const pill = animalReminders.length > 0
                                     ? { background: '#fee2e2', color: '#dc2626', text: `${animalReminders.length} rappel${animalReminders.length > 1 ? 's' : ''}` }
                                     : { background: '#d1fae5', color: '#047857', text: 'À jour' };
+                                const hasVet = animal.veterinaire && animal.veterinaire.nom;
+                                const vetOpen = openVetId === animal.id;
                                 return (
-                                    <div
-                                        key={animal.id}
-                                        className="animate-fade-in"
-                                        onClick={() => { setSelectedAnimal(animal.id); setActiveTab('dossier'); }}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '13px 14px',
-                                            borderBottom: i < filteredAnimals.length - 1 ? '1px solid #f3f4f6' : 'none',
-                                            cursor: 'pointer',
-                                            background: selectedAnimal === animal.id ? '#f0fdf4' : 'white'
-                                        }}
-                                    >
-                                        {animal.photo ? (
-                                            <AnimalAvatar animal={animal} size={44} />
-                                        ) : (
-                                            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                <AnimalAvatar animal={animal} size={24} />
-                                            </div>
-                                        )}
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <h3 style={{ fontSize: '15px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{animal.nom}</h3>
-                                            {subtitle && <p style={{ color: '#6b7280', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{subtitle}</p>}
-                                            {animal.veterinaire && animal.veterinaire.nom && (
-                                                <div style={{ marginTop: '2px' }}>
-                                                    <div style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                                                        <span>🩺</span>
-                                                        <span style={{ fontWeight: '600' }}>{animal.veterinaire.nom}</span>
-                                                        {animal.veterinaire.tel && (
-                                                            <a href={`tel:${animal.veterinaire.tel}`} onClick={(e) => e.stopPropagation()}
-                                                                style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>
-                                                                · {animal.veterinaire.tel}
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                    {animal.veterinaire.adresse && (
-                                                        <div style={{ fontSize: '11px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                            📍 {animal.veterinaire.adresse}
-                                                        </div>
-                                                    )}
+                                    <div key={animal.id} className="animate-fade-in" style={{ background: 'white', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+                                        {/* Ligne principale */}
+                                        <div
+                                            onClick={() => { setSelectedAnimal(animal.id); setActiveTab('dossier'); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', cursor: 'pointer', background: selectedAnimal === animal.id ? '#f0fdf4' : 'white' }}
+                                        >
+                                            {animal.photo ? (
+                                                <AnimalAvatar animal={animal} size={44} />
+                                            ) : (
+                                                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <AnimalAvatar animal={animal} size={24} />
                                                 </div>
                                             )}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <h3 style={{ fontSize: '15px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{animal.nom}</h3>
+                                                {subtitle && <p style={{ color: '#6b7280', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{subtitle}</p>}
+                                            </div>
+                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', background: pill.background, color: pill.color }}>{pill.text}</span>
+                                            {hasVet && (
+                                                <button onClick={(e) => { e.stopPropagation(); setOpenVetId(vetOpen ? null : animal.id); }}
+                                                    title="Vétérinaire habituel"
+                                                    style={{ padding: '6px 8px', background: vetOpen ? '#059669' : '#ecfdf5', color: vetOpen ? 'white' : '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '15px', flexShrink: 0 }}>
+                                                    🩺
+                                                </button>
+                                            )}
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                <EditIcon size={16} />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                <DeleteIcon size={16} />
+                                            </button>
+                                            <span style={{ color: '#d1d5db', fontSize: '18px' }}>›</span>
                                         </div>
-                                        <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', background: pill.background, color: pill.color }}>{pill.text}</span>
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                            <EditIcon size={16} />
-                                        </button>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                            <DeleteIcon size={16} />
-                                        </button>
-                                        <span style={{ color: '#d1d5db', fontSize: '18px' }}>›</span>
+                                        {/* Accordéon vétérinaire */}
+                                        {hasVet && vetOpen && (
+                                            <div style={{ padding: '10px 16px 14px', borderTop: '1px solid #d1fae5', background: '#f0fdf4' }}>
+                                                <p style={{ fontSize: '13px', fontWeight: '700', color: '#065f46', margin: '0 0 6px' }}>🩺 {animal.veterinaire.nom}</p>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                                    {animal.veterinaire.tel && (
+                                                        <a href={`tel:${animal.veterinaire.tel}`} onClick={(e) => e.stopPropagation()}
+                                                            style={{ fontSize: '13px', color: '#10b981', fontWeight: '600', textDecoration: 'none' }}>
+                                                            📞 {animal.veterinaire.tel}
+                                                        </a>
+                                                    )}
+                                                    {animal.veterinaire.adresse && (
+                                                        <span style={{ fontSize: '13px', color: '#6b7280' }}>📍 {animal.veterinaire.adresse}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
