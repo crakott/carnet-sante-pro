@@ -1,28 +1,47 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Card, Button, Field, Input, IconButton } from './ui';
+import { Card, Button, Field, Input, IconButton, Row } from './ui';
 import { colors, spacing } from '../theme';
 import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput, getCountdown } from '../utils/dates';
 
-// Upcoming/past appointments for one animal (mirrors PlanningTab in the web app)
-export default function PlanningSection({ animal, addAnimalItem, deleteAnimalItem }) {
-  const [showForm, setShowForm] = useState(false);
-  const [motif, setMotif] = useState('');
-  const [date, setDate] = useState(isoToDisplay(todayStr()));
-  const [heure, setHeure] = useState('');
-  const [lieu, setLieu] = useState('');
-  const [notes, setNotes] = useState('');
+const emptyForm = { motif: '', date: '', heure: '', lieu: '', notes: '' };
 
-  const handleAdd = () => {
-    if (motif && date) {
-      addAnimalItem(animal, 'rdvs', { motif, date: displayToIso(date), heure, lieu, notes });
-      setMotif('');
-      setDate(isoToDisplay(todayStr()));
-      setHeure('');
-      setLieu('');
-      setNotes('');
-      setShowForm(false);
+export default function PlanningSection({ animal, addAnimalItem, deleteAnimalItem, updateAnimalItem }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({ ...emptyForm, date: isoToDisplay(todayStr()) });
+
+  const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm, date: isoToDisplay(todayStr()) });
+    setShowForm(true);
+  };
+
+  const openEdit = (r) => {
+    setEditingId(r.id);
+    setForm({ motif: r.motif || '', date: isoToDisplay(r.date) || '', heure: r.heure || '', lieu: r.lieu || '', notes: r.notes || '' });
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    if (!form.motif || !form.date) return;
+    const payload = { motif: form.motif, date: displayToIso(form.date), heure: form.heure, lieu: form.lieu, notes: form.notes };
+    if (editingId) {
+      updateAnimalItem(animal, 'rdvs', editingId, payload);
+    } else {
+      addAnimalItem(animal, 'rdvs', payload);
     }
+    setEditingId(null);
+    setForm({ ...emptyForm, date: isoToDisplay(todayStr()) });
+    setShowForm(false);
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm, date: isoToDisplay(todayStr()) });
+    setShowForm(false);
   };
 
   const rdvs = animal.rdvs || [];
@@ -33,8 +52,9 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
 
   const renderRdv = (r, faded) => {
     const c = getCountdown(r.date);
+    const isEditing = editingId === r.id;
     return (
-      <Card key={r.id} accentColor={colors.primary} style={faded ? { opacity: 0.6 } : null}>
+      <Card key={r.id} accentColor={isEditing ? colors.yellow : colors.primary} style={[faded ? { opacity: 0.6 } : null, isEditing ? { borderWidth: 2, borderColor: colors.yellow } : null]}>
         <View style={styles.itemHeader}>
           <View style={{ flex: 1 }}>
             <View style={styles.titleRow}>
@@ -49,7 +69,12 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
             {r.lieu ? <Text style={styles.itemMeta}>📍 {r.lieu}</Text> : null}
             {r.notes ? <Text style={[styles.itemMeta, { fontStyle: 'italic', marginTop: 4 }]}>📝 {r.notes}</Text> : null}
           </View>
-          <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'rdvs', r.id)} />
+          {r.id ? (
+            <Row style={{ gap: 4 }}>
+              <IconButton title="✏️" color={colors.yellow} bg="#fef9c3" onPress={() => openEdit(r)} />
+              <IconButton title="🗑️" color={colors.red} bg={colors.redLight} onPress={() => deleteAnimalItem(animal, 'rdvs', r.id)} />
+            </Row>
+          ) : null}
         </View>
       </Card>
     );
@@ -60,35 +85,41 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
       <Text style={styles.title}>📅 Rendez-vous de {animal.nom}</Text>
 
       {showForm ? (
-        <Card style={{ borderWidth: 2, borderColor: colors.primary }}>
+        <Card style={{ borderWidth: 2, borderColor: editingId ? colors.yellow : colors.primary }}>
           <Field label="Motif">
-            <Input value={motif} onChangeText={setMotif} placeholder="ex. Vaccination, Consultation…" />
+            <Input value={form.motif} onChangeText={(v) => set('motif', v)} placeholder="ex. Vaccination, Consultation…" />
           </Field>
           <Field label="Date">
             <Input
-              value={date}
-              onChangeText={(v) => setDate(formatDateInput(v))}
+              value={form.date}
+              onChangeText={(v) => set('date', formatDateInput(v))}
               placeholder="JJ/MM/AAAA"
               keyboardType="numeric"
               maxLength={10}
             />
           </Field>
           <Field label="Heure">
-            <Input value={heure} onChangeText={setHeure} placeholder="HH:MM" />
+            <Input value={form.heure} onChangeText={(v) => set('heure', v)} placeholder="HH:MM" />
           </Field>
           <Field label="Lieu">
-            <Input value={lieu} onChangeText={setLieu} placeholder="ex. Clinique Saint-Germain" />
+            <Input value={form.lieu} onChangeText={(v) => set('lieu', v)} placeholder="ex. Clinique Saint-Germain" />
           </Field>
           <Field label="Notes / check-list consultation">
-            <Input value={notes} onChangeText={setNotes} placeholder="Observations, questions à poser…" multiline style={{ minHeight: 64 }} />
+            <Input value={form.notes} onChangeText={(v) => set('notes', v)} placeholder="Observations, questions à poser…" multiline style={{ minHeight: 64 }} />
           </Field>
-          <View style={styles.actions}>
-            <Button title="➕ Ajouter" onPress={handleAdd} color={colors.primary} style={{ flex: 1 }} />
-            <Button title="Annuler" onPress={() => setShowForm(false)} color={colors.border} textColor={colors.text} style={{ flex: 1 }} />
-          </View>
+          <Row style={{ gap: spacing.sm }}>
+            <Button
+              title={editingId ? '✏️ Modifier' : '➕ Ajouter'}
+              onPress={handleSave}
+              color={editingId ? colors.yellow : colors.primary}
+              textColor={editingId ? '#92400e' : undefined}
+              style={{ flex: 1 }}
+            />
+            <Button title="Annuler" onPress={handleCancel} color={colors.border} textColor={colors.text} style={{ flex: 1 }} />
+          </Row>
         </Card>
       ) : (
-        <Button title="➕ Ajouter un rendez-vous" onPress={() => setShowForm(true)} color={colors.primary} style={{ marginBottom: spacing.lg }} />
+        <Button title="➕ Ajouter un rendez-vous" onPress={openAdd} color={colors.primary} style={{ marginBottom: spacing.lg }} />
       )}
 
       <Text style={styles.sectionLabel}>À venir</Text>
@@ -107,7 +138,6 @@ export default function PlanningSection({ animal, addAnimalItem, deleteAnimalIte
 const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', marginBottom: spacing.lg, color: colors.text },
   sectionLabel: { fontSize: 16, fontWeight: '700', marginBottom: spacing.sm, color: colors.text },
-  actions: { flexDirection: 'row', gap: spacing.sm },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   itemTitle: { fontWeight: '600', color: colors.text },
