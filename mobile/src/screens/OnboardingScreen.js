@@ -24,8 +24,8 @@ const SLIDES = [
   {
     id: '2',
     tag: 'Dossier médical complet',
-    title: 'Vaccins, traitements\net pesées centralisés',
-    subtitle: 'Antiparasitaires, vermifuges, chirurgies, observations, documents, photos… tout est enregistré et imprimable.',
+    title: 'Vaccins, traitements\net alimentation centralisés',
+    subtitle: 'Antiparasitaires, vermifuges, chirurgies, profil alimentaire, photos recadrables… tout est enregistré et imprimable.',
     topColor: '#0369a1',
     cardType: 'health',
   },
@@ -47,9 +47,9 @@ const SLIDES = [
   },
   {
     id: '5',
-    tag: 'Budget & Partage',
-    title: 'Suivez vos dépenses\net partagez le dossier',
-    subtitle: 'Suivi des frais vétérinaires et soins. Partagez le dossier complet par email ou QR code avec votre vétérinaire.',
+    tag: 'Partage & Urgences',
+    title: 'Prêt à partager\net à retrouver',
+    subtitle: 'Dossier vétérinaire personnalisé (choisissez les sections), étiquette collier PDF et affiche perdu/trouvé en un tap.',
     topColor: '#7c3aed',
     cardType: 'budget',
   },
@@ -116,11 +116,14 @@ function HealthCard() {
           <Text style={card.animalName}>Luna</Text>
           <Text style={card.animalSub}>Labrador · Femelle · 3 ans</Text>
         </View>
+        <View style={[card.badge, { backgroundColor: '#f0fdf4' }]}>
+          <Text style={[card.badgeText, { color: '#065f46', fontSize: 9 }]}>✂️ Photo recadrée</Text>
+        </View>
       </View>
       <PreviewRow icon="💉" label="Vaccin Rage" right="À jour" rightBg="#d1fae5" rightColor="#065f46" />
       <PreviewRow icon="💊" label="Prévicox 7 j" right="En cours" rightBg="#dbeafe" rightColor="#1e40af" />
       <PreviewRow icon="🐛" label="Antiparasitaire" right="J-14" rightBg="#fef3c7" rightColor="#92400e" />
-      <PreviewRow icon="⚖️" label="Dernière pesée" right="12,4 kg" rightBg="#f3f4f6" rightColor="#374151" />
+      <PreviewRow icon="🍽️" label="Croquettes Royal Canin" right="Allergies ⚠️" rightBg="#fef3c7" rightColor="#92400e" />
     </View>
   );
 }
@@ -198,18 +201,32 @@ function VoyageCard() {
 function BudgetCard() {
   return (
     <View style={card.container}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <Text style={card.header}>💰 Budget — Luna</Text>
-        <Text style={{ fontSize: 12, fontWeight: '800', color: '#dc2626' }}>−135 €</Text>
+      <Text style={card.header}>📤 Partage — Luna</Text>
+      {/* Section selector chips */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
+        {['💉 Vaccins', '💊 Traitement', '⚖️ Poids', '🐛 Antiparas.'].map((s, i) => (
+          <View key={i} style={{ backgroundColor: '#7c3aed', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 3 }}>
+            <Text style={{ fontSize: 9, color: '#fff', fontWeight: '700' }}>{s}</Text>
+          </View>
+        ))}
+        {['💰 Budget'].map((s, i) => (
+          <View key={i} style={{ backgroundColor: '#f3f4f6', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: '#d1d5db' }}>
+            <Text style={{ fontSize: 9, color: '#6b7280', fontWeight: '600' }}>{s}</Text>
+          </View>
+        ))}
       </View>
-      <PreviewRow icon="🏥" label="Consultation Dr. Martin" right="−65 €" rightBg="#fee2e2" rightColor="#dc2626" />
-      <PreviewRow icon="💉" label="Vaccins annuels" right="−42 €" rightBg="#fee2e2" rightColor="#dc2626" />
-      <PreviewRow icon="💊" label="Médicaments" right="−28 €" rightBg="#fef3c7" rightColor="#92400e" />
-      <View style={[card.row, { marginTop: 8, backgroundColor: '#f3f4f6', borderRadius: 8, padding: 8 }]}>
-        <Text style={{ fontSize: 14 }}>📤</Text>
+      <View style={[card.row, { backgroundColor: '#f0fdf4', borderRadius: 8, padding: 8, marginBottom: 5 }]}>
+        <Text style={{ fontSize: 14 }}>🏷️</Text>
         <View style={{ flex: 1 }}>
-          <Text style={[card.animalName, { fontSize: 11 }]}>Partage vétérinaire</Text>
-          <Text style={[card.animalSub, { fontSize: 10 }]}>Envoyer le dossier par e-mail ou QR code</Text>
+          <Text style={[card.animalName, { fontSize: 11, color: '#065f46' }]}>Étiquette collier PDF</Text>
+          <Text style={[card.animalSub, { fontSize: 10 }]}>Nom · puce · médicaments · QR code</Text>
+        </View>
+      </View>
+      <View style={[card.row, { backgroundColor: '#fee2e2', borderRadius: 8, padding: 8 }]}>
+        <Text style={{ fontSize: 14 }}>🔍</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[card.animalName, { fontSize: 11, color: '#dc2626' }]}>Affiche Perdu / Trouvé</Text>
+          <Text style={[card.animalSub, { fontSize: 10 }]}>A4 · photo recadrée · QR code · contact</Text>
         </View>
       </View>
     </View>
