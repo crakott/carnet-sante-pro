@@ -876,7 +876,8 @@
 
         // Open a printable, standalone report with the full written record AND embedded photos/audio,
         // so the owner can save it as PDF or print it to hand/send to the vétérinaire (mailto: can't carry attachments)
-        const openDossierReport = (animal) => {
+        const openDossierReport = (animal, sections) => {
+            const s = sections || { vaccins: true, traitements: true, chirurgies: true, antiparasitaires: true, vermifuges: true, rdvs: true, assurance: true, poids: true, budget: true, observations: true };
             const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
             const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
             const chirurgies = [...(animal.chirurgies || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -943,26 +944,16 @@
                     <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
                     ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
                     ${animal.identifiant ? `<p><strong>Identifiant :</strong> ${escapeHtml(animal.identifiant)}</p>` : ''}
-                    <h2>💉 Vaccins</h2>
-                    <p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>
-                    <h2>💊 Traitements en cours</h2>
-                    <p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>
-                    <h2>🔪 Chirurgies & interventions</h2>
-                    ${chirHtml}
-                    <h2>🦟 Antiparasitaires</h2>
-                    ${apHtml}
-                    <h2>🪱 Vermifuges</h2>
-                    ${vfHtml}
-                    <h2>📅 Rendez-vous vétérinaires</h2>
-                    ${rdvHtml}
-                    ${assurHtml ? '<h2>🛡️ Assurance</h2>' + assurHtml : ''}
-                    <h2>⚖️ Historique de poids</h2>
-                    ${poidsHtml}
-                    ${lastWeight ? `<p>Poids actuel : <strong>${escapeHtml(lastWeight.valeur)} kg</strong> (mesuré le ${escapeHtml(lastWeight.date)})</p>` : ''}
-                    <h2>💰 Budget total</h2>
-                    <p>${budget > 0 ? `${budget.toFixed(2)} €` : 'Aucune dépense enregistrée'}</p>
-                    <h2>📋 Observations</h2>
-                    ${obsHtml}
+                    ${s.vaccins ? `<h2>💉 Vaccins</h2><p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>` : ''}
+                    ${s.traitements ? `<h2>💊 Traitements en cours</h2><p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>` : ''}
+                    ${s.chirurgies ? `<h2>🔪 Chirurgies & interventions</h2>${chirHtml}` : ''}
+                    ${s.antiparasitaires ? `<h2>🦟 Antiparasitaires</h2>${apHtml}` : ''}
+                    ${s.vermifuges ? `<h2>🪱 Vermifuges</h2>${vfHtml}` : ''}
+                    ${s.rdvs ? `<h2>📅 Rendez-vous vétérinaires</h2>${rdvHtml}` : ''}
+                    ${s.assurance && assurHtml ? '<h2>🛡️ Assurance</h2>' + assurHtml : ''}
+                    ${s.poids ? `<h2>⚖️ Historique de poids</h2>${poidsHtml}${lastWeight ? `<p>Poids actuel : <strong>${escapeHtml(lastWeight.valeur)} kg</strong> (mesuré le ${escapeHtml(lastWeight.date)})</p>` : ''}` : ''}
+                    ${s.budget ? `<h2>💰 Budget total</h2><p>${budget > 0 ? budget.toFixed(2) + ' €' : 'Aucune dépense enregistrée'}</p>` : ''}
+                    ${s.observations ? `<h2>📋 Observations</h2>${obsHtml}` : ''}
                 </body></html>`);
             win.document.close();
         };
@@ -2714,6 +2705,20 @@
             const [editAssurance, setEditAssurance] = React.useState(false);
             const emptyAssurance = { compagnie: '', numeroContrat: '', telephone: '', dateDebut: '', dateFin: '', franchise: '', plafondAnnuel: '', notes: '' };
             const [assuranceForm, setAssuranceForm] = React.useState(animal.assurance || emptyAssurance);
+            const [showSectionPicker, setShowSectionPicker] = React.useState(false);
+            const [reportSections, setReportSections] = React.useState({ vaccins: true, traitements: true, chirurgies: true, antiparasitaires: true, vermifuges: true, rdvs: true, assurance: true, poids: true, budget: false, observations: true });
+            const REPORT_SECTION_LABELS = [
+                { key: 'vaccins', label: '💉 Vaccins' },
+                { key: 'traitements', label: '💊 Traitements en cours' },
+                { key: 'chirurgies', label: '🔪 Chirurgies & interventions' },
+                { key: 'antiparasitaires', label: '🦟 Antiparasitaires' },
+                { key: 'vermifuges', label: '🪱 Vermifuges' },
+                { key: 'rdvs', label: '📅 Rendez-vous' },
+                { key: 'poids', label: '⚖️ Historique de poids' },
+                { key: 'observations', label: '📋 Observations' },
+                { key: 'assurance', label: '🛡️ Assurance' },
+                { key: 'budget', label: '💰 Budget total' },
+            ];
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
@@ -2778,8 +2783,31 @@
 
                     <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                         <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>📤 Partage Vétérinaire</h4>
-                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Envoie un e-mail au vétérinaire avec le dossier complet de l'animal (vaccins, poids, médicaments, observations écrites)</p>
-                        <button onClick={() => openDossierReport(animal)} style={{ width: '100%', marginBottom: '8px', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Voir / imprimer le dossier complet (avec photos)</button>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '10px' }}>Génère un dossier PDF à partager avec le vétérinaire. Choisis les sections à inclure.</p>
+
+                        <button onClick={() => setShowSectionPicker(v => !v)} style={{ width: '100%', marginBottom: '8px', padding: '8px 12px', background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>🗂️ Sections à inclure ({Object.values(reportSections).filter(Boolean).length}/{REPORT_SECTION_LABELS.length})</span>
+                            <span style={{ color: '#9ca3af' }}>{showSectionPicker ? '▲' : '▼'}</span>
+                        </button>
+
+                        {showSectionPicker && (
+                            <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', marginBottom: '10px', overflow: 'hidden' }}>
+                                <div style={{ padding: '8px 12px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '10px' }}>
+                                    <button onClick={() => setReportSections(Object.fromEntries(REPORT_SECTION_LABELS.map(l => [l.key, true])))} style={{ fontSize: '12px', color: '#10b981', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Tout cocher</button>
+                                    <button onClick={() => setReportSections(Object.fromEntries(REPORT_SECTION_LABELS.map(l => [l.key, false])))} style={{ fontSize: '12px', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}>Tout décocher</button>
+                                </div>
+                                {REPORT_SECTION_LABELS.map((sec, i) => (
+                                    <label key={sec.key} onClick={() => setReportSections(s => ({ ...s, [sec.key]: !s[sec.key] }))} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderTop: i > 0 ? '1px solid #f3f4f6' : 'none', cursor: 'pointer', background: reportSections[sec.key] ? '#f0fdf4' : 'white' }}>
+                                        <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: reportSections[sec.key] ? 'none' : '2px solid #d1d5db', background: reportSections[sec.key] ? '#10b981' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            {reportSections[sec.key] && <span style={{ color: 'white', fontSize: '11px', fontWeight: '700' }}>✓</span>}
+                                        </div>
+                                        <span style={{ fontSize: '13px', fontWeight: '500' }}>{sec.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+
+                        <button onClick={() => openDossierReport(animal, reportSections)} style={{ width: '100%', marginBottom: '8px', padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🖨️ Générer le dossier PDF</button>
                         {(animal.partages && animal.partages.length > 0) ? (
                             animal.partages.map(p => (
                                 <div key={p.id} style={{ fontSize: '13px', padding: '6px', background: '#f0fdf4', borderRadius: '4px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
