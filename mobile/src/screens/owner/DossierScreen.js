@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, Linking } from 'react-native';
+import CropModal from '../../components/CropModal';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
@@ -43,6 +44,8 @@ export default function DossierScreen() {
   const [lostSignes, setLostSignes] = useState('');
   const [showLostForm, setShowLostForm] = useState(false);
   const [lostMode, setLostMode] = useState('perdu');
+  const [lostPhoto, setLostPhoto] = useState(null);
+  const [showCropLost, setShowCropLost] = useState(false);
 
   const toggleSection = useCallback((key) => {
     setShareSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -55,6 +58,7 @@ export default function DossierScreen() {
     getVideosForAnimal(animal.id).then((list) => setVideoCount(list.length)).catch(() => setVideoCount(0));
     setContactPhone(animal.contactPhone || '');
     setLostTel(animal.contactPhone || '');
+    setLostPhoto(null);
   }, [animal?.id]);
 
   if (animals.length === 0) {
@@ -113,7 +117,8 @@ export default function DossierScreen() {
     try {
       const form = { date: lostDate, lieu: lostLieu, telephone: lostTel, signes: lostSignes, mode: lostMode };
       const label = lostMode === 'perdu' ? 'Perdu' : 'Trouvé';
-      const html = buildLostPosterHtml(animal, form, animal.shareEnabled ? shareUrl : '');
+      const posterAnimal = lostPhoto ? { ...animal, photo: lostPhoto } : animal;
+      const html = buildLostPosterHtml(posterAnimal, form, animal.shareEnabled ? shareUrl : '');
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Affiche ${label} — ${animal.nom}`, UTI: 'com.adobe.pdf' });
     } catch {
@@ -305,6 +310,23 @@ export default function DossierScreen() {
               </View>
             )}
 
+            {/* Photo preview + crop */}
+            {animal.photo ? (
+              <View style={styles.lostPhotoRow}>
+                <Image source={{ uri: lostPhoto || animal.photo }} style={styles.lostPhotoThumb} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <TouchableOpacity style={styles.cropBtn} onPress={() => setShowCropLost(true)}>
+                    <Text style={styles.cropBtnText}>✂️ Recadrer la photo pour l'affiche</Text>
+                  </TouchableOpacity>
+                  {lostPhoto ? (
+                    <TouchableOpacity style={styles.resetPhotoBtn} onPress={() => setLostPhoto(null)}>
+                      <Text style={styles.resetPhotoBtnText}>↩ Rétablir l'original</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
             <Text style={styles.fieldLabel}>
               {lostMode === 'perdu' ? '📅 Disparu(e) le' : '📅 Trouvé(e) le'}
             </Text>
@@ -329,6 +351,13 @@ export default function DossierScreen() {
           </View>
         )}
       </Card>
+
+      <CropModal
+        visible={showCropLost}
+        photo={lostPhoto || animal?.photo}
+        onSave={(cropped) => { setLostPhoto(cropped); setShowCropLost(false); }}
+        onCancel={() => setShowCropLost(false)}
+      />
     </Screen>
   );
 }
@@ -439,4 +468,10 @@ const styles = StyleSheet.create({
   modeBtnTextActive: { color: colors.text },
   qrNotice: { backgroundColor: '#fffbeb', borderRadius: 8, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: '#fde68a' },
   qrNoticeText: { fontSize: 11, color: '#92400e', lineHeight: 16 },
+  lostPhotoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.md },
+  lostPhotoThumb: { width: 64, height: 64, borderRadius: 8, resizeMode: 'cover', backgroundColor: '#e5e7eb' },
+  cropBtn: { backgroundColor: '#f3f4f6', borderRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: 8, borderWidth: 1, borderColor: '#d1d5db' },
+  cropBtnText: { fontSize: 13, color: '#374151', fontWeight: '600' },
+  resetPhotoBtn: { backgroundColor: '#fef2f2', borderRadius: 8, paddingHorizontal: spacing.sm, paddingVertical: 6, borderWidth: 1, borderColor: '#fecaca' },
+  resetPhotoBtnText: { fontSize: 12, color: '#dc2626' },
 });
