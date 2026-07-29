@@ -989,6 +989,7 @@
                 const diff = (Date.now() - new Date(animal.dateNaissance)) / (365.25 * 86400000);
                 return diff < 1 ? Math.round(diff * 12) + ' mois' : Math.floor(diff) + ' an' + (Math.floor(diff) > 1 ? 's' : '');
             })();
+            const posterPhoto = lostInfo && lostInfo.photo ? lostInfo.photo : (animal.photo || null);
             const qrUrl = (shareUrl && animal.shareEnabled)
                 ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}`
                 : null;
@@ -1029,7 +1030,7 @@
             </div>
             <div class="body">
                 <div class="photo-col">
-                    ${animal.photo ? `<img src="${animal.photo}" alt="${escapeHtml(animal.nom)}" />` : `<div class="photo-placeholder">${emoji}</div>`}
+                    ${posterPhoto ? `<img src="${posterPhoto}" alt="${escapeHtml(animal.nom)}" />` : `<div class="photo-placeholder">${emoji}</div>`}
                 </div>
                 <div class="info-col">
                     <div class="ir"><strong>Espèce</strong>${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}</div>
@@ -2928,7 +2929,7 @@
             const [editAlimentation, setEditAlimentation] = React.useState(false);
             const [alimentationForm, setAlimentationForm] = React.useState(animal.alimentationInfo || emptyAlimentation);
             const [showLostForm, setShowLostForm] = React.useState(false);
-            const [lostForm, setLostForm] = React.useState({ mode: 'perdu', dateEvt: new Date().toISOString().split('T')[0], lieuEvt: '', telephone: animal.contactUrgence || '', description: '' });
+            const [lostForm, setLostForm] = React.useState({ mode: 'perdu', dateEvt: new Date().toISOString().split('T')[0], lieuEvt: '', telephone: animal.contactUrgence || '', description: '', photo: '' });
             const [editContact, setEditContact] = React.useState(false);
             const [contactValue, setContactValue] = React.useState(animal.contactUrgence || '');
 
@@ -3208,6 +3209,29 @@
                                 </div>
                                 <input type="text" placeholder={lostForm.mode === 'perdu' ? 'Lieu de disparition (ex : Parc des Halles, Lyon 3e)' : 'Lieu où trouvé(e) (ex : Rue du Commerce, Paris 15e)'} value={lostForm.lieuEvt} onChange={e => setLostForm(f => ({ ...f, lieuEvt: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
                                 <textarea placeholder="Signes distinctifs (couleur du pelage, tache, collier, comportement...)" value={lostForm.description} onChange={e => setLostForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical' }} />
+
+                                {/* Photo pour l'affiche */}
+                                <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                                    <div style={{ padding: '8px 12px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', fontSize: '12px', fontWeight: '600', color: '#374151' }}>📸 Photo sur l'affiche</div>
+                                    <div style={{ padding: '10px 12px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                        <div style={{ flexShrink: 0, width: '64px', height: '64px', borderRadius: '8px', overflow: 'hidden', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>
+                                            {(lostForm.photo || animal.photo)
+                                                ? <img src={lostForm.photo || animal.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="aperçu" />
+                                                : (EMOJIS_ESPECE[animal.espece] || '🐾')}
+                                        </div>
+                                        <div style={{ flex: 1, display: 'grid', gap: '6px' }}>
+                                            {animal.photo && (
+                                                <button onClick={() => openCropModal(animal.photo, NaN).then(p => setLostForm(f => ({ ...f, photo: p }))).catch(() => {})} style={{ padding: '7px 10px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', textAlign: 'left' }}>✂️ Rogner la photo de profil</button>
+                                            )}
+                                            <label style={{ padding: '7px 10px', background: '#f3f4f6', color: '#374151', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', textAlign: 'left', display: 'block' }}>
+                                                📁 Choisir une autre photo
+                                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (!f) return; const fr = new FileReader(); fr.onload = ev => openCropModal(ev.target.result, NaN).then(p => setLostForm(fm => ({ ...fm, photo: p }))).catch(() => {}); fr.readAsDataURL(f); }} />
+                                            </label>
+                                            {lostForm.photo && <button onClick={() => setLostForm(f => ({ ...f, photo: '' }))} style={{ padding: '5px 10px', background: 'none', color: '#9ca3af', border: 'none', fontSize: '11px', cursor: 'pointer', textAlign: 'left' }}>↩ Utiliser la photo de profil</button>}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {!animal.shareEnabled && <p style={{ fontSize: '12px', color: '#9ca3af' }}>💡 Activez le partage (carte "Fiche de garde") pour ajouter un QR code sur l'affiche.</p>}
                                 <button onClick={() => openLostPosterReport(animal, lostForm, animal.shareEnabled ? shareUrl : null)} style={{ padding: '10px 16px', background: lostForm.mode === 'perdu' ? '#dc2626' : '#16a34a', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>🖨️ Générer l'affiche {lostForm.mode === 'perdu' ? '"Animal perdu"' : '"Animal trouvé"'}</button>
                             </div>
