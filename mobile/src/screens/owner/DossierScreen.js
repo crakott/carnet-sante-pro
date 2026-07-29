@@ -42,6 +42,7 @@ export default function DossierScreen() {
   const [lostTel, setLostTel] = useState('');
   const [lostSignes, setLostSignes] = useState('');
   const [showLostForm, setShowLostForm] = useState(false);
+  const [lostMode, setLostMode] = useState('perdu');
 
   const toggleSection = useCallback((key) => {
     setShareSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -110,10 +111,11 @@ export default function DossierScreen() {
 
   const handleLostPoster = async () => {
     try {
-      const form = { date: lostDate, lieu: lostLieu, telephone: lostTel, signes: lostSignes };
+      const form = { date: lostDate, lieu: lostLieu, telephone: lostTel, signes: lostSignes, mode: lostMode };
+      const label = lostMode === 'perdu' ? 'Perdu' : 'Trouvé';
       const html = buildLostPosterHtml(animal, form, animal.shareEnabled ? shareUrl : '');
       const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Affiche perdu — ${animal.nom}`, UTI: 'com.adobe.pdf' });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Affiche ${label} — ${animal.nom}`, UTI: 'com.adobe.pdf' });
     } catch {
       Alert.alert('Erreur', "Impossible de générer l'affiche.");
     }
@@ -264,26 +266,66 @@ export default function DossierScreen() {
         ) : null}
       </Card>
 
-      {/* Affiche Animal perdu */}
+      {/* Affiche Animal perdu / trouvé */}
       <Card style={styles.shareBlock}>
         <TouchableOpacity onPress={() => setShowLostForm((v) => !v)} activeOpacity={0.7} style={styles.lostHeader}>
-          <Text style={styles.shareTitle}>🔍 Affiche "Animal perdu"</Text>
+          <Text style={styles.shareTitle}>🔍 Affiche perdu / trouvé</Text>
           <Text style={styles.accordionArrow}>{showLostForm ? '▲' : '▼'}</Text>
         </TouchableOpacity>
         {!showLostForm && (
-          <Text style={styles.shareHint}>Générez une affiche imprimable en rouge avec la photo de {animal.nom} et votre numéro en grand.</Text>
+          <Text style={styles.shareHint}>
+            Affiche A4 deux colonnes (photo + infos) avec numéro en grand et QR code. Modes Perdu 🔴 et Trouvé 🟢.
+          </Text>
         )}
         {showLostForm && (
-          <View style={{ marginTop: spacing.sm }}>
-            <Text style={styles.fieldLabel}>📅 Date de disparition</Text>
+          <View style={{ marginTop: spacing.md }}>
+            {/* Toggle PERDU / TROUVÉ */}
+            <View style={styles.modeToggle}>
+              <TouchableOpacity
+                style={[styles.modeBtn, lostMode === 'perdu' && styles.modeBtnActiveRed]}
+                onPress={() => setLostMode('perdu')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modeBtnText, lostMode === 'perdu' && styles.modeBtnTextActive]}>🔴 PERDU</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeBtn, lostMode === 'trouve' && styles.modeBtnActiveGreen]}
+                onPress={() => setLostMode('trouve')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modeBtnText, lostMode === 'trouve' && styles.modeBtnTextActive]}>🟢 TROUVÉ</Text>
+              </TouchableOpacity>
+            </View>
+
+            {!animal.shareEnabled && (
+              <View style={styles.qrNotice}>
+                <Text style={styles.qrNoticeText}>
+                  💡 Activez le partage (Fiche de garde) pour inclure le QR code dans l'affiche.
+                </Text>
+              </View>
+            )}
+
+            <Text style={styles.fieldLabel}>
+              {lostMode === 'perdu' ? '📅 Disparu(e) le' : '📅 Trouvé(e) le'}
+            </Text>
             <Input value={lostDate} onChangeText={setLostDate} placeholder="ex : 15 juillet 2025" style={{ marginBottom: spacing.sm }} />
-            <Text style={styles.fieldLabel}>📍 Dernier lieu connu</Text>
+
+            <Text style={styles.fieldLabel}>
+              {lostMode === 'perdu' ? '📍 Dernier lieu connu' : '📍 Lieu de découverte'}
+            </Text>
             <Input value={lostLieu} onChangeText={setLostLieu} placeholder="ex : Parc de la Mairie, Lyon 3e" style={{ marginBottom: spacing.sm }} />
+
             <Text style={styles.fieldLabel}>📞 Téléphone de contact</Text>
             <Input value={lostTel} onChangeText={setLostTel} placeholder="06 12 34 56 78" keyboardType="phone-pad" style={{ marginBottom: spacing.sm }} />
+
             <Text style={styles.fieldLabel}>🔍 Signes distinctifs</Text>
             <Input value={lostSignes} onChangeText={setLostSignes} placeholder="ex : Tache blanche sur la patte droite, collier rouge…" multiline style={{ marginBottom: spacing.md, minHeight: 60 }} />
-            <Button title="📤 Générer et partager l'affiche" onPress={handleLostPoster} color="#dc2626" />
+
+            <Button
+              title={`📤 Générer l'affiche ${lostMode === 'perdu' ? 'PERDU' : 'TROUVÉ'}`}
+              onPress={handleLostPoster}
+              color={lostMode === 'perdu' ? '#dc2626' : '#059669'}
+            />
           </View>
         )}
       </Card>
@@ -385,4 +427,16 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 11, fontWeight: '600', color: colors.textLight, marginBottom: 4, marginTop: spacing.sm },
   lostHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   accordionArrow: { fontSize: 12, color: colors.textMuted },
+  modeToggle: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  modeBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: 8,
+    borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.background, alignItems: 'center',
+  },
+  modeBtnActiveRed:   { backgroundColor: '#fef2f2', borderColor: '#dc2626' },
+  modeBtnActiveGreen: { backgroundColor: '#f0fdf4', borderColor: '#059669' },
+  modeBtnText:       { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+  modeBtnTextActive: { color: colors.text },
+  qrNotice: { backgroundColor: '#fffbeb', borderRadius: 8, padding: spacing.sm, marginBottom: spacing.md, borderWidth: 1, borderColor: '#fde68a' },
+  qrNoticeText: { fontSize: 11, color: '#92400e', lineHeight: 16 },
 });
