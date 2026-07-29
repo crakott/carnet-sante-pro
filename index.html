@@ -2781,7 +2781,26 @@
                                         )}
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <h3 style={{ fontSize: '15px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{animal.nom}</h3>
-                                            {subtitle && <p style={{ color: '#6b7280', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</p>}
+                                            {subtitle && <p style={{ color: '#6b7280', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{subtitle}</p>}
+                                            {animal.veterinaire && animal.veterinaire.nom && (
+                                                <div style={{ marginTop: '2px' }}>
+                                                    <div style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                                        <span>🩺</span>
+                                                        <span style={{ fontWeight: '600' }}>{animal.veterinaire.nom}</span>
+                                                        {animal.veterinaire.tel && (
+                                                            <a href={`tel:${animal.veterinaire.tel}`} onClick={(e) => e.stopPropagation()}
+                                                                style={{ color: '#10b981', textDecoration: 'none', fontWeight: '600' }}>
+                                                                · {animal.veterinaire.tel}
+                                                            </a>
+                                                        )}
+                                                    </div>
+                                                    {animal.veterinaire.adresse && (
+                                                        <div style={{ fontSize: '11px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            📍 {animal.veterinaire.adresse}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', background: pill.background, color: pill.color }}>{pill.text}</span>
                                         <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -2823,6 +2842,23 @@
                                         <label htmlFor="edit-sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
                                     </div>
                                     <input type="text" placeholder="Identifiant vétérinaire (puce électronique, optionnel)" value={editingAnimal.identifiant || ''} onChange={(e) => setEditingAnimal({ ...editingAnimal, identifiant: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', gridColumn: '1 / -1' }} />
+                                    <div style={{ gridColumn: '1 / -1', background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '8px', padding: '12px' }}>
+                                        <p style={{ fontSize: '13px', fontWeight: '700', color: '#065f46', marginBottom: '8px' }}>🩺 Vétérinaire habituel (optionnel)</p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                                            <input type="text" placeholder="Nom du cabinet / vétérinaire"
+                                                value={(editingAnimal.veterinaire || {}).nom || ''}
+                                                onChange={(e) => setEditingAnimal({ ...editingAnimal, veterinaire: { ...(editingAnimal.veterinaire || {}), nom: e.target.value } })}
+                                                style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} />
+                                            <input type="tel" placeholder="Téléphone"
+                                                value={(editingAnimal.veterinaire || {}).tel || ''}
+                                                onChange={(e) => setEditingAnimal({ ...editingAnimal, veterinaire: { ...(editingAnimal.veterinaire || {}), tel: e.target.value } })}
+                                                style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} />
+                                            <input type="text" placeholder="Adresse"
+                                                value={(editingAnimal.veterinaire || {}).adresse || ''}
+                                                onChange={(e) => setEditingAnimal({ ...editingAnimal, veterinaire: { ...(editingAnimal.veterinaire || {}), adresse: e.target.value } })}
+                                                style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', gridColumn: '1 / -1' }} />
+                                        </div>
+                                    </div>
                                     <div style={{ gridColumn: '1 / -1' }}>
                                         <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Photo (optionnel)</label>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
