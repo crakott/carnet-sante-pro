@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Card, Button, Field, Input, Select, IconButton, Row } from './ui';
-import TraitementSection from './TraitementSection';
 import { colors, spacing } from '../theme';
 import { formatDate, todayStr, isoToDisplay, displayToIso, formatDateInput, addDays } from '../utils/dates';
 import { VACCINS_COURANTS } from '../constants';
@@ -116,25 +115,6 @@ export default function VaccinsSection({ animal, addAnimalItem, deleteAnimalItem
         )}
       </Card>
 
-      <TraitementSection
-        title="Antiparasitaires"
-        emoji="🦟"
-        color={colors.purple}
-        items={animal.antiparasitaires}
-        onAdd={(item) => addAnimalItem(animal, 'antiparasitaires', item)}
-        onDelete={(id) => deleteAnimalItem(animal, 'antiparasitaires', id)}
-        onUpdate={(id, updates) => updateAnimalItem(animal, 'antiparasitaires', id, updates)}
-      />
-
-      <TraitementSection
-        title="Vermifuges"
-        emoji="🪱"
-        color={colors.brown}
-        items={animal.vermifuges}
-        onAdd={(item) => addAnimalItem(animal, 'vermifuges', item)}
-        onDelete={(id) => deleteAnimalItem(animal, 'vermifuges', id)}
-        onUpdate={(id, updates) => updateAnimalItem(animal, 'vermifuges', id, updates)}
-      />
     </View>
   );
 }

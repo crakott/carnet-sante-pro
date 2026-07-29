@@ -3,7 +3,9 @@ import { View, Text, Image } from 'react-native';
 import { Screen, EmptyState } from '../../components/ui';
 import AnimalPicker from '../../components/AnimalPicker';
 import MedicamentsSection from '../../components/MedicamentsSection';
+import TraitementSection from '../../components/TraitementSection';
 import { useAnimals } from '../../context/AnimalsContext';
+import { colors } from '../../theme';
 
 export default function MedicamentsScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, addAnimalItem, deleteAnimalItem, updateAnimalItem } = useAnimals();
@@ -33,12 +35,32 @@ export default function MedicamentsScreen() {
       )}
       <AnimalPicker animals={animals} selectedAnimal={selectedAnimal} onSelect={setSelectedAnimal} />
       {animal ? (
-        <MedicamentsSection
-          animal={animal}
-          addAnimalItem={addAnimalItem}
-          deleteAnimalItem={deleteAnimalItem}
-          updateAnimalItem={updateAnimalItem}
-        />
+        <>
+          <MedicamentsSection
+            animal={animal}
+            addAnimalItem={addAnimalItem}
+            deleteAnimalItem={deleteAnimalItem}
+            updateAnimalItem={updateAnimalItem}
+          />
+          <TraitementSection
+            title="Antiparasitaires"
+            emoji="🦟"
+            color={colors.purple}
+            items={animal.antiparasitaires}
+            onAdd={(item) => addAnimalItem(animal, 'antiparasitaires', item)}
+            onDelete={(id) => deleteAnimalItem(animal, 'antiparasitaires', id)}
+            onUpdate={(id, updates) => updateAnimalItem(animal, 'antiparasitaires', id, updates)}
+          />
+          <TraitementSection
+            title="Vermifuges"
+            emoji="🪱"
+            color={colors.brown}
+            items={animal.vermifuges}
+            onAdd={(item) => addAnimalItem(animal, 'vermifuges', item)}
+            onDelete={(id) => deleteAnimalItem(animal, 'vermifuges', id)}
+            onUpdate={(id, updates) => updateAnimalItem(animal, 'vermifuges', id, updates)}
+          />
+        </>
       ) : (
         <EmptyState>Sélectionnez un animal</EmptyState>
       )}
