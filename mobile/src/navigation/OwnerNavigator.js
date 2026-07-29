@@ -43,6 +43,7 @@ const stackOptions = {
   headerTitleStyle: { fontWeight: '700', fontSize: 16 },
   headerBackTitle: 'Retour',
   headerShadowVisible: false,
+  headerRight: () => <SearchHeaderButton />,
 };
 
 const APP_TITLE = '🐾 Carnet Santé';
@@ -90,7 +91,6 @@ function AccueilStack() {
         options={{
           title: APP_TITLE,
           headerLeft: () => <Text style={{ fontSize: 22, marginLeft: 8 }}>🏠</Text>,
-          headerRight: () => <SearchHeaderButton />,
         }}
       />
     </AccueilStackNav.Navigator>
@@ -127,7 +127,7 @@ function UrgencesStack() {
       <UrgencesStackNav.Screen
         name="UrgencesMain"
         component={SecuriteScreen}
-        options={{ title: APP_TITLE }}
+        options={({ navigation }) => ({ title: APP_TITLE, headerLeft: () => <HomeButton navigation={navigation} /> })}
       />
     </UrgencesStackNav.Navigator>
   );
