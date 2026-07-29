@@ -34,6 +34,8 @@
       });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2220007721302800" crossorigin="anonymous"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -192,6 +194,13 @@
             reader.onerror = () => onError && onError();
             reader.readAsDataURL(file);
         };
+
+        // Global crop-modal controller — openCropModal(src, aspectRatio?) returns a Promise<dataUrl>
+        const _cropModal = { show: null };
+        const openCropModal = (src, aspectRatio) => new Promise((resolve, reject) => {
+            if (!_cropModal.show) { reject(new Error('no modal')); return; }
+            _cropModal.show({ src, aspectRatio: aspectRatio !== undefined ? aspectRatio : NaN, resolve, reject });
+        });
 
         // Local-only video storage (IndexedDB) — videos never leave this device, no Firestore/cloud sync
         const VIDEO_DB_NAME = 'carnet-sante-videos';
@@ -1453,6 +1462,7 @@
                         )}
                         {syncState === 'synced' && !isOnline && null}
 
+                        <CropModal />
                         {showSearch && <SearchOverlay animals={animals} onClose={() => setShowSearch(false)} navigateTo={navigateTo} setSelectedAnimal={setSelectedAnimal} />}
 
                         <NotificationPrompt animals={animals} reminders={reminders} />
@@ -1954,6 +1964,68 @@
         }
 
         // QR code linking to the app's URL (or a custom `value`, e.g. a shared dossier link)
+        function CropModal() {
+            const [state, setState] = React.useState(null);
+            const imgRef = React.useRef(null);
+            const cropperRef = React.useRef(null);
+
+            React.useEffect(() => {
+                _cropModal.show = (s) => setState(s);
+                return () => { _cropModal.show = null; };
+            }, []);
+
+            React.useEffect(() => {
+                if (!state) return;
+                if (cropperRef.current) { cropperRef.current.destroy(); cropperRef.current = null; }
+                if (!imgRef.current || !window.Cropper) return;
+                cropperRef.current = new window.Cropper(imgRef.current, {
+                    aspectRatio: state.aspectRatio,
+                    viewMode: 1,
+                    autoCropArea: 0.9,
+                    dragMode: 'move',
+                    guides: true,
+                    highlight: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                });
+                return () => { if (cropperRef.current) { cropperRef.current.destroy(); cropperRef.current = null; } };
+            }, [state]);
+
+            if (!state) return null;
+
+            const confirm = () => {
+                if (cropperRef.current) {
+                    const canvas = cropperRef.current.getCroppedCanvas({ maxWidth: 1400, maxHeight: 1400, fillColor: '#fff' });
+                    state.resolve(canvas.toDataURL('image/jpeg', 0.88));
+                }
+                setState(null);
+            };
+
+            const cancel = () => { state.reject(new Error('cancelled')); setState(null); };
+            const setRatio = (r) => { if (cropperRef.current) cropperRef.current.setAspectRatio(r); };
+            const rotate = (deg) => { if (cropperRef.current) cropperRef.current.rotate(deg); };
+
+            return (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', background: '#000' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: '#111827', flexShrink: 0 }}>
+                        <button onClick={cancel} style={{ color: '#f87171', background: 'none', border: 'none', fontSize: '15px', fontWeight: '600', cursor: 'pointer', padding: '6px 0' }}>✕ Annuler</button>
+                        <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>✂️ Rogner la photo</span>
+                        <button onClick={confirm} style={{ color: '#34d399', background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', padding: '6px 0' }}>✓ Appliquer</button>
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+                        <img ref={imgRef} src={state.src} style={{ display: 'block', maxWidth: '100%', opacity: 0 }} alt="à rogner" />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', padding: '10px 16px', background: '#111827', flexShrink: 0, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        {[{ label: '⬜ Carré', r: 1 }, { label: '↔️ Libre', r: NaN }, { label: '4:3', r: 4/3 }, { label: '3:4', r: 3/4 }].map(({ label, r }) => (
+                            <button key={label} onClick={() => setRatio(r)} style={{ padding: '7px 12px', background: '#374151', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>{label}</button>
+                        ))}
+                        <button onClick={() => rotate(-90)} style={{ padding: '7px 12px', background: '#374151', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>↩ −90°</button>
+                        <button onClick={() => rotate(90)} style={{ padding: '7px 12px', background: '#374151', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>↪ +90°</button>
+                    </div>
+                </div>
+            );
+        }
+
         function ShareQRCode({ size = 120, value }) {
             const ref = React.useRef(null);
 
@@ -2635,9 +2707,15 @@
 
             const handlePhotoChange = (file, setter) => {
                 setPhotoError('');
-                readImageAsResizedDataUrl(file, 400, 0.85,
-                    (photo) => setter(prev => ({ ...prev, photo })),
-                    () => setPhotoError('Impossible de lire cette image.'));
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    openCropModal(e.target.result, 1)
+                        .then(cropped => setter(prev => ({ ...prev, photo: cropped })))
+                        .catch(() => {});
+                };
+                reader.onerror = () => setPhotoError('Impossible de lire cette image.');
+                reader.readAsDataURL(file);
             };
 
             const handleAddAnimal = () => {
@@ -3721,19 +3799,11 @@
                 if (!file || !file.type.startsWith('image/')) return;
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const MAX_PX = 1600;
-                        const scale = Math.min(1, MAX_PX / Math.max(img.width, img.height));
-                        const canvas = document.createElement('canvas');
-                        canvas.width = Math.round(img.width * scale);
-                        canvas.height = Math.round(img.height * scale);
-                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                        setPhotoBase64(canvas.toDataURL('image/jpeg', 0.82));
-                    };
-                    img.onerror = () => setFileError('Impossible de lire cette image.');
-                    img.src = e.target.result;
+                    openCropModal(e.target.result, NaN)
+                        .then(cropped => setPhotoBase64(cropped))
+                        .catch(() => {});
                 };
+                reader.onerror = () => setFileError('Impossible de lire cette image.');
                 reader.readAsDataURL(file);
             };
 
@@ -4003,7 +4073,7 @@
                                 <textarea placeholder="Notes (déroulement, suites opératoires, anesthésie…)" value={newChirurgie.notes} onChange={(e) => setNewChirurgie({ ...newChirurgie, notes: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px' }} />
                                 <div>
                                     <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '6px' }}>📷 Photo (optionnel)</label>
-                                    <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (f) readImageAsResizedDataUrl(f, 1600, 0.82, (photo) => setNewChirurgie(prev => ({ ...prev, photo })), () => {}); }} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
+                                    <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (!f || !f.type.startsWith('image/')) return; const fr = new FileReader(); fr.onload = (ev) => openCropModal(ev.target.result, NaN).then(cropped => setNewChirurgie(prev => ({ ...prev, photo: cropped }))).catch(() => {}); fr.readAsDataURL(f); }} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
                                     {newChirurgie.photo && <img src={newChirurgie.photo} alt="preview" style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginTop: '6px' }} />}
                                 </div>
                             </div>
@@ -4084,7 +4154,10 @@
                     readFileAsDataUrl(file, MAX_DOCUMENT_PDF_SIZE, setPhotoBase64,
                         () => setFileError(`PDF trop volumineux (max ${Math.round(MAX_DOCUMENT_PDF_SIZE / 1024)} Ko). Essayez de le compresser ou de photographier les pages.`));
                 } else if (file.type.startsWith('image/')) {
-                    readImageAsResizedDataUrl(file, 1600, 0.82, setPhotoBase64, () => setFileError('Impossible de lire ce fichier.'));
+                    const fr = new FileReader();
+                    fr.onload = (e) => openCropModal(e.target.result, NaN).then(setPhotoBase64).catch(() => {});
+                    fr.onerror = () => setFileError('Impossible de lire ce fichier.');
+                    fr.readAsDataURL(file);
                 } else {
                     setFileError('Format non supporté : choisissez une image ou un PDF.');
                 }
@@ -4557,7 +4630,11 @@
 
             const handlePhoto = (file) => {
                 setFileError('');
-                readImageAsResizedDataUrl(file, 1200, 0.8, setPhotoBase64, () => setFileError('Impossible de lire ce fichier.'));
+                if (!file || !file.type.startsWith('image/')) return;
+                const fr = new FileReader();
+                fr.onload = (e) => openCropModal(e.target.result, NaN).then(setPhotoBase64).catch(() => {});
+                fr.onerror = () => setFileError('Impossible de lire ce fichier.');
+                fr.readAsDataURL(file);
             };
 
             const handleSend = async () => {
