@@ -1037,7 +1037,7 @@
                     ${animal.sexe ? `<div class="ir"><strong>Sexe</strong>${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' · stérilisé/castré' : ''}</div>` : ''}
                     ${age ? `<div class="ir"><strong>Âge</strong>${escapeHtml(age)}</div>` : ''}
                     ${animal.identifiant ? `<div class="ir"><strong>Puce / identifiant</strong>${escapeHtml(animal.identifiant)}</div>` : ''}
-                    ${dateEvt ? `<div class="ir hi"><strong>${escapeHtml(dateLabel)}</strong>${escapeHtml(dateEvt)}</div>` : ''}
+                    ${dateEvt ? `<div class="ir hi"><strong>${escapeHtml(dateLabel)}</strong>${escapeHtml(formatDate(dateEvt))}</div>` : ''}
                     ${lieuEvt ? `<div class="ir hi"><strong>${escapeHtml(lieuLabel)}</strong>${escapeHtml(lieuEvt)}</div>` : ''}
                     ${description ? `<div class="ir" style="margin-top:2px"><strong>Signes distinctifs</strong>${escapeHtml(description)}</div>` : ''}
                 </div>
