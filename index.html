@@ -960,6 +960,89 @@
             win.document.close();
         };
 
+        const openLostPosterReport = (animal, lostInfo) => {
+            const { datePerdu, lieuPerdu, telephone, description } = lostInfo || {};
+            const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
+            const photoHtml = animal.photo
+                ? `<img src="${animal.photo}" style="max-width:100%;max-height:300px;border-radius:12px;margin-bottom:16px;object-fit:cover;display:block;margin-left:auto;margin-right:auto;" />`
+                : `<div style="width:180px;height:180px;background:#f3f4f6;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:80px;">${emoji}</div>`;
+            const win = window.open('', '_blank');
+            if (!win) return;
+            win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Animal perdu — ${escapeHtml(animal.nom)}</title><style>
+                *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Arial,sans-serif;padding:24px;max-width:620px;margin:0 auto;color:#111}
+                .banner{background:#ef4444;color:white;text-align:center;padding:28px 20px;border-radius:14px;margin-bottom:24px}
+                .banner h1{font-size:52px;font-weight:900;letter-spacing:3px;margin-bottom:8px}
+                .banner h2{font-size:30px;font-weight:700}
+                .photo{text-align:center;margin-bottom:20px}
+                .info{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px}
+                .info p{font-size:15px;margin-bottom:8px;line-height:1.5}.info p:last-child{margin-bottom:0}
+                .contact{background:#10b981;color:white;text-align:center;padding:24px;border-radius:14px;margin-bottom:20px}
+                .contact .label{font-size:14px;opacity:.85;margin-bottom:8px}
+                .contact .tel{font-size:40px;font-weight:900;letter-spacing:1px}
+                .footer{font-size:12px;color:#9ca3af;text-align:center}
+                @media print{body{padding:0}.no-print{display:none}}
+            </style></head><body>
+                <div class="banner"><h1>🔍 ANIMAL PERDU</h1><h2>${emoji} ${escapeHtml(animal.nom)}</h2></div>
+                <div class="photo">${photoHtml}</div>
+                <div class="info">
+                    <p><strong>Espèce :</strong> ${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}</p>
+                    ${animal.sexe ? `<p><strong>Sexe :</strong> ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>` : ''}
+                    ${animal.dateNaissance ? `<p><strong>Né(e) le :</strong> ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
+                    ${animal.identifiant ? `<p><strong>Puce / identifiant :</strong> ${escapeHtml(animal.identifiant)}</p>` : ''}
+                    ${datePerdu ? `<p><strong>Perdu(e) le :</strong> ${escapeHtml(datePerdu)}</p>` : ''}
+                    ${lieuPerdu ? `<p><strong>Lieu :</strong> ${escapeHtml(lieuPerdu)}</p>` : ''}
+                    ${description ? `<p><strong>Signes distinctifs :</strong> ${escapeHtml(description)}</p>` : ''}
+                </div>
+                <div class="contact">
+                    <div class="label">Si vous l\'avez vu, merci de contacter :</div>
+                    <div class="tel">${escapeHtml(telephone || '—')}</div>
+                </div>
+                <p class="footer">Merci de ne pas garder l\'animal sans en informer le propriétaire.</p>
+                <br/><button class="no-print" onclick="window.print()" style="display:block;margin:16px auto;padding:10px 24px;background:#ef4444;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">\u{1F5A8}️ Imprimer</button>
+            </body></html>`);
+            win.document.close();
+        };
+
+        const openCollarTagReport = (animal, shareUrl) => {
+            const currentMeds = (animal.medicaments || []).filter(m => !m.dateFin || new Date(m.dateFin) >= new Date());
+            const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
+            const qrUrl = shareUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}` : null;
+            const win = window.open('', '_blank');
+            if (!win) return;
+            win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Étiquette collier — ${escapeHtml(animal.nom)}</title><style>
+                *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Arial,sans-serif;padding:20px;background:#f9fafb}
+                .card{background:white;border:2.5px solid #111;border-radius:14px;padding:16px;max-width:360px;margin:0 auto 16px;page-break-inside:avoid}
+                .name{font-size:24px;font-weight:900;margin-bottom:2px}
+                .sub{font-size:12px;color:#6b7280;margin-bottom:12px}
+                .row{display:flex;gap:12px;align-items:flex-start}
+                .info{flex:1}.tel-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+                .tel{font-size:20px;font-weight:900;color:#ef4444;margin-bottom:10px}
+                .alert-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+                .alert{font-size:12px;color:#111;margin-bottom:8px}
+                .qr{flex-shrink:0;text-align:center}.qr img{border-radius:6px;display:block}
+                .qr-caption{font-size:9px;color:#9ca3af;margin-top:3px;text-align:center}
+                .hint{font-size:11px;color:#9ca3af;text-align:center;margin-top:8px}
+                @media print{body{background:white;padding:0}.no-print{display:none}}
+            </style></head><body>
+                <div class="card">
+                    <div class="name">${emoji} ${escapeHtml(animal.nom)}</div>
+                    <div class="sub">${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}${animal.identifiant ? ' · Puce : ' + escapeHtml(animal.identifiant) : ''}</div>
+                    <div class="row">
+                        <div class="info">
+                            <div class="tel-label">Contact si trouvé</div>
+                            <div class="tel">${escapeHtml(animal.contactUrgence || '—')}</div>
+                            ${currentMeds.length > 0 ? `<div class="alert-label">⚠️ Médicaments en cours</div><div class="alert">${escapeHtml(currentMeds.map(m => m.nom).join(', '))}</div>` : ''}
+                            ${animal.alimentationInfo && animal.alimentationInfo.allergies ? `<div class="alert-label">🚫 Allergies alimentaires</div><div class="alert">${escapeHtml(animal.alimentationInfo.allergies)}</div>` : ''}
+                        </div>
+                        ${qrUrl ? `<div class="qr"><img src="${qrUrl}" width="110" height="110" alt="QR code" /><div class="qr-caption">Carnet de santé</div></div>` : ''}
+                    </div>
+                </div>
+                <p class="hint">Imprimez et plastifiez · Taille carte de crédit recommandée</p>
+                <button class="no-print" onclick="window.print()" style="display:block;margin:16px auto;padding:10px 24px;background:#10b981;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">\u{1F5A8}️ Imprimer</button>
+            </body></html>`);
+            win.document.close();
+        };
+
         // ── Service Worker registration ──────────────────────────────────
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -2721,6 +2804,13 @@
                 { key: 'assurance', label: '🛡️ Assurance' },
                 { key: 'budget', label: '💰 Budget total' },
             ];
+            const emptyAlimentation = { type: 'croquettes', marque: '', portions: '', frequence: '2 repas/jour', allergies: '', supplements: '', notes: '' };
+            const [editAlimentation, setEditAlimentation] = React.useState(false);
+            const [alimentationForm, setAlimentationForm] = React.useState(animal.alimentationInfo || emptyAlimentation);
+            const [showLostForm, setShowLostForm] = React.useState(false);
+            const [lostForm, setLostForm] = React.useState({ datePerdu: new Date().toISOString().split('T')[0], lieuPerdu: '', telephone: animal.contactUrgence || '', description: '' });
+            const [editContact, setEditContact] = React.useState(false);
+            const [contactValue, setContactValue] = React.useState(animal.contactUrgence || '');
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
@@ -2842,6 +2932,25 @@
                                 </button>
                             </div>
                         )}
+                        <div style={{ marginTop: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>📞 Contact si trouvé / perdu</span>
+                                <button onClick={() => { setContactValue(animal.contactUrgence || ''); setEditContact(v => !v); }} style={{ padding: '3px 10px', background: '#f3f4f6', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                    {editContact ? 'Annuler' : (animal.contactUrgence ? '✏️' : '➕ Ajouter')}
+                                </button>
+                            </div>
+                            {editContact ? (
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <input type="tel" placeholder="Ex : 06 12 34 56 78" value={contactValue} onChange={e => setContactValue(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                    <button onClick={() => { saveAnimal({ ...animal, contactUrgence: contactValue }); setEditContact(false); }} style={{ padding: '8px 14px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>💾</button>
+                                </div>
+                            ) : (
+                                <p style={{ fontSize: '13px', color: animal.contactUrgence ? '#111827' : '#9ca3af' }}>{animal.contactUrgence || 'Non renseigné — requis pour l\'étiquette collier'}</p>
+                            )}
+                        </div>
+                        {animal.shareEnabled && (
+                            <button onClick={() => openCollarTagReport(animal, shareUrl)} style={{ width: '100%', marginTop: '10px', padding: '8px 12px', background: '#111827', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🏷️ Générer l'étiquette collier (QR code)</button>
+                        )}
                     </div>
 
                     {(() => {
@@ -2902,6 +3011,83 @@
                             </div>
                         );
                     })()}
+
+                    {/* ── Fiche alimentation ── */}
+                    {(() => {
+                        const al = animal.alimentationInfo || {};
+                        const typeLabels = { croquettes: '🥣 Croquettes', patee: '🥩 Pâtée', mixte: '🥣🥩 Mixte', barf: '🥩 BARF / cru', maison: '🍳 Fait maison', autre: '🍽️ Autre' };
+                        return (
+                            <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h4 style={{ fontSize: '15px', fontWeight: '700', margin: 0 }}>🍽️ Alimentation</h4>
+                                    <button onClick={() => { setAlimentationForm(animal.alimentationInfo || emptyAlimentation); setEditAlimentation(v => !v); }} style={{ padding: '4px 10px', background: '#f3f4f6', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                                        {editAlimentation ? 'Annuler' : (al.marque || al.type ? '✏️ Modifier' : '➕ Ajouter')}
+                                    </button>
+                                </div>
+                                {editAlimentation ? (
+                                    <div style={{ display: 'grid', gap: '10px' }}>
+                                        <div>
+                                            <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Type d'alimentation</label>
+                                            <select value={alimentationForm.type} onChange={e => setAlimentationForm(f => ({ ...f, type: e.target.value }))} style={{ width: '100%', padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', background: 'white' }}>
+                                                <option value="croquettes">🥣 Croquettes</option>
+                                                <option value="patee">🥩 Pâtée</option>
+                                                <option value="mixte">🥣🥩 Mixte (croquettes + pâtée)</option>
+                                                <option value="barf">🥩 BARF / alimentation crue</option>
+                                                <option value="maison">🍳 Fait maison</option>
+                                                <option value="autre">🍽️ Autre</option>
+                                            </select>
+                                        </div>
+                                        <input type="text" placeholder="Marque / produit (ex : Royal Canin Adult)" value={alimentationForm.marque} onChange={e => setAlimentationForm(f => ({ ...f, marque: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <input type="text" placeholder="Portions (ex : 200g matin + 200g soir)" value={alimentationForm.portions} onChange={e => setAlimentationForm(f => ({ ...f, portions: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <input type="text" placeholder="Fréquence (ex : 2 repas/jour)" value={alimentationForm.frequence} onChange={e => setAlimentationForm(f => ({ ...f, frequence: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <input type="text" placeholder="Allergies / intolérances alimentaires" value={alimentationForm.allergies} onChange={e => setAlimentationForm(f => ({ ...f, allergies: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <input type="text" placeholder="Compléments / suppléments (ex : oméga-3, probiotiques)" value={alimentationForm.supplements} onChange={e => setAlimentationForm(f => ({ ...f, supplements: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                        <textarea placeholder="Notes (régime vétérinaire, transition alimentaire...)" value={alimentationForm.notes} onChange={e => setAlimentationForm(f => ({ ...f, notes: e.target.value }))} rows={2} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical' }} />
+                                        <button onClick={() => { saveAnimal({ ...animal, alimentationInfo: alimentationForm }); setEditAlimentation(false); }} style={{ padding: '9px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>💾 Enregistrer</button>
+                                    </div>
+                                ) : (al.marque || al.type) ? (
+                                    <div style={{ fontSize: '13px', display: 'grid', gap: '4px' }}>
+                                        {al.type && <p><strong>Type :</strong> {typeLabels[al.type] || al.type}</p>}
+                                        {al.marque && <p><strong>Marque :</strong> {al.marque}</p>}
+                                        {al.portions && <p><strong>Portions :</strong> {al.portions}</p>}
+                                        {al.frequence && <p><strong>Fréquence :</strong> {al.frequence}</p>}
+                                        {al.allergies && <p style={{ color: '#dc2626', fontWeight: '600' }}>🚫 Allergies : {al.allergies}</p>}
+                                        {al.supplements && <p><strong>Compléments :</strong> {al.supplements}</p>}
+                                        {al.notes && <p style={{ color: '#6b7280', fontStyle: 'italic' }}>{al.notes}</p>}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '13px', color: '#9ca3af' }}>Aucune information d'alimentation. Cliquez sur "Ajouter" pour renseigner le régime de {animal.nom}.</p>
+                                )}
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Affiche animal perdu ── */}
+                    <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>🔍 Affiche «&nbsp;Animal perdu&nbsp;»</h4>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '10px' }}>Génère une affiche imprimable à coller dans le quartier, avec photo, description et numéro de contact.</p>
+                        <button onClick={() => setShowLostForm(v => !v)} style={{ width: '100%', padding: '8px 12px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>🔍 Remplir les informations de disparition</span>
+                            <span>{showLostForm ? '▲' : '▼'}</span>
+                        </button>
+                        {showLostForm && (
+                            <div style={{ marginTop: '10px', display: 'grid', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Disparu le</label>
+                                        <input type="date" value={lostForm.datePerdu} onChange={e => setLostForm(f => ({ ...f, datePerdu: e.target.value }))} style={{ width: '100%', padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }} />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Téléphone à afficher</label>
+                                        <input type="tel" placeholder="06 12 34 56 78" value={lostForm.telephone} onChange={e => setLostForm(f => ({ ...f, telephone: e.target.value }))} style={{ width: '100%', padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }} />
+                                    </div>
+                                </div>
+                                <input type="text" placeholder="Lieu (ex : Parc de la Mairie, Lyon 3e)" value={lostForm.lieuPerdu} onChange={e => setLostForm(f => ({ ...f, lieuPerdu: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                <textarea placeholder="Signes distinctifs (couleur du pelage, tache, collier, comportement...)" value={lostForm.description} onChange={e => setLostForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical' }} />
+                                <button onClick={() => openLostPosterReport(animal, lostForm)} style={{ padding: '10px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>🖨️ Générer l'affiche</button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             );
         }
