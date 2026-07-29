@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -41,7 +41,32 @@ const TUTORIAL_STEPS = [
   },
 ];
 
-const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' };
+const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '', veterinaire: { nom: '', adresse: '', telephone: '' } };
+
+function VetBlock({ vet, isLast }) {
+  const hasPhone = vet?.telephone?.trim();
+  const hasAddr = vet?.adresse?.trim();
+  return (
+    <View style={[styles.vetBlock, !isLast && styles.vetBlockBorder]}>
+      <View style={styles.vetRow}>
+        <View style={styles.vetInfo}>
+          <Text style={styles.vetName}>🏥 {vet.nom}</Text>
+          {hasAddr ? <Text style={styles.vetAddr}>📍 {vet.adresse}</Text> : null}
+        </View>
+        {hasPhone ? (
+          <TouchableOpacity
+            style={styles.vetCallBtn}
+            onPress={() => Linking.openURL(`tel:${vet.telephone.replace(/\s/g, '')}`)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.vetCallIcon}>📞</Text>
+            <Text style={styles.vetCallText}>{vet.telephone}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
+  );
+}
 
 export default function AccueilScreen() {
   const { animals, selectedAnimal, setSelectedAnimal, saveAnimal, deleteAnimal } = useAnimals();
@@ -81,7 +106,7 @@ export default function AccueilScreen() {
 
   const handleAddAnimal = async () => {
     if (newAnimal.nom && newAnimal.espece) {
-      await saveAnimal({ ...newAnimal, dateNaissance: displayToIso(newAnimal.dateNaissance), vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
+      await saveAnimal({ ...newAnimal, dateNaissance: displayToIso(newAnimal.dateNaissance), vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], partages: [] });
       setNewAnimal(emptyAnimal);
       setShowAdd(false);
     }
@@ -139,26 +164,31 @@ export default function AccueilScreen() {
             const pill = animalReminders.length > 0
               ? { text: `${animalReminders.length} rappel${animalReminders.length > 1 ? 's' : ''}`, bg: colors.redLight, color: colors.pillRedText }
               : { text: 'À jour', bg: colors.pillGreenBg, color: colors.pillGreenText };
+            const vet = animal.veterinaire;
+            const hasVet = vet?.nom?.trim();
+            const isLast = i === filteredAnimals.length - 1;
             return (
-              <ListRow
-                key={animal.id}
-                last={i === filteredAnimals.length - 1}
-                left={<Avatar animal={animal} size={44} />}
-                title={animal.nom}
-                subtitle={subtitle}
-                pill={pill}
-                onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Dossier'); }}
-                actions={
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} style={styles.btnEdit}>
-                      <Text style={styles.btnEditText}>✎</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => confirmDelete(animal)} style={styles.btnDelete}>
-                      <Text style={styles.btnDeleteText}>✖</Text>
-                    </TouchableOpacity>
-                  </View>
-                }
-              />
+              <React.Fragment key={animal.id}>
+                <ListRow
+                  last={!hasVet && isLast}
+                  left={<Avatar animal={animal} size={44} />}
+                  title={animal.nom}
+                  subtitle={subtitle}
+                  pill={pill}
+                  onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Dossier'); }}
+                  actions={
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} style={styles.btnEdit}>
+                        <Text style={styles.btnEditText}>✎</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => confirmDelete(animal)} style={styles.btnDelete}>
+                        <Text style={styles.btnDeleteText}>✖</Text>
+                      </TouchableOpacity>
+                    </View>
+                  }
+                />
+                {hasVet && <VetBlock vet={vet} isLast={isLast} />}
+              </React.Fragment>
             );
           })}
         </ListGroup>
@@ -274,6 +304,29 @@ function AnimalForm({ animal, setAnimal }) {
       <Field label="Identifiant vétérinaire (puce électronique, optionnel)">
         <Input value={animal.identifiant || ''} onChangeText={(v) => setAnimal({ ...animal, identifiant: v })} placeholder="Identifiant" />
       </Field>
+      <Text style={styles.vetSectionTitle}>🏥 Vétérinaire attitré</Text>
+      <Field label="Nom du vétérinaire">
+        <Input
+          value={animal.veterinaire?.nom || ''}
+          onChangeText={(v) => setAnimal({ ...animal, veterinaire: { ...(animal.veterinaire || {}), nom: v } })}
+          placeholder="Dr. Dupont"
+        />
+      </Field>
+      <Field label="Adresse">
+        <Input
+          value={animal.veterinaire?.adresse || ''}
+          onChangeText={(v) => setAnimal({ ...animal, veterinaire: { ...(animal.veterinaire || {}), adresse: v } })}
+          placeholder="12 rue des Lilas, 75001 Paris"
+        />
+      </Field>
+      <Field label="Téléphone">
+        <Input
+          value={animal.veterinaire?.telephone || ''}
+          onChangeText={(v) => setAnimal({ ...animal, veterinaire: { ...(animal.veterinaire || {}), telephone: v } })}
+          placeholder="06 12 34 56 78"
+          keyboardType="phone-pad"
+        />
+      </Field>
     </>
   );
 }
@@ -378,5 +431,63 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 14,
     color: colors.text,
+  },
+  vetSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  vetBlock: {
+    backgroundColor: '#f0fdf4',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  vetBlockBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  vetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  vetInfo: {
+    flex: 1,
+  },
+  vetName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065f46',
+    marginBottom: 2,
+  },
+  vetAddr: {
+    fontSize: 11,
+    color: colors.textLight,
+    lineHeight: 15,
+  },
+  vetCallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#d1fae5',
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    flexShrink: 0,
+  },
+  vetCallIcon: {
+    fontSize: 13,
+  },
+  vetCallText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065f46',
   },
 });
