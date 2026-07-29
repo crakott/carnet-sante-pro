@@ -987,7 +987,7 @@
             win.document.write(`<!doctype html><html><head><meta charset="utf-8">
             <title>${titleText} — ${escapeHtml(animal.nom)}</title>
             <style>
-                *{box-sizing:border-box;margin:0;padding:0}
+                *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
                 body{font-family:'Helvetica Neue',Arial,sans-serif;background:white;color:#111;width:190mm;padding:10mm;margin:0 auto}
                 .header{background:${accent};color:white;text-align:center;padding:18px 16px;border-radius:12px;margin-bottom:14px}
                 .header-icon{font-size:32px;line-height:1;margin-bottom:4px}
