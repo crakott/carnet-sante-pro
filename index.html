@@ -960,45 +960,86 @@
             win.document.close();
         };
 
-        const openLostPosterReport = (animal, lostInfo) => {
-            const { datePerdu, lieuPerdu, telephone, description } = lostInfo || {};
+        const openLostPosterReport = (animal, lostInfo, shareUrl) => {
+            const { mode = 'perdu', dateEvt, lieuEvt, telephone, description } = lostInfo || {};
+            const isPerdu = mode !== 'trouve';
             const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
-            const photoHtml = animal.photo
-                ? `<img src="${animal.photo}" style="max-width:100%;max-height:300px;border-radius:12px;margin-bottom:16px;object-fit:cover;display:block;margin-left:auto;margin-right:auto;" />`
-                : `<div style="width:180px;height:180px;background:#f3f4f6;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:80px;">${emoji}</div>`;
+            const accent = isPerdu ? '#dc2626' : '#16a34a';
+            const accentLight = isPerdu ? '#fef2f2' : '#f0fdf4';
+            const titleIcon = isPerdu ? '🔍' : '✅';
+            const titleText = isPerdu ? 'ANIMAL PERDU' : 'ANIMAL TROUVÉ';
+            const dateLabel = isPerdu ? 'Perdu(e) le' : 'Trouvé(e) le';
+            const lieuLabel = isPerdu ? 'Lieu de disparition' : 'Lieu où trouvé(e)';
+            const ctaLabel = isPerdu ? 'Si vous l\'avez vu(e), appelez le :' : 'Pour contacter le propriétaire :';
+            const footerText = isPerdu
+                ? 'Merci de ne pas garder l\'animal sans en informer le propriétaire.'
+                : 'Merci pour votre aide ! L\'animal sera rendu à son propriétaire dans les plus brefs délais.';
+            const age = (() => {
+                if (!animal.dateNaissance) return null;
+                const diff = (Date.now() - new Date(animal.dateNaissance)) / (365.25 * 86400000);
+                return diff < 1 ? Math.round(diff * 12) + ' mois' : Math.floor(diff) + ' an' + (Math.floor(diff) > 1 ? 's' : '');
+            })();
+            const qrUrl = (shareUrl && animal.shareEnabled)
+                ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}`
+                : null;
             const win = window.open('', '_blank');
             if (!win) return;
-            win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Animal perdu — ${escapeHtml(animal.nom)}</title><style>
-                *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Arial,sans-serif;padding:24px;max-width:620px;margin:0 auto;color:#111}
-                .banner{background:#ef4444;color:white;text-align:center;padding:28px 20px;border-radius:14px;margin-bottom:24px}
-                .banner h1{font-size:52px;font-weight:900;letter-spacing:3px;margin-bottom:8px}
-                .banner h2{font-size:30px;font-weight:700}
-                .photo{text-align:center;margin-bottom:20px}
-                .info{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px}
-                .info p{font-size:15px;margin-bottom:8px;line-height:1.5}.info p:last-child{margin-bottom:0}
-                .contact{background:#10b981;color:white;text-align:center;padding:24px;border-radius:14px;margin-bottom:20px}
-                .contact .label{font-size:14px;opacity:.85;margin-bottom:8px}
-                .contact .tel{font-size:40px;font-weight:900;letter-spacing:1px}
-                .footer{font-size:12px;color:#9ca3af;text-align:center}
-                @media print{body{padding:0}.no-print{display:none}}
+            win.document.write(`<!doctype html><html><head><meta charset="utf-8">
+            <title>${titleText} — ${escapeHtml(animal.nom)}</title>
+            <style>
+                *{box-sizing:border-box;margin:0;padding:0}
+                body{font-family:'Helvetica Neue',Arial,sans-serif;background:white;color:#111;width:190mm;padding:10mm;margin:0 auto}
+                .header{background:${accent};color:white;text-align:center;padding:18px 16px;border-radius:12px;margin-bottom:14px}
+                .header-icon{font-size:32px;line-height:1;margin-bottom:4px}
+                .header-title{font-size:42px;font-weight:900;letter-spacing:4px;margin-bottom:4px}
+                .header-name{font-size:26px;font-weight:700;opacity:.95}
+                .body{display:flex;gap:14px;margin-bottom:14px}
+                .photo-col{flex:0 0 44%}
+                .photo-col img,.photo-placeholder{width:100%;height:250px;object-fit:cover;border-radius:10px;display:block}
+                .photo-placeholder{background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:90px}
+                .info-col{flex:1;background:${accentLight};border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:7px}
+                .ir{font-size:14px;line-height:1.5}
+                .ir strong{color:${accent};font-size:12px;display:block;text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px}
+                .ir.hi{background:${accent};color:white;padding:6px 10px;border-radius:6px}
+                .ir.hi strong{color:rgba(255,255,255,.75)}
+                .contact{background:${accent};color:white;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:16px}
+                .contact-text{flex:1}
+                .contact-label{font-size:13px;opacity:.85;margin-bottom:5px}
+                .contact-tel{font-size:34px;font-weight:900;letter-spacing:.5px}
+                .qr-wrap{flex-shrink:0;text-align:center}
+                .qr-wrap img{border-radius:8px;background:white;padding:5px;display:block}
+                .qr-cap{font-size:10px;opacity:.7;margin-top:3px}
+                .footer{font-size:11px;color:#9ca3af;text-align:center;margin-top:10px;line-height:1.5}
+                @media print{body{width:100%;padding:6mm}.no-print{display:none!important}}
             </style></head><body>
-                <div class="banner"><h1>🔍 ANIMAL PERDU</h1><h2>${emoji} ${escapeHtml(animal.nom)}</h2></div>
-                <div class="photo">${photoHtml}</div>
-                <div class="info">
-                    <p><strong>Espèce :</strong> ${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}</p>
-                    ${animal.sexe ? `<p><strong>Sexe :</strong> ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>` : ''}
-                    ${animal.dateNaissance ? `<p><strong>Né(e) le :</strong> ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
-                    ${animal.identifiant ? `<p><strong>Puce / identifiant :</strong> ${escapeHtml(animal.identifiant)}</p>` : ''}
-                    ${datePerdu ? `<p><strong>Perdu(e) le :</strong> ${escapeHtml(datePerdu)}</p>` : ''}
-                    ${lieuPerdu ? `<p><strong>Lieu :</strong> ${escapeHtml(lieuPerdu)}</p>` : ''}
-                    ${description ? `<p><strong>Signes distinctifs :</strong> ${escapeHtml(description)}</p>` : ''}
+            <div class="header">
+                <div class="header-icon">${titleIcon}</div>
+                <div class="header-title">${titleText}</div>
+                <div class="header-name">${emoji} ${escapeHtml(animal.nom)}</div>
+            </div>
+            <div class="body">
+                <div class="photo-col">
+                    ${animal.photo ? `<img src="${animal.photo}" alt="${escapeHtml(animal.nom)}" />` : `<div class="photo-placeholder">${emoji}</div>`}
                 </div>
-                <div class="contact">
-                    <div class="label">Si vous l\'avez vu, merci de contacter :</div>
-                    <div class="tel">${escapeHtml(telephone || '—')}</div>
+                <div class="info-col">
+                    <div class="ir"><strong>Espèce</strong>${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}</div>
+                    ${animal.sexe ? `<div class="ir"><strong>Sexe</strong>${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' · stérilisé/castré' : ''}</div>` : ''}
+                    ${age ? `<div class="ir"><strong>Âge</strong>${escapeHtml(age)}</div>` : ''}
+                    ${animal.identifiant ? `<div class="ir"><strong>Puce / identifiant</strong>${escapeHtml(animal.identifiant)}</div>` : ''}
+                    ${dateEvt ? `<div class="ir hi"><strong>${escapeHtml(dateLabel)}</strong>${escapeHtml(dateEvt)}</div>` : ''}
+                    ${lieuEvt ? `<div class="ir hi"><strong>${escapeHtml(lieuLabel)}</strong>${escapeHtml(lieuEvt)}</div>` : ''}
+                    ${description ? `<div class="ir" style="margin-top:2px"><strong>Signes distinctifs</strong>${escapeHtml(description)}</div>` : ''}
                 </div>
-                <p class="footer">Merci de ne pas garder l\'animal sans en informer le propriétaire.</p>
-                <br/><button class="no-print" onclick="window.print()" style="display:block;margin:16px auto;padding:10px 24px;background:#ef4444;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">\u{1F5A8}️ Imprimer</button>
+            </div>
+            <div class="contact">
+                <div class="contact-text">
+                    <div class="contact-label">${escapeHtml(ctaLabel)}</div>
+                    <div class="contact-tel">📞 ${escapeHtml(telephone || '—')}</div>
+                </div>
+                ${qrUrl ? `<div class="qr-wrap"><img src="${qrUrl}" width="110" height="110" alt="QR code" /><div class="qr-cap">Carnet de santé</div></div>` : ''}
+            </div>
+            <p class="footer">${escapeHtml(footerText)}</p>
+            <button class="no-print" onclick="window.print()" style="display:block;margin:14px auto 0;padding:10px 28px;background:${accent};color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimer</button>
             </body></html>`);
             win.document.close();
         };
@@ -2808,7 +2849,7 @@
             const [editAlimentation, setEditAlimentation] = React.useState(false);
             const [alimentationForm, setAlimentationForm] = React.useState(animal.alimentationInfo || emptyAlimentation);
             const [showLostForm, setShowLostForm] = React.useState(false);
-            const [lostForm, setLostForm] = React.useState({ datePerdu: new Date().toISOString().split('T')[0], lieuPerdu: '', telephone: animal.contactUrgence || '', description: '' });
+            const [lostForm, setLostForm] = React.useState({ mode: 'perdu', dateEvt: new Date().toISOString().split('T')[0], lieuEvt: '', telephone: animal.contactUrgence || '', description: '' });
             const [editContact, setEditContact] = React.useState(false);
             const [contactValue, setContactValue] = React.useState(animal.contactUrgence || '');
 
@@ -3062,29 +3103,34 @@
                         );
                     })()}
 
-                    {/* ── Affiche animal perdu ── */}
+                    {/* ── Affiche animal perdu / trouvé ── */}
                     <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                        <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>🔍 Affiche «&nbsp;Animal perdu&nbsp;»</h4>
-                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '10px' }}>Génère une affiche imprimable à coller dans le quartier, avec photo, description et numéro de contact.</p>
-                        <button onClick={() => setShowLostForm(v => !v)} style={{ width: '100%', padding: '8px 12px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>🔍 Remplir les informations de disparition</span>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>🔍 Affiche « Animal perdu / trouvé »</h4>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '10px' }}>Génère une affiche A4 imprimable avec photo, QR code et numéro de contact.</p>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                            <button onClick={() => setLostForm(f => ({ ...f, mode: 'perdu' }))} style={{ flex: 1, padding: '9px', background: lostForm.mode === 'perdu' ? '#dc2626' : '#f3f4f6', color: lostForm.mode === 'perdu' ? 'white' : '#374151', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>🔍 PERDU</button>
+                            <button onClick={() => setLostForm(f => ({ ...f, mode: 'trouve' }))} style={{ flex: 1, padding: '9px', background: lostForm.mode === 'trouve' ? '#16a34a' : '#f3f4f6', color: lostForm.mode === 'trouve' ? 'white' : '#374151', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>✅ TROUVÉ</button>
+                        </div>
+                        <button onClick={() => setShowLostForm(v => !v)} style={{ width: '100%', padding: '8px 12px', background: lostForm.mode === 'perdu' ? '#fef2f2' : '#f0fdf4', color: lostForm.mode === 'perdu' ? '#dc2626' : '#16a34a', border: `1px solid ${lostForm.mode === 'perdu' ? '#fecaca' : '#bbf7d0'}`, borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{lostForm.mode === 'perdu' ? '🔍 Informations de disparition' : '✅ Informations de découverte'}</span>
                             <span>{showLostForm ? '▲' : '▼'}</span>
                         </button>
                         {showLostForm && (
                             <div style={{ marginTop: '10px', display: 'grid', gap: '10px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div>
-                                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Disparu le</label>
-                                        <input type="date" value={lostForm.datePerdu} onChange={e => setLostForm(f => ({ ...f, datePerdu: e.target.value }))} style={{ width: '100%', padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }} />
+                                        <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>{lostForm.mode === 'perdu' ? 'Perdu(e) le' : 'Trouvé(e) le'}</label>
+                                        <input type="date" value={lostForm.dateEvt} onChange={e => setLostForm(f => ({ ...f, dateEvt: e.target.value }))} style={{ width: '100%', padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }} />
                                     </div>
                                     <div>
                                         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '3px' }}>Téléphone à afficher</label>
                                         <input type="tel" placeholder="06 12 34 56 78" value={lostForm.telephone} onChange={e => setLostForm(f => ({ ...f, telephone: e.target.value }))} style={{ width: '100%', padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }} />
                                     </div>
                                 </div>
-                                <input type="text" placeholder="Lieu (ex : Parc de la Mairie, Lyon 3e)" value={lostForm.lieuPerdu} onChange={e => setLostForm(f => ({ ...f, lieuPerdu: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
+                                <input type="text" placeholder={lostForm.mode === 'perdu' ? 'Lieu de disparition (ex : Parc des Halles, Lyon 3e)' : 'Lieu où trouvé(e) (ex : Rue du Commerce, Paris 15e)'} value={lostForm.lieuEvt} onChange={e => setLostForm(f => ({ ...f, lieuEvt: e.target.value }))} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }} />
                                 <textarea placeholder="Signes distinctifs (couleur du pelage, tache, collier, comportement...)" value={lostForm.description} onChange={e => setLostForm(f => ({ ...f, description: e.target.value }))} rows={2} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', resize: 'vertical' }} />
-                                <button onClick={() => openLostPosterReport(animal, lostForm)} style={{ padding: '10px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>🖨️ Générer l'affiche</button>
+                                {!animal.shareEnabled && <p style={{ fontSize: '12px', color: '#9ca3af' }}>💡 Activez le partage (carte "Fiche de garde") pour ajouter un QR code sur l'affiche.</p>}
+                                <button onClick={() => openLostPosterReport(animal, lostForm, animal.shareEnabled ? shareUrl : null)} style={{ padding: '10px 16px', background: lostForm.mode === 'perdu' ? '#dc2626' : '#16a34a', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>🖨️ Générer l'affiche {lostForm.mode === 'perdu' ? '"Animal perdu"' : '"Animal trouvé"'}</button>
                             </div>
                         )}
                     </div>
