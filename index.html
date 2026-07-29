@@ -5025,6 +5025,7 @@
             const { year, month } = ym;
             const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
             const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+            const [filterAnimalId, setFilterAnimalId] = React.useState(null);
 
             const monthName = new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
             const firstDay = new Date(year, month, 1);
@@ -5033,21 +5034,24 @@
             const totalCells = startOffset + lastDay.getDate();
             const cells = Array.from({ length: Math.ceil(totalCells / 7) * 7 });
 
+            const visibleAnimals = filterAnimalId ? animals.filter(a => a.id === filterAnimalId) : animals;
+
             const eventsByDate = {};
-            animals.forEach((animal, ai) => {
-                const color = COLORS[ai % COLORS.length];
+            visibleAnimals.forEach((animal, ai) => {
+                const globalIdx = animals.findIndex(a => a.id === animal.id);
+                const color = COLORS[globalIdx % COLORS.length];
                 const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
-                const addEvent = (date, label) => {
+                const addEvent = (date, label, type) => {
                     if (!date) return;
                     const key = date.slice(0, 10);
                     if (!eventsByDate[key]) eventsByDate[key] = [];
-                    eventsByDate[key].push({ label: `${emoji} ${label}`, color });
+                    eventsByDate[key].push({ label, color, emoji, animalNom: animal.nom, animalPhoto: animal.photo || null, type });
                 };
-                (animal.vaccins || []).forEach(v => addEvent(v.prochaineDate, v.nom));
-                (animal.antiparasitaires || []).forEach(a => addEvent(a.prochainTraitement, a.nom));
-                (animal.vermifuges || []).forEach(v => addEvent(v.prochainTraitement, v.nom));
-                (animal.rdvs || []).forEach(r => addEvent(r.date, r.motif));
-                (animal.medicaments || []).filter(m => m.prochaineDate).forEach(m => addEvent(m.prochaineDate, m.nom));
+                (animal.vaccins || []).forEach(v => addEvent(v.prochaineDate, v.nom, '💉'));
+                (animal.antiparasitaires || []).forEach(a => addEvent(a.prochainTraitement, a.nom, '🦟'));
+                (animal.vermifuges || []).forEach(v => addEvent(v.prochainTraitement, v.nom, '🪱'));
+                (animal.rdvs || []).forEach(r => addEvent(r.date, r.motif, '🏥'));
+                (animal.medicaments || []).filter(m => m.prochaineDate).forEach(m => addEvent(m.prochaineDate, m.nom, '💊'));
             });
 
             const todayStr = now.toISOString().slice(0, 10);
@@ -5058,7 +5062,31 @@
 
             return (
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>📆 Calendrier multi-animaux</h2>
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>📆 Calendrier multi-animaux</h2>
+
+                    {/* ── Pastilles filtre animaux ── */}
+                    {animals.length > 1 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                            <div onClick={() => setFilterAnimalId(null)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', padding: '4px 12px', borderRadius: '20px', cursor: 'pointer', fontWeight: '600', background: filterAnimalId === null ? '#1f2937' : '#f3f4f6', color: filterAnimalId === null ? 'white' : '#6b7280', border: filterAnimalId === null ? '2px solid #1f2937' : '2px solid transparent', transition: 'all 0.15s' }}>
+                                Tous
+                            </div>
+                            {animals.map((a, i) => {
+                                const col = COLORS[i % COLORS.length];
+                                const active = filterAnimalId === a.id;
+                                return (
+                                    <div key={a.id} onClick={() => setFilterAnimalId(active ? null : a.id)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '4px 12px 4px 4px', borderRadius: '20px', cursor: 'pointer', fontWeight: '600', background: active ? col : col + '18', color: active ? 'white' : col, border: `2px solid ${active ? col : col + '55'}`, transition: 'all 0.15s' }}>
+                                        {a.photo
+                                            ? <img src={a.photo} style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${active ? 'white' : col}`, flexShrink: 0 }} />
+                                            : <span style={{ width: '26px', height: '26px', borderRadius: '50%', background: active ? 'rgba(255,255,255,0.3)' : col, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>{EMOJIS_ESPECE[a.espece] || '🐾'}</span>
+                                        }
+                                        {a.nom}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <button onClick={prevMonth} style={{ padding: '6px 14px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '16px' }}>‹</button>
@@ -5083,7 +5111,7 @@
                                     <span style={{ fontSize: '12px', fontWeight: isToday ? '700' : '500', color: isToday ? '#10b981' : '#374151' }}>{dayNum}</span>
                                     <div style={{ marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                                         {events.slice(0, 2).map((ev, ei) => (
-                                            <div key={ei} style={{ fontSize: '10px', background: ev.color + '22', color: ev.color, borderRadius: '3px', padding: '1px 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '600' }}>{ev.label}</div>
+                                            <div key={ei} style={{ fontSize: '10px', background: ev.color + '22', color: ev.color, borderRadius: '3px', padding: '1px 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '600' }}>{ev.type} {ev.label}</div>
                                         ))}
                                         {events.length > 2 && <div style={{ fontSize: '10px', color: '#9ca3af' }}>+{events.length - 2}</div>}
                                     </div>
@@ -5098,15 +5126,22 @@
                                 {new Date(selectedDay + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                             </h4>
                             {eventsByDate[selectedDay].map((ev, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0', borderBottom: i < eventsByDate[selectedDay].length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: ev.color, flexShrink: 0 }} />
-                                    <span style={{ fontSize: '14px' }}>{ev.label}</span>
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: i < eventsByDate[selectedDay].length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                                    {ev.animalPhoto
+                                        ? <img src={ev.animalPhoto} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${ev.color}`, flexShrink: 0 }} />
+                                        : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: ev.color + '22', border: `2px solid ${ev.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{ev.emoji}</div>
+                                    }
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>{ev.type} {ev.label}</div>
+                                        <div style={{ fontSize: '12px', color: ev.color, fontWeight: '600' }}>{ev.animalNom}</div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    {animals.length > 0 && (
+                    {/* Pastilles légende si un seul animal (pas de filtre affiché) */}
+                    {animals.length === 1 && (
                         <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                             {animals.map((a, i) => {
                                 const col = COLORS[i % COLORS.length];
