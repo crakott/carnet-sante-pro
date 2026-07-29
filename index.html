@@ -1766,12 +1766,12 @@
             const [proMode, setProMode] = React.useState(false);
 
             const FEATURES = [
-                { icon: 'syringe', bg: '#eff6ff', color: '#2563eb', title: 'Vaccins & rappels', desc: 'Calendrier vaccinal complet avec alertes automatiques avant expiration.' },
-                { icon: 'shield', bg: '#f0fdf4', color: '#059669', title: 'Antiparasitaires', desc: 'Planifiez les traitements Frontline, Milbemax… avec rappels calculés automatiquement.' },
-                { icon: 'clipboard', bg: '#fef3c7', color: '#d97706', title: 'Observations & photos', desc: 'Documentez comportements, blessures et maladies avec photos et enregistrements audio.' },
-                { icon: 'map-pin', bg: '#fce7f3', color: '#db2777', title: 'Vétérinaires proches', desc: 'Trouvez les cliniques vétérinaires autour de vous en temps réel (OpenStreetMap).' },
-                { icon: 'bar-chart', bg: '#faf5ff', color: '#7c3aed', title: 'Budget vétérinaire', desc: 'Suivez toutes vos dépenses par animal et par catégorie sur la durée.' },
-                { icon: 'smartphone', bg: '#ecfdf5', color: '#10b981', title: 'Application mobile', desc: 'Installable sur votre téléphone, fonctionne hors connexion, notifications push.' },
+                { emoji: '🔍', bg: '#fff1f2', title: 'Affiche perdu / trouvé', desc: 'Générez une affiche A4 imprimable avec photo, QR code et coordonnées — rouge si l\'animal est perdu, verte s\'il est trouvé.' },
+                { emoji: '✈️', bg: '#fef3c7', title: 'Fiche voyage', desc: 'Checklist voyage France / Europe / International, rappels vaccins, passeport animal… tout dans un PDF imprimable.' },
+                { icon: 'syringe', bg: '#eff6ff', color: '#2563eb', title: 'Vaccins & rappels', desc: 'Calendrier vaccinal complet avec alertes automatiques. Notifications push même téléphone verrouillé.' },
+                { emoji: '🔗', bg: '#ecfdf5', title: 'Fiche de garde partagée', desc: 'QR code public à accrocher au collier : dossier consultable sans connexion par n\'importe quel vétérinaire de garde.' },
+                { icon: 'clipboard', bg: '#faf5ff', color: '#7c3aed', title: 'Dossier PDF personnalisé', desc: 'Exportez le dossier médical en PDF en choisissant les sections à inclure : vaccins, traitements, chirurgies, poids…' },
+                { icon: 'map-pin', bg: '#fce7f3', color: '#db2777', title: 'Vétérinaires de garde', desc: '21 cliniques vétérinaires d\'urgence dans 15 villes. Trouvez le plus proche en un clic, 24h/24.' },
             ];
 
             const STEPS = [
@@ -1815,7 +1815,7 @@
                                     Le carnet de santé intelligent<br />pour vos animaux
                                 </h1>
                                 <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: '#065f46', marginBottom: '32px', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 32px' }}>
-                                    Vaccins, médicaments, antiparasitaires, observations, budget, vétérinaires… Tout le suivi santé de vos animaux en une seule application.
+                                    Vaccins, affiches perdu/trouvé, fiches voyage, QR code collier… Tout le suivi santé de vos animaux — et les outils pour chaque urgence.
                                 </p>
                                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
                                     <button onClick={() => setShowForm(true)}
@@ -1836,10 +1836,10 @@
                     {/* ── DIFFERENTIATEURS ── */}
                     <div style={{ background: '#064e3b', padding: '18px 20px', display: 'flex', justifyContent: 'center', gap: 'clamp(20px, 5vw, 56px)', flexWrap: 'wrap' }}>
                         {[
-                            { icon: '📶', label: 'Fonctionne hors ligne' },
+                            { icon: '🔍', label: 'Affiche perdu/trouvé' },
+                            { icon: '✈️', label: 'Fiche voyage' },
                             { icon: '👨‍👩‍👧', label: 'Foyer partagé' },
-                            { icon: '🔒', label: 'Données sécurisées' },
-                            { icon: '📱', label: 'Installable (PWA)' },
+                            { icon: '📶', label: 'Fonctionne hors ligne' },
                         ].map((d, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d1fae5', fontSize: '14px', fontWeight: '600' }}>
                                 <span style={{ fontSize: '18px' }}>{d.icon}</span>
@@ -1852,16 +1852,16 @@
                     <section style={{ padding: '64px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '960px', margin: '0 auto' }}>
                             <h2 style={{ textAlign: 'center', fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '8px', color: '#064e3b' }}>
-                                Tout ce dont vos animaux ont besoin
+                                Des outils pour chaque situation
                             </h2>
                             <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>
-                                Une application complète pensée pour les propriétaires d'animaux
+                                Du suivi quotidien aux situations d'urgence — une application complète pensée pour les propriétaires d'animaux
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                                 {FEATURES.map((f, i) => (
                                     <div key={i} style={{ background: 'white', borderRadius: '16px', padding: '28px 24px', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                                        <div style={{ width: '52px', height: '52px', background: f.bg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
-                                            <SvgIcon name={f.icon} size={26} color={f.color} strokeWidth={1.8} />
+                                        <div style={{ width: '52px', height: '52px', background: f.bg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px', fontSize: '26px' }}>
+                                            {f.emoji ? f.emoji : <SvgIcon name={f.icon} size={26} color={f.color} strokeWidth={1.8} />}
                                         </div>
                                         <h3 style={{ fontWeight: '700', fontSize: '17px', marginBottom: '8px', color: '#111827' }}>{f.title}</h3>
                                         <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
