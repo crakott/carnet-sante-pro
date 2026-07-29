@@ -6,7 +6,8 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 
 - [ ] **Slots AdSense** : remplacer les 5 occurrences de `xxxxxxxxxx` dans `index.html` par les vrais IDs de slot depuis le tableau de bord AdSense
 - [x] **Politique de confidentialité** (`privacy.html`) : champs responsable de traitement complétés (Rakotoson Christopher / carnetsante2@gmail.com / 12 rue de Vendée, Villedieu-la-Blouère, 49450 Beaupréau-en-Mauges)
-- [x] **Règles Firestore (mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
+- [ ] **Règles Firestore (à republier)** : le QR code de la fiche de garde ne fonctionne pas car les règles actuellement publiées n'autorisent pas la lecture publique (`allow get: if resource.data.shareEnabled == true`). Republier le contenu de `firestore.rules` dans Firebase Console > Firestore Database > Règles pour activer les fiches de garde publiques (scan QR code sans connexion).
+- [x] **Règles Firestore (ancienne mise à jour)** : republier le contenu de `firestore.rules` dans Firebase
   Console > Firestore Database > Règles (la recherche vétérinaire par nom, le nouvel onglet
   Chirurgies, la "Fiche de garde" partagée par QR code, le "Foyer partagé", les ordonnances
   émises par le vétérinaire et la messagerie sécurisée nécessitent les nouvelles règles
