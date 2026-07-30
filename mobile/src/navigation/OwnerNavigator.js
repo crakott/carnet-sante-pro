@@ -73,6 +73,18 @@ function BackAndHomeButtons({ navigation }) {
   );
 }
 
+function UrgencesBackOrHomeButton({ navigation }) {
+  const parentNav = navigation.getParent();
+  if (parentNav?.canGoBack()) {
+    return (
+      <TouchableOpacity onPress={() => parentNav.goBack()} hitSlop={12} style={{ paddingHorizontal: 6, marginLeft: 4 }}>
+        <Text style={{ fontSize: 26, color: '#111827', lineHeight: 30 }}>‹</Text>
+      </TouchableOpacity>
+    );
+  }
+  return <HomeButton navigation={navigation} />;
+}
+
 function SearchHeaderButton() {
   const { setOpen } = useSearch();
   return (
@@ -127,7 +139,7 @@ function UrgencesStack() {
       <UrgencesStackNav.Screen
         name="UrgencesMain"
         component={SecuriteScreen}
-        options={({ navigation }) => ({ title: APP_TITLE, headerLeft: () => <HomeButton navigation={navigation} /> })}
+        options={({ navigation }) => ({ title: APP_TITLE, headerLeft: () => <UrgencesBackOrHomeButton navigation={navigation} /> })}
       />
     </UrgencesStackNav.Navigator>
   );
@@ -242,6 +254,7 @@ export default function OwnerNavigator() {
           initialRouteName="Accueil"
           tabBar={(props) => <CustomTabBar {...props} />}
           screenOptions={{ headerShown: false }}
+          backBehavior="history"
         >
           <Tab.Screen name="Dossier" component={DossierStack} />
           <Tab.Screen name="Urgences" component={UrgencesStack} />
