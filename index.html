@@ -2765,7 +2765,7 @@
                                         {/* Ligne principale */}
                                         <div
                                             onClick={() => { setSelectedAnimal(animal.id); setActiveTab('dossier'); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', cursor: 'pointer', background: selectedAnimal === animal.id ? '#f0fdf4' : 'white' }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 14px', cursor: 'pointer', background: selectedAnimal === animal.id ? '#f0fdf4' : 'white' }}
                                         >
                                             {animal.photo ? (
                                                 <AnimalAvatar animal={animal} size={44} />
@@ -2778,26 +2778,27 @@
                                                 <h3 style={{ fontSize: '15px', fontWeight: '700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{animal.nom}</h3>
                                                 {subtitle && <p style={{ color: '#6b7280', fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{subtitle}</p>}
                                             </div>
-                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap', background: pill.background, color: pill.color }}>{pill.text}</span>
-                                            {hasVet && (
-                                                <button onClick={(e) => { e.stopPropagation(); setOpenVetId(vetOpen ? null : animal.id); }}
-                                                    title="Vétérinaire habituel"
-                                                    style={{ padding: '6px 8px', background: vetOpen ? '#059669' : '#ecfdf5', color: vetOpen ? 'white' : '#059669', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '15px', flexShrink: 0 }}>
-                                                    🩺
-                                                </button>
-                                            )}
-                                            <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '8px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                                <EditIcon size={16} />
+                                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 8px', borderRadius: '999px', whiteSpace: 'nowrap', flexShrink: 0, background: pill.background, color: pill.color }}>{pill.text}</span>
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '7px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                                <EditIcon size={15} />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '8px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                                                <DeleteIcon size={16} />
+                                            <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '7px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                                <DeleteIcon size={15} />
                                             </button>
-                                            <span style={{ color: '#d1d5db', fontSize: '18px' }}>›</span>
+                                            <span style={{ color: '#d1d5db', fontSize: '16px', flexShrink: 0 }}>›</span>
                                         </div>
-                                        {/* Accordéon vétérinaire */}
+                                        {/* Bande vétérinaire cliquable — visible uniquement si vét assigné */}
+                                        {hasVet && (
+                                            <div onClick={(e) => { e.stopPropagation(); setOpenVetId(vetOpen ? null : animal.id); }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderTop: '1px solid #d1fae5', background: vetOpen ? '#d1fae5' : '#f0fdf4', cursor: 'pointer' }}>
+                                                <span style={{ fontSize: '13px' }}>🩺</span>
+                                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#059669', flex: 1 }}>{animal.veterinaire.nom}</span>
+                                                <span style={{ fontSize: '11px', color: '#9ca3af' }}>{vetOpen ? '▲' : '▼'}</span>
+                                            </div>
+                                        )}
+                                        {/* Accordéon détail */}
                                         {hasVet && vetOpen && (
-                                            <div style={{ padding: '10px 16px 14px', borderTop: '1px solid #d1fae5', background: '#f0fdf4' }}>
-                                                <p style={{ fontSize: '13px', fontWeight: '700', color: '#065f46', margin: '0 0 6px' }}>🩺 {animal.veterinaire.nom}</p>
+                                            <div style={{ padding: '8px 16px 12px', background: '#f0fdf4' }}>
                                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                                     {animal.veterinaire.tel && (
                                                         <a href={`tel:${animal.veterinaire.tel}`} onClick={(e) => e.stopPropagation()}
