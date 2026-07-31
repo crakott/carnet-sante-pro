@@ -1805,7 +1805,7 @@
                     </nav>
 
                     {/* ── 1. HERO ── */}
-                    <section style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%)', padding: '72px 20px 56px' }}>
+                    <section style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%)', padding: '52px 20px 36px' }}>
                         <div style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center' }}>
                             <div style={{ fontSize: '56px', marginBottom: '20px' }}>🐾</div>
                             <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: '800', color: '#064e3b', lineHeight: 1.15, marginBottom: '20px' }}>
@@ -1825,17 +1825,22 @@
                                 </button>
                             </div>
                             <p style={{ fontSize: '13px', color: '#6b7280' }}>✅ Gratuit · ✅ Sans publicité intrusive · ✅ Données sécurisées</p>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
+                                {['🐕 Chien', '🐈 Chat', '🐇 Lapin', '🐦 Oiseau', '🐴 Cheval', '🦎 Reptile'].map((s, i) => (
+                                    <span key={i} style={{ background: 'rgba(6,95,70,0.08)', color: '#065f46', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>{s}</span>
+                                ))}
+                            </div>
                         </div>
                     </section>
 
                     {/* ── PRODUCT SHOWCASE ── */}
-                    <section style={{ background: 'white', padding: '64px 20px' }}>
+                    <section style={{ background: 'white', padding: '44px 20px' }}>
                         <div style={{ maxWidth: '860px', margin: '0 auto', textAlign: 'center' }}>
                             <p style={{ fontSize: '13px', fontWeight: '700', color: '#10b981', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '12px' }}>Aperçu de l'application</p>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
                                 Votre animal mérite son propre dossier santé.
                             </h2>
-                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '48px' }}>Voilà ce que vous aurez dès votre inscription — en moins de 3 minutes.</p>
+                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '28px' }}>Voilà ce que vous aurez dès votre inscription — en moins de 3 minutes.</p>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                                 <PhoneMockup />
                                 <div style={{ background: '#1c1c2e', borderRadius: '32px', padding: '12px', boxShadow: '0 32px 64px rgba(0,0,0,0.25)', maxWidth: '220px', flexShrink: 0 }}>
@@ -1859,13 +1864,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '28px' }}>
+                                {[
+                                    { icon: '💉', text: 'Consultez les rappels de vaccination en un coup d\'œil.' },
+                                    { icon: '🗂️', text: 'Retrouvez les documents vétérinaires de votre animal.' },
+                                    { icon: '🔗', text: 'Partagez uniquement les informations nécessaires.' },
+                                ].map((item, i) => (
+                                    <div key={i} style={{ textAlign: 'center', padding: '14px 12px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+                                        <div style={{ fontSize: '22px', marginBottom: '6px' }}>{item.icon}</div>
+                                        <p style={{ fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>{item.text}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </section>
 
                     {/* ── 2. ARGUMENT CLÉ — QR CODE URGENCE ── */}
-                    <section style={{ padding: '72px 20px', background: '#111827' }}>
+                    <section style={{ padding: '48px 20px', background: '#111827' }}>
                         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-                            <div style={{ textAlign: 'center', marginBottom: '52px' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                                 <div style={{ display: 'inline-block', background: '#ef4444', borderRadius: '8px', padding: '6px 16px', fontSize: '13px', fontWeight: '700', color: 'white', marginBottom: '20px', letterSpacing: '0.05em' }}>🚨 EN CAS D'URGENCE</div>
                                 <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: '800', color: 'white', lineHeight: 1.2, marginBottom: '16px' }}>
                                     Les informations vitales de votre animal,<br />accessibles en quelques secondes.
@@ -1900,7 +1917,7 @@
                                     </div>
                                 ))}
                             </div>
-                            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                            <div style={{ textAlign: 'center', marginTop: '24px' }}>
                                 <button onClick={() => setShowForm(true)}
                                     style={{ padding: '14px 32px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
                                     Créer la fiche de mon animal →
@@ -1910,12 +1927,12 @@
                     </section>
 
                     {/* ── 4. COMMENT ÇA MARCHE ── */}
-                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
+                    <section style={{ padding: '48px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b', textAlign: 'center' }}>
                                 Comment ça marche ?
                             </h2>
-                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '56px', textAlign: 'center' }}>Démarrez en moins de 3 minutes, sans installation ni carte bancaire.</p>
+                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '36px', textAlign: 'center' }}>Démarrez en moins de 3 minutes, sans installation ni carte bancaire.</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
                                 {/* Étape 01 */}
@@ -1992,12 +2009,12 @@
                     </section>
 
                     {/* ── 3. FONCTIONNALITÉS ── */}
-                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
+                    <section style={{ padding: '48px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '980px', margin: '0 auto' }}>
                             <h2 style={{ textAlign: 'center', fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
                                 Toutes les fonctionnalités
                             </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '28px', fontSize: '16px' }}>
                                 Du suivi quotidien aux situations d'urgence — une application complète.
                             </p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
@@ -2025,12 +2042,12 @@
                     </section>
 
                     {/* ── 4. POURQUOI C'EST UTILE ── */}
-                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                    <section style={{ padding: '48px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
                                 Pourquoi c'est utile ?
                             </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '52px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé.</p>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '32px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé.</p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
                                 {[
                                     { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose ou le coryza. Un carnet à jour est obligatoire pour certains voyages, la pension ou le toilettage. Une alerte configurée quelques semaines avant vous évite d\'oublier une injection.' },
@@ -2051,7 +2068,7 @@
                     </section>
 
                     {/* ── 5. ESPACE VÉTÉRINAIRE ── */}
-                    <section style={{ padding: '72px 20px', background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
+                    <section style={{ padding: '48px 20px', background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
                         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '48px', flexWrap: 'wrap', justifyContent: 'center' }}>
                                 <div style={{ flex: '1 1 340px', color: 'white' }}>
@@ -2060,13 +2077,13 @@
                                         Espace vétérinaire professionnel
                                     </h2>
                                     <p style={{ color: '#d1fae5', fontSize: '16px', lineHeight: 1.7, marginBottom: '28px' }}>
-                                        Accédez au dossier complet de vos patients en quelques secondes. Ajoutez des actes médicaux validés, émettez des ordonnances numériques et communiquez directement avec les propriétaires.
+                                        Accédez au dossier complet de vos patients en quelques secondes. Ajoutez des actes médicaux avec badge professionnel, rédigez des notes de consultation et communiquez directement avec les propriétaires.
                                     </p>
                                     <div style={{ display: 'grid', gap: '12px', marginBottom: '32px' }}>
                                         {[
                                             '🔎 Recherche par numéro de puce ou nom du propriétaire',
-                                            '✅ Actes médicaux validés avec badge professionnel',
-                                            '📝 Ordonnances et certificats numériques',
+                                            '✅ Actes médicaux identifiés avec badge professionnel',
+                                            '📝 Notes de consultation et comptes-rendus numériques',
                                             '💬 Messagerie sécurisée avec le propriétaire',
                                             '📊 Historique complet : vaccins, chirurgies, poids',
                                         ].map((item, i) => (
@@ -2084,13 +2101,14 @@
                                 </div>
                                 <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '220px' }}>
                                     {[
-                                        { num: '< 5s', label: 'pour accéder au dossier patient' },
-                                        { num: '100%', label: 'des actes validés avec badge pro' },
-                                        { num: '0', label: 'installation requise — 100% web' },
+                                        { icon: '⚡', label: 'Accès rapide', desc: 'Dossier patient disponible immédiatement' },
+                                        { icon: '🩺', label: 'Badge professionnel', desc: 'Chaque acte clairement identifié comme acte pro' },
+                                        { icon: '📱', label: 'Zéro installation', desc: '100 % web, fonctionne sur tous les appareils' },
                                     ].map((stat, i) => (
                                         <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px 24px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
-                                            <div style={{ fontSize: '28px', fontWeight: '800', color: '#34d399', marginBottom: '4px' }}>{stat.num}</div>
-                                            <div style={{ fontSize: '13px', color: '#d1fae5' }}>{stat.label}</div>
+                                            <div style={{ fontSize: '28px', marginBottom: '4px' }}>{stat.icon}</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#34d399', marginBottom: '4px' }}>{stat.label}</div>
+                                            <div style={{ fontSize: '12px', color: '#d1fae5' }}>{stat.desc}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -2099,15 +2117,15 @@
                     </section>
 
                     {/* ── 6. SANTÉ CHIEN & CHAT ── */}
-                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                    <section style={{ padding: '48px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
                                 Guide santé de votre animal
                             </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '16px', marginBottom: '52px' }}>Informations essentielles pour prendre soin de votre compagnon au quotidien.</p>
+                            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '16px', marginBottom: '32px' }}>Informations essentielles pour prendre soin de votre compagnon au quotidien.</p>
 
                             {/* Chien */}
-                            <div style={{ marginBottom: '48px' }}>
+                            <div style={{ marginBottom: '32px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                     <span style={{ fontSize: '36px' }}>🐶</span>
                                     <h3 style={{ fontWeight: '800', fontSize: '24px', color: '#111827', margin: 0 }}>Santé du chien</h3>
@@ -2153,7 +2171,7 @@
                     </section>
 
                     {/* ── 7. FAQ ── */}
-                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
+                    <section style={{ padding: '48px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
                                 Questions fréquentes
@@ -2181,7 +2199,7 @@
                     </section>
 
                     {/* ── 7. À PROPOS ── */}
-                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                    <section style={{ padding: '48px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '24px', color: '#064e3b' }}>À propos de Carnet Santé PRO</h2>
                             <div style={{ width: '72px', height: '72px', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 24px' }}>🐾</div>
@@ -2200,7 +2218,7 @@
                     </section>
 
                     {/* ── 8. CTA FINAL ── */}
-                    <section style={{ padding: '72px 20px', background: 'linear-gradient(135deg, #10b981, #059669)', textAlign: 'center' }}>
+                    <section style={{ padding: '48px 20px', background: 'linear-gradient(135deg, #10b981, #059669)', textAlign: 'center' }}>
                         <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', color: 'white', marginBottom: '16px' }}>
                             Prêt à prendre soin de vos animaux ?
                         </h2>
