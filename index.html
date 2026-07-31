@@ -1804,7 +1804,7 @@
                         </div>
                     </nav>
 
-                    {/* ── HERO ── */}
+                    {/* ── 1. HERO ── */}
                     <section style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%)', padding: '60px 20px' }}>
                         <div style={{ maxWidth: '1060px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '48px', flexWrap: 'wrap', justifyContent: 'center' }}>
                             <div style={{ flex: '1 1 340px', textAlign: 'center' }}>
@@ -1812,7 +1812,7 @@
                                 <h1 style={{ fontSize: 'clamp(26px, 5vw, 46px)', fontWeight: '800', color: '#064e3b', lineHeight: 1.2, marginBottom: '20px' }}>
                                     Le carnet de santé numérique de votre animal, toujours avec vous.
                                 </h1>
-                                <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: '#065f46', marginBottom: '32px', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 32px' }}>
+                                <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: '#065f46', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 32px' }}>
                                     Vaccins, traitements, documents vétérinaires et informations importantes réunis au même endroit.
                                 </p>
                                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
@@ -1831,100 +1831,182 @@
                         </div>
                     </section>
 
-                    {/* ── DIFFERENTIATEURS ── */}
-                    <div style={{ background: '#064e3b', padding: '18px 20px', display: 'flex', justifyContent: 'center', gap: 'clamp(20px, 5vw, 56px)', flexWrap: 'wrap' }}>
-                        {[
-                            { icon: '🔍', label: 'Affiche perdu/trouvé' },
-                            { icon: '✈️', label: 'Fiche voyage' },
-                            { icon: '👨‍👩‍👧', label: 'Foyer partagé' },
-                            { icon: '📶', label: 'Fonctionne hors ligne' },
-                        ].map((d, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d1fae5', fontSize: '14px', fontWeight: '600' }}>
-                                <span style={{ fontSize: '18px' }}>{d.icon}</span>
-                                {d.label}
+                    {/* ── 2. COMMENT ÇA MARCHE ── */}
+                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
+                                Comment ça marche ?
+                            </h2>
+                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '52px' }}>Démarrez en moins de 3 minutes, sans installation ni carte bancaire.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px' }}>
+                                {STEPS.map((s, i) => (
+                                    <div key={i} style={{ textAlign: 'center', position: 'relative' }}>
+                                        <div style={{ width: '64px', height: '64px', background: '#10b981', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: '800', margin: '0 auto 18px', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}>{s.num}</div>
+                                        <h3 style={{ fontWeight: '700', fontSize: '17px', marginBottom: '8px', color: '#111827' }}>{s.title}</h3>
+                                        <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.7 }}>{s.desc}</p>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    </section>
 
-                    {/* ── FEATURES ── */}
-                    <section style={{ padding: '64px 20px', background: 'white' }}>
-                        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-                            <h2 style={{ textAlign: 'center', fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '8px', color: '#064e3b' }}>
-                                Des outils pour chaque situation
+                    {/* ── 3. FONCTIONNALITÉS ── */}
+                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
+                        <div style={{ maxWidth: '980px', margin: '0 auto' }}>
+                            <h2 style={{ textAlign: 'center', fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
+                                Toutes les fonctionnalités
                             </h2>
                             <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>
-                                Du suivi quotidien aux situations d'urgence — une application complète pensée pour les propriétaires d'animaux
+                                Du suivi quotidien aux situations d'urgence — une application complète.
                             </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-                                {FEATURES.map((f, i) => (
-                                    <div key={i} style={{ background: 'white', borderRadius: '16px', padding: '28px 24px', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-                                        <div style={{ width: '52px', height: '52px', background: f.bg, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px', fontSize: '26px' }}>
-                                            {f.emoji ? f.emoji : <SvgIcon name={f.icon} size={26} color={f.color} strokeWidth={1.8} />}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                                {[
+                                    { emoji: '💉', bg: '#ecfdf5', title: 'Vaccins & rappels', desc: 'Enregistrez chaque vaccination et recevez une notification avant la date de rappel. Ne ratez plus jamais une injection importante.' },
+                                    { emoji: '💊', bg: '#eff6ff', title: 'Traitements & médicaments', desc: 'Suivez les traitements en cours, les antiparasitaires et les vermifuges avec leurs dates de renouvellement et heures de prise.' },
+                                    { emoji: '🔍', bg: '#fff1f2', title: 'Affiche perdu / trouvé', desc: 'Générez une affiche A4 imprimable avec photo, QR code et coordonnées — rouge si l\'animal est perdu, verte s\'il est trouvé.' },
+                                    { emoji: '✈️', bg: '#fef3c7', title: 'Fiche voyage', desc: 'Checklist voyage France / Europe / International, rappels vaccins obligatoires, passeport animal — tout dans un PDF imprimable.' },
+                                    { emoji: '🔗', bg: '#f5f3ff', title: 'Fiche de garde QR code', desc: 'QR code à accrocher au collier : le dossier est consultable sans connexion par n\'importe quel vétérinaire de garde.' },
+                                    { emoji: '👨‍👩‍👧', bg: '#fdf4ff', title: 'Foyer partagé', desc: 'Partagez l\'accès aux carnets de tous vos animaux avec les membres de votre famille, en lecture et en écriture.' },
+                                    { emoji: '📶', bg: '#f0fdf4', title: 'Fonctionne hors ligne', desc: 'Consultez et modifiez les dossiers même sans connexion. La synchronisation se fait automatiquement au retour du réseau.' },
+                                    { emoji: '🔔', bg: '#fefce8', title: 'Notifications push', desc: 'Recevez des rappels même téléphone verrouillé : vaccins à venir, doses de médicaments, renouvellements antiparasitaires.' },
+                                    { emoji: '⚖️', bg: '#fff7ed', title: 'Courbe de poids', desc: 'Suivez l\'évolution du poids sur un graphique et fixez un objectif. Idéal pour détecter les variations anormales.' },
+                                ].map((f, i) => (
+                                    <div key={i} style={{ background: 'white', borderRadius: '14px', padding: '24px', border: '1px solid #e5e7eb', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                        <div style={{ width: '46px', height: '46px', background: f.bg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>{f.emoji}</div>
+                                        <div>
+                                            <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '6px', color: '#111827' }}>{f.title}</h3>
+                                            <p style={{ color: '#6b7280', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
                                         </div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '17px', marginBottom: '8px', color: '#111827' }}>{f.title}</h3>
-                                        <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </section>
 
-                    {/* ── HOW IT WORKS ── */}
-                    <section style={{ padding: '64px 20px', background: '#f0fdf4' }}>
-                        <div style={{ maxWidth: '760px', margin: '0 auto', textAlign: 'center' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '48px', color: '#064e3b' }}>
-                                Démarrez en 3 minutes
+                    {/* ── 4. POURQUOI C'EST UTILE ── */}
+                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
+                                Pourquoi c'est utile ?
                             </h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '32px' }}>
-                                {STEPS.map((s, i) => (
-                                    <div key={i} style={{ textAlign: 'center' }}>
-                                        <div style={{ width: '56px', height: '56px', background: '#10b981', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '800', margin: '0 auto 16px' }}>{s.num}</div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '16px', marginBottom: '8px', color: '#111827' }}>{s.title}</h3>
-                                        <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.6 }}>{s.desc}</p>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '52px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+                                {[
+                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose ou le coryza. Un carnet à jour est obligatoire pour certains voyages, la pension ou le toilettage. Une alerte configurée quelques semaines avant vous évite d\'oublier une injection.' },
+                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et moustiques représentent un risque toute l\'année, y compris en appartement. Les tiques véhiculent des maladies sérieuses comme la piroplasmose. Un traitement renouvelé toutes les 4 à 12 semaines protège efficacement votre animal et votre foyer.' },
+                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité touche près d\'un animal sur deux en France. Pesez votre animal chaque mois et suivez la courbe dans l\'app. Une variation rapide peut aussi signaler une maladie à ne pas ignorer.' },
+                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent plus de 80 % des chiens et chats de plus de 3 ans. Un brossage hebdomadaire et un détartrage annuel suffisent à maintenir une bonne santé bucco-dentaire.' },
+                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime dans l\'app pour faciliter les ajustements lors des consultations vétérinaires.' },
+                                    { icon: '📋', title: 'Dossier médical centralisé', text: 'Chirurgies passées, allergies, analyses, traitements en cours : votre vétérinaire a besoin de l\'historique complet. En cas d\'urgence, le QR code du collier lui donne accès en quelques secondes.' },
+                                ].map((c, i) => (
+                                    <div key={i} style={{ background: '#f9fafb', borderRadius: '12px', padding: '22px', border: '1px solid #e5e7eb' }}>
+                                        <div style={{ fontSize: '28px', marginBottom: '10px' }}>{c.icon}</div>
+                                        <h3 style={{ fontWeight: '700', fontSize: '15px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
+                                        <p style={{ color: '#4b5563', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{c.text}</p>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </section>
 
-                    {/* ── GUIDE SANTÉ ── */}
-                    <section style={{ padding: '64px 20px', background: '#f9fafb' }}>
+                    {/* ── 5. ESPACE VÉTÉRINAIRE ── */}
+                    <section style={{ padding: '72px 20px', background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '48px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <div style={{ flex: '1 1 340px', color: 'white' }}>
+                                    <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: '700', marginBottom: '20px', color: '#a7f3d0' }}>🩺 POUR LES PROFESSIONNELS</div>
+                                    <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '16px', lineHeight: 1.2 }}>
+                                        Espace vétérinaire professionnel
+                                    </h2>
+                                    <p style={{ color: '#d1fae5', fontSize: '16px', lineHeight: 1.7, marginBottom: '28px' }}>
+                                        Accédez au dossier complet de vos patients en quelques secondes. Ajoutez des actes médicaux validés, émettez des ordonnances numériques et communiquez directement avec les propriétaires.
+                                    </p>
+                                    <div style={{ display: 'grid', gap: '12px', marginBottom: '32px' }}>
+                                        {[
+                                            '🔎 Recherche par numéro de puce ou nom du propriétaire',
+                                            '✅ Actes médicaux validés avec badge professionnel',
+                                            '📝 Ordonnances et certificats numériques',
+                                            '💬 Messagerie sécurisée avec le propriétaire',
+                                            '📊 Historique complet : vaccins, chirurgies, poids',
+                                        ].map((item, i) => (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ecfdf5', fontSize: '14px' }}>
+                                                <span>{item}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                        <button onClick={() => { setProMode(true); setShowForm(true); }}
+                                            style={{ padding: '14px 28px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
+                                            Accéder à l'espace vétérinaire →
+                                        </button>
+                                        <span style={{ color: '#a7f3d0', fontSize: '15px', fontWeight: '600' }}>49,99 €/mois</span>
+                                    </div>
+                                </div>
+                                <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '220px' }}>
+                                    {[
+                                        { num: '< 5s', label: 'pour accéder au dossier patient' },
+                                        { num: '100%', label: 'des actes validés avec badge pro' },
+                                        { num: '0', label: 'installation requise — 100% web' },
+                                    ].map((stat, i) => (
+                                        <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px 24px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
+                                            <div style={{ fontSize: '28px', fontWeight: '800', color: '#34d399', marginBottom: '4px' }}>{stat.num}</div>
+                                            <div style={{ fontSize: '13px', color: '#d1fae5' }}>{stat.label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── 6. FAQ ── */}
+                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
-                                Guide de la santé animale
-                            </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '40px', fontSize: '16px' }}>Cliquez sur un sujet pour lire nos conseils détaillés.</p>
-                            <FaqItem q="💉 Calendrier vaccinal du chien et du chat" r="La vaccination est le pilier de la prévention des maladies infectieuses chez l'animal de compagnie. Elle doit débuter dès les premières semaines de vie et se poursuivre tout au long de la vie de l'animal, avec des rappels réguliers pour maintenir une immunité efficace. Chez le chien, les vaccins essentiels (dit « core ») sont : la maladie de Carré, la parvovirose, l'hépatite de Rubarth et la toux du chenil. Le premier protocole commence à 6–8 semaines avec deux injections espacées de 3 à 4 semaines, puis un rappel à 1 an, et ensuite tous les 1 à 3 ans. Chez le chat, les vaccins fondamentaux protègent contre la typhus (panleucopénie), le coryza et la leucose féline (FeLV). Le protocole débute entre 8 et 12 semaines, suivi d'un rappel à 1 an, puis tous les 1 à 3 ans. Le vaccin antirabique est obligatoire pour tout voyage à l'étranger. Carnet Santé PRO vous envoie un rappel automatique avant chaque échéance vaccinale." />
-                            <FaqItem q="🦟 Antiparasitaires et vermifuges : fréquences recommandées" r="Les parasites internes (vers) et externes (puces, tiques, moustiques) sont une menace permanente pour la santé de votre animal, et parfois pour la vôtre. Un protocole de prévention régulier est indispensable, même si votre animal ne sort pas ou peu. Pour les antiparasitaires externes : les pipettes, colliers ou comprimés doivent être renouvelés toutes les 4 à 12 semaines selon le produit. Les tiques sont particulièrement présentes au printemps et en automne et peuvent transmettre des maladies graves comme la piroplasmose. Pour les vermifuges : les chiots et chatons doivent être vermifugés toutes les 2 semaines jusqu'à 3 mois, puis tous les mois jusqu'à 6 mois, puis tous les 3 mois pour un adulte qui sort, ou deux fois par an en intérieur strict. Le ténia se contracte souvent par ingestion de puces — d'où l'importance de coupler vermifuge et antiparasitaire externe." />
-                            <FaqItem q="🚨 Signes d'alerte : quand consulter en urgence ?" r="Certains symptômes nécessitent une consultation vétérinaire immédiate, sans attendre le lendemain. Urgences absolues : difficulté à respirer ou respiration haletante au repos, abdomen gonflé ou douloureux (surtout chez un chien de grande race — risque de dilatation-torsion de l'estomac), perte de connaissance ou convulsions. Consultations rapides (dans les heures qui suivent) : sang dans les urines, selles ou vomissements, refus de boire pendant plus de 24 heures, boiterie soudaine ou vive douleur à la manipulation, œil rouge avec écoulement ou vision altérée. En dehors des heures d'ouverture, la fiche de garde QR code de Carnet Santé PRO permet au vétérinaire de garde d'accéder instantanément aux vaccins, allergies et traitements en cours de votre animal." />
-                        </div>
-                    </section>
-
-                    {/* ── FAQ ── */}
-                    <section style={{ padding: '64px 20px', background: 'white' }}>
-                        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '40px', color: '#064e3b' }}>
                                 Questions fréquentes
                             </h2>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '40px', fontSize: '16px' }}>Tout ce que vous voulez savoir avant de commencer.</p>
                             {[
-                                { q: 'Carnet Santé PRO est-il gratuit ?', r: 'Oui, l\'application est entièrement gratuite pour les propriétaires d\'animaux. Toutes les fonctionnalités — suivi des vaccins et traitements, rappels automatiques, calendrier, fiche voyage, affiche perdu/trouvé, partage en famille — sont incluses sans abonnement ni limite d\'animaux. Un abonnement mensuel (49,99 €/mois) est uniquement requis pour l\'espace vétérinaire professionnel, qui donne accès à la recherche d\'animaux par identifiant et à l\'ajout d\'actes médicaux validés.' },
-                                { q: 'Mes données sont-elles sécurisées ?', r: 'Toutes vos données sont stockées de manière sécurisée sur les serveurs Firebase de Google, certifiés ISO 27001, chiffrées en transit (TLS) et au repos (AES-256). Seuls vous et les vétérinaires que vous autorisez explicitement peuvent accéder au dossier de votre animal. Vous pouvez supprimer votre compte et toutes vos données à tout moment depuis les paramètres de l\'application.' },
-                                { q: 'Combien d\'animaux puis-je enregistrer ?', r: 'Il n\'y a aucune limite au nombre d\'animaux que vous pouvez ajouter dans Carnet Santé PRO. Que vous ayez un seul chat ou une dizaine d\'animaux (chiens, chats, lapins, chevaux, oiseaux, rongeurs…), chaque animal dispose de son propre carnet de santé complet avec photo, profil, historique médical et rappels personnalisés.' },
-                                { q: 'Puis-je utiliser l\'application sans connexion internet ?', r: 'Oui, Carnet Santé PRO fonctionne hors ligne grâce à la persistance locale IndexedDB. Vous pouvez consulter les dossiers de vos animaux, ajouter des informations et recevoir des rappels même sans réseau. Toutes vos modifications sont synchronisées automatiquement dès que vous retrouvez une connexion internet.' },
-                                { q: 'Comment fonctionne le partage du dossier avec mon vétérinaire ?', r: 'Deux options existent. (1) Fiche de garde QR code : activez le partage depuis l\'onglet Dossier de votre animal, puis accrochez le QR code généré au collier. N\'importe quel vétérinaire peut scanner ce QR pour voir le dossier résumé (vaccins, traitements, allergies) sans avoir de compte. (2) Espace vétérinaire pro : votre vétérinaire abonné peut rechercher votre animal par numéro de puce ou par votre nom, consulter le dossier complet et y ajouter des actes médicaux validés avec son badge professionnel.' },
-                                { q: 'À quelle fréquence faut-il vermifuger son chien ou son chat ?', r: 'Les recommandations générales sont : toutes les 2 semaines jusqu\'à 3 mois, puis une fois par mois jusqu\'à 6 mois, puis tous les 3 mois pour un animal qui sort régulièrement, ou deux fois par an pour un animal strictement d\'intérieur. Ces fréquences peuvent varier selon le mode de vie de l\'animal et les conseils de votre vétérinaire. Carnet Santé PRO vous envoie un rappel automatique avant chaque renouvellement.' },
-                                { q: 'Comment activer les notifications de rappels ?', r: 'Dans l\'onglet Paramètres de l\'application, appuyez sur "Activer les notifications push" et acceptez la demande de permission de votre navigateur. Vous pouvez ensuite configurer individuellement le nombre de jours d\'avance pour chaque type de rappel : vaccins, traitements médicamenteux, antiparasitaires et vermifuges. Les rappels fonctionnent même lorsque l\'application est fermée, et arrivent même sur un téléphone verrouillé si la clé VAPID est configurée.' },
-                                { q: 'Puis-je partager les animaux avec ma famille ?', r: 'Oui, la fonctionnalité "Foyer partagé" (dans Paramètres) permet à plusieurs membres d\'une même famille de gérer ensemble les carnets de santé de tous les animaux du foyer. Le créateur du foyer génère un QR code d\'invitation ; chaque membre qui le scanne (et accepte) obtient un accès complet (lecture et écriture) à tous les animaux partagés, exactement comme le propriétaire principal.' },
-                                { q: 'Comment installer l\'application sur mon téléphone ?', r: '📱 Android (Chrome) : appuyez sur le menu ⋮ en haut à droite, puis "Ajouter à l\'écran d\'accueil" ou "Installer l\'application". 🍎 iPhone (Safari) : appuyez sur le bouton Partager ⬆️ en bas, puis "Sur l\'écran d\'accueil". L\'app s\'installe comme une application native, sans passer par un store, sans publicité obligatoire, et se met à jour automatiquement à chaque ouverture.' },
-                                { q: 'Quels animaux sont compatibles avec Carnet Santé PRO ?', r: 'L\'application est conçue pour tous les animaux de compagnie : chiens, chats, lapins, hamsters, cochons d\'Inde, oiseaux, reptiles, chevaux, et bien d\'autres. Le suivi est entièrement personnalisable : vous saisissez l\'espèce, la race et adaptez les informations selon votre animal. Les vétérinaires équins ou spécialisés peuvent également utiliser l\'espace vétérinaire professionnel.' },
+                                { q: 'Carnet Santé PRO est-il gratuit ?', r: 'Oui, l\'application est entièrement gratuite pour les propriétaires d\'animaux. Toutes les fonctionnalités — suivi des vaccins et traitements, rappels automatiques, calendrier, fiche voyage, affiche perdu/trouvé, partage en famille — sont incluses sans abonnement ni limite d\'animaux. Un abonnement mensuel (49,99 €/mois) est uniquement requis pour l\'espace vétérinaire professionnel.' },
+                                { q: 'Combien d\'animaux puis-je enregistrer ?', r: 'Il n\'y a aucune limite. Chiens, chats, lapins, chevaux, oiseaux, rongeurs… chaque animal dispose de son propre carnet de santé complet avec photo, profil, historique médical et rappels personnalisés.' },
+                                { q: 'Puis-je utiliser l\'application sans connexion internet ?', r: 'Oui, Carnet Santé PRO fonctionne hors ligne grâce à la persistance locale IndexedDB. Vous pouvez consulter les dossiers, ajouter des informations et recevoir des rappels même sans réseau. Toutes vos modifications se synchronisent automatiquement dès le retour de la connexion.' },
+                                { q: 'Comment fonctionne la fiche de garde QR code ?', r: 'Activez le partage depuis l\'onglet Dossier de votre animal. Un QR code unique est généré — accrochez-le au collier. N\'importe quel vétérinaire peut le scanner pour voir le dossier résumé (vaccins, traitements, allergies) sans créer de compte. La fiche est en lecture seule et ne contient pas vos données personnelles sensibles.' },
+                                { q: 'À quelle fréquence faut-il vermifuger son chien ou son chat ?', r: 'Les recommandations générales : toutes les 2 semaines jusqu\'à 3 mois, puis une fois par mois jusqu\'à 6 mois, puis tous les 3 mois pour un animal qui sort régulièrement, ou deux fois par an pour un animal strictement d\'intérieur. Carnet Santé PRO vous envoie un rappel automatique avant chaque renouvellement.' },
+                                { q: 'Mes données sont-elles sécurisées ?', r: 'Toutes vos données sont stockées sur les serveurs Firebase de Google (ISO 27001), chiffrées en transit (TLS) et au repos (AES-256). Seuls vous et les vétérinaires que vous autorisez peuvent accéder au dossier de votre animal. Vous pouvez supprimer votre compte et toutes vos données à tout moment.' },
+                                { q: 'Puis-je partager les animaux avec ma famille ?', r: 'Oui, la fonctionnalité "Foyer partagé" (dans Paramètres) permet à plusieurs membres d\'une même famille de gérer ensemble les carnets de santé de tous les animaux du foyer. Le créateur du foyer génère un QR code d\'invitation ; chaque membre qui le scanne obtient un accès complet en lecture et en écriture.' },
+                                { q: 'Comment installer l\'application sur mon téléphone ?', r: '📱 Android (Chrome) : menu ⋮ → "Ajouter à l\'écran d\'accueil" ou "Installer l\'application". 🍎 iPhone (Safari) : bouton Partager ⬆️ → "Sur l\'écran d\'accueil". L\'app s\'installe comme une application native, sans passer par un store, et se met à jour automatiquement.' },
                             ].map((faq, i) => (
                                 <FaqItem key={i} q={faq.q} r={faq.r} />
                             ))}
+                            <div style={{ marginTop: '32px', borderTop: '1px solid #e5e7eb', paddingTop: '32px' }}>
+                                <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>Conseils santé — cliquez pour lire</p>
+                                <FaqItem q="💉 Calendrier vaccinal du chien et du chat" r="La vaccination est le pilier de la prévention des maladies infectieuses chez l'animal de compagnie. Elle doit débuter dès les premières semaines de vie et se poursuivre tout au long de la vie de l'animal, avec des rappels réguliers pour maintenir une immunité efficace. Chez le chien, les vaccins essentiels (dit « core ») sont : la maladie de Carré, la parvovirose, l'hépatite de Rubarth et la toux du chenil. Le premier protocole commence à 6–8 semaines avec deux injections espacées de 3 à 4 semaines, puis un rappel à 1 an, et ensuite tous les 1 à 3 ans. Chez le chat, les vaccins fondamentaux protègent contre la typhus (panleucopénie), le coryza et la leucose féline (FeLV). Le protocole débute entre 8 et 12 semaines, suivi d'un rappel à 1 an, puis tous les 1 à 3 ans. Le vaccin antirabique est obligatoire pour tout voyage à l'étranger. Carnet Santé PRO vous envoie un rappel automatique avant chaque échéance vaccinale." />
+                                <FaqItem q="🦟 Antiparasitaires et vermifuges : fréquences recommandées" r="Les parasites internes (vers) et externes (puces, tiques, moustiques) sont une menace permanente pour la santé de votre animal, et parfois pour la vôtre. Un protocole de prévention régulier est indispensable, même si votre animal ne sort pas ou peu. Pour les antiparasitaires externes : les pipettes, colliers ou comprimés doivent être renouvelés toutes les 4 à 12 semaines selon le produit. Les tiques sont particulièrement présentes au printemps et en automne et peuvent transmettre des maladies graves comme la piroplasmose. Pour les vermifuges : les chiots et chatons doivent être vermifugés toutes les 2 semaines jusqu'à 3 mois, puis tous les mois jusqu'à 6 mois, puis tous les 3 mois pour un adulte qui sort, ou deux fois par an en intérieur strict." />
+                                <FaqItem q="🚨 Signes d'alerte : quand consulter en urgence ?" r="Certains symptômes nécessitent une consultation vétérinaire immédiate. Urgences absolues : difficulté à respirer ou respiration haletante au repos, abdomen gonflé ou douloureux (surtout chez un chien de grande race — risque de dilatation-torsion de l'estomac), perte de connaissance ou convulsions. Consultations rapides : sang dans les urines, selles ou vomissements, refus de boire pendant plus de 24 heures, boiterie soudaine, œil rouge avec écoulement. En dehors des heures d'ouverture, la fiche de garde QR code de Carnet Santé PRO permet au vétérinaire de garde d'accéder instantanément aux vaccins, allergies et traitements de votre animal." />
+                            </div>
                         </div>
                     </section>
 
-                    {/* ── CTA BOTTOM ── */}
-                    <section style={{ padding: '64px 20px', background: 'linear-gradient(135deg, #10b981, #059669)', textAlign: 'center' }}>
+                    {/* ── 7. À PROPOS ── */}
+                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                        <div style={{ maxWidth: '700px', margin: '0 auto', textAlign: 'center' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '24px', color: '#064e3b' }}>À propos de Carnet Santé PRO</h2>
+                            <div style={{ width: '72px', height: '72px', background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', margin: '0 auto 24px' }}>🐾</div>
+                            <p style={{ color: '#4b5563', fontSize: '16px', lineHeight: 1.8, marginBottom: '16px' }}>
+                                Carnet Santé PRO est une application web progressive (PWA) développée par <strong>Christopher Rakotoson</strong>, propriétaire d'animaux convaincu que le suivi de santé ne devrait pas se perdre dans des carnets papier ou des notes éparpillées.
+                            </p>
+                            <p style={{ color: '#4b5563', fontSize: '16px', lineHeight: 1.8, marginBottom: '32px' }}>
+                                L'application est 100 % gratuite pour les propriétaires, fonctionne sur tous les appareils (iPhone, Android, ordinateur), et sans installation via un store. Elle est conçue pour être rapide, simple et disponible même sans connexion internet.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                {['🐶 Chiens', '🐱 Chats', '🐰 Lapins', '🐦 Oiseaux', '🐴 Chevaux', '🦎 Reptiles'].map((a, i) => (
+                                    <span key={i} style={{ background: '#f0fdf4', color: '#065f46', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: '600', border: '1px solid #d1fae5' }}>{a}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── 8. CTA FINAL ── */}
+                    <section style={{ padding: '72px 20px', background: 'linear-gradient(135deg, #10b981, #059669)', textAlign: 'center' }}>
                         <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', color: 'white', marginBottom: '16px' }}>
                             Prêt à prendre soin de vos animaux ?
                         </h2>
@@ -1935,32 +2017,6 @@
                             style={{ padding: '16px 40px', background: 'white', color: '#10b981', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '18px', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
                             Créer mon compte gratuitement →
                         </button>
-                    </section>
-
-                    {/* ── CONSEILS SANTÉ ── */}
-                    <section style={{ padding: '64px 20px', background: 'white' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
-                                Conseils santé pour vos animaux
-                            </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé tout au long de l'année.</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
-                                {[
-                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose, la maladie de Carré ou le coryza. Un carnet à jour est aussi obligatoire pour certains voyages, la pension ou le toilettage. Notez chaque injection et configurez une alerte quelques semaines avant la date de rappel pour ne jamais manquer une vaccination importante.' },
-                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et moustiques représentent un risque sanitaire toute l\'année, y compris en appartement. Les puces peuvent transmettre des vers, et les tiques véhiculent des maladies sérieuses comme la piroplasmose. Un traitement préventif adapté (pipette, collier, comprimé) renouvelé toutes les 4 à 12 semaines protège efficacement votre animal et votre foyer.' },
-                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité touche près d\'un animal de compagnie sur deux en France et est la première cause de maladies chroniques : diabète, arthrose, problèmes cardiaques. Pesez votre animal une fois par mois et suivez la courbe sur le graphique dédié de l\'application. Une perte ou une prise de poids rapide peut aussi signaler une maladie sous-jacente à explorer avec votre vétérinaire.' },
-                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent plus de 80 % des chiens et chats de plus de 3 ans : tartre, gingivite, douleur chronique. Les bactéries buccales peuvent même atteindre le cœur et les reins par la circulation sanguine. Un brossage hebdomadaire, des jouets dentaires adaptés et un détartrage vétérinaire annuel suffisent à maintenir une bonne santé bucco-dentaire et à prolonger l\'espérance de vie.' },
-                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, la race, l\'âge (chiot/adulte/senior), le niveau d\'activité et l\'état de santé (stérilisé, en surpoids…). Une alimentation inadaptée entraîne carence, obésité ou insuffisance rénale. Consignez le régime actuel, les marques et les quantités dans l\'application pour faciliter les ajustements lors des consultations vétérinaires.' },
-                                    { icon: '📋', title: 'Dossier médical centralisé', text: 'Chirurgies passées, allergies médicamenteuses, résultats d\'analyses, traitements en cours : votre vétérinaire a besoin de l\'historique complet pour prendre les meilleures décisions. Un dossier numérique centralisé, toujours à portée de main sur votre téléphone, évite les oublis et les redondances d\'examens. En cas d\'urgence, votre vétérinaire de garde y accède en quelques secondes via le QR code du collier.' },
-                                ].map((c, i) => (
-                                    <div key={i} style={{ background: '#f0fdf4', borderRadius: '12px', padding: '24px', borderLeft: '4px solid #10b981' }}>
-                                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>{c.icon}</div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '16px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
-                                        <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: 1.6 }}>{c.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </section>
 
                     {/* ── FOOTER ── */}
