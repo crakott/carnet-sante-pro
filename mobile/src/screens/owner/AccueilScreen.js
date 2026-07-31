@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Linking } f
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Screen, ScreenTitle, Card, Button, Field, Input, Select, ModalSheet, Avatar, ListGroup, ListRow } from '../../components/ui';
+import { Screen, ScreenTitle, Card, Button, Field, Input, Select, ModalSheet, Avatar } from '../../components/ui';
 import AdBanner from '../../components/AdBanner';
 import TutorialOverlay from '../../components/TutorialOverlay';
 import SearchModal from '../../components/SearchModal';
@@ -44,27 +44,22 @@ const TUTORIAL_STEPS = [
 
 const emptyAnimal = { nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '', veterinaire: { nom: '', adresse: '', telephone: '' } };
 
-function VetBlock({ vet, isLast }) {
+function VetBlock({ vet }) {
   const hasPhone = vet?.telephone?.trim();
   const hasAddr = vet?.adresse?.trim();
   return (
-    <View style={[styles.vetBlock, !isLast && styles.vetBlockBorder]}>
-      <View style={styles.vetRow}>
-        <View style={styles.vetInfo}>
-          <Text style={styles.vetName}>🏥 {vet.nom}</Text>
-          {hasAddr ? <Text style={styles.vetAddr}>📍 {vet.adresse}</Text> : null}
-        </View>
-        {hasPhone ? (
-          <TouchableOpacity
-            style={styles.vetCallBtn}
-            onPress={() => Linking.openURL(`tel:${vet.telephone.replace(/\s/g, '')}`)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.vetCallIcon}>📞</Text>
-            <Text style={styles.vetCallText}>{vet.telephone}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+    <View style={styles.vetDetails}>
+      {hasAddr ? <Text style={styles.vetAddr}>📍 {vet.adresse}</Text> : null}
+      {hasPhone ? (
+        <TouchableOpacity
+          style={styles.vetCallBtn}
+          onPress={() => Linking.openURL(`tel:${vet.telephone.replace(/\s/g, '')}`)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.vetCallIcon}>📞</Text>
+          <Text style={styles.vetCallText}>{vet.telephone}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -79,6 +74,7 @@ export default function AccueilScreen() {
   const [editingAnimal, setEditingAnimal] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [search, setSearch] = useState('');
+  const [expandedVets, setExpandedVets] = useState(new Set());
 
   const lastOpenAdd = useRef(null);
   useEffect(() => {
@@ -120,6 +116,14 @@ export default function AccueilScreen() {
     }
   };
 
+  const toggleVet = (id) => {
+    setExpandedVets((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   const confirmDelete = (animal) => {
     Alert.alert('Supprimer', `Supprimer ${animal.nom} et tout son dossier ?`, [
       { text: 'Annuler', style: 'cancel' },
@@ -157,42 +161,56 @@ export default function AccueilScreen() {
       )}
 
       {filteredAnimals.length > 0 && (
-        <ListGroup>
-          {filteredAnimals.map((animal, i) => {
+        <View style={styles.animalList}>
+          {filteredAnimals.map((animal) => {
             const age = computeAge(animal.dateNaissance);
             const subtitle = [animal.race, age].filter(Boolean).join(' — ');
             const animalReminders = reminders.filter((r) => r.animal === animal.nom);
-            const pill = animalReminders.length > 0
-              ? { text: `${animalReminders.length} rappel${animalReminders.length > 1 ? 's' : ''}`, bg: colors.redLight, color: colors.pillRedText }
-              : { text: 'À jour', bg: colors.pillGreenBg, color: colors.pillGreenText };
+            const hasReminders = animalReminders.length > 0;
             const vet = animal.veterinaire;
             const hasVet = vet?.nom?.trim();
-            const isLast = i === filteredAnimals.length - 1;
+            const isVetExpanded = expandedVets.has(animal.id);
             return (
-              <React.Fragment key={animal.id}>
-                <ListRow
-                  last={!hasVet && isLast}
-                  left={<Avatar animal={animal} size={44} />}
-                  title={animal.nom}
-                  subtitle={subtitle}
-                  pill={pill}
+              <View key={animal.id} style={styles.animalCard}>
+                <TouchableOpacity
+                  style={styles.animalRow}
                   onPress={() => { setSelectedAnimal(animal.id); navigation.navigate('Dossier'); }}
-                  actions={
-                    <View style={styles.cardActions}>
-                      <TouchableOpacity onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })} style={styles.btnEdit}>
-                        <Text style={styles.btnEditText}>✎</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => confirmDelete(animal)} style={styles.btnDelete}>
-                        <Text style={styles.btnDeleteText}>✖</Text>
-                      </TouchableOpacity>
-                    </View>
-                  }
-                />
-                {hasVet && <VetBlock vet={vet} isLast={isLast} />}
-              </React.Fragment>
+                  activeOpacity={0.75}
+                >
+                  <Avatar animal={animal} size={52} />
+                  <View style={styles.animalInfo}>
+                    <Text style={styles.animalName} numberOfLines={1}>{animal.nom}</Text>
+                    {subtitle ? <Text style={styles.animalSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
+                  </View>
+                  <View style={[styles.badge, hasReminders ? styles.badgeRed : styles.badgeGreen]}>
+                    <Text style={[styles.badgeText, hasReminders ? styles.badgeTextRed : styles.badgeTextGreen]}>
+                      {hasReminders ? `${animalReminders.length} rappel${animalReminders.length > 1 ? 's' : ''}` : 'À jour'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setEditingAnimal({ ...animal, dateNaissance: isoToDisplay(animal.dateNaissance) })}
+                    style={styles.btnEdit}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.btnEditText}>✎</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => confirmDelete(animal)} style={styles.btnDelete} hitSlop={8}>
+                    <Text style={styles.btnDeleteText}>✖</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.chevron}>›</Text>
+                </TouchableOpacity>
+                {hasVet && (
+                  <TouchableOpacity style={styles.vetToggleRow} onPress={() => toggleVet(animal.id)} activeOpacity={0.7}>
+                    <Text style={styles.vetToggleIcon}>🩺</Text>
+                    <Text style={styles.vetToggleName} numberOfLines={1}>{vet.nom}</Text>
+                    <Text style={styles.vetToggleArrow}>{isVetExpanded ? '▲' : '▼'}</Text>
+                  </TouchableOpacity>
+                )}
+                {hasVet && isVetExpanded && <VetBlock vet={vet} />}
+              </View>
             );
           })}
-        </ListGroup>
+        </View>
       )}
 
       <Button title="➕ Ajouter un animal" onPress={() => setShowAdd(true)} />
@@ -343,21 +361,10 @@ function AnimalForm({ animal, setAnimal }) {
 }
 
 const styles = StyleSheet.create({
-  reminderBanner: {
-    backgroundColor: colors.yellowLight,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.yellow,
-  },
-  reminderTitle: {
-    color: '#d97706',
-    fontWeight: '700',
-    marginBottom: spacing.sm,
-  },
-  reminderItem: {
-    fontSize: 13,
-    color: colors.text,
-    marginBottom: 4,
-  },
+  reminderBanner: { backgroundColor: colors.yellowLight, borderLeftWidth: 4, borderLeftColor: colors.yellow },
+  reminderTitle: { color: '#d97706', fontWeight: '700', marginBottom: spacing.sm },
+  reminderItem: { fontSize: 13, color: colors.text, marginBottom: 4 },
+  reminderLink: { color: colors.primaryDark, fontWeight: '600', fontSize: 13, marginTop: spacing.xs },
   searchInput: {
     backgroundColor: colors.white,
     borderWidth: 1,
@@ -369,136 +376,79 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
   },
-  reminderLink: {
-    color: colors.primaryDark,
-    fontWeight: '600',
-    fontSize: 13,
-    marginTop: spacing.xs,
-  },
-  cardActions: {
-    flexDirection: 'column',
-    gap: 4,
-  },
-  btnEdit: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.blueLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnEditText: { color: colors.blue, fontSize: 16, fontWeight: '700' },
-  btnDelete: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.redLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnDeleteText: { color: colors.red, fontSize: 16, fontWeight: '700' },
-  photoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  error: {
-    color: colors.red,
-    fontSize: 12,
-    marginTop: spacing.xs,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: spacing.lg,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+  // Animal cards
+  animalList: { gap: spacing.sm, marginBottom: spacing.md },
+  animalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.inputBorder,
+    borderColor: '#d1fae5',
+    overflow: 'hidden',
+  },
+  animalRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkboxMark: {
-    color: colors.white,
-    fontWeight: '700',
-  },
-  checkboxLabel: {
-    fontSize: 14,
-    color: colors.text,
-  },
-  vetSectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  vetBlock: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
     backgroundColor: '#f0fdf4',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  },
+  animalInfo: { flex: 1 },
+  animalName: { fontSize: 16, fontWeight: '700', color: colors.text },
+  animalSubtitle: { fontSize: 13, color: colors.textLight, marginTop: 2 },
+  badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeGreen: { backgroundColor: colors.pillGreenBg },
+  badgeRed: { backgroundColor: colors.redLight },
+  badgeText: { fontSize: 12, fontWeight: '700' },
+  badgeTextGreen: { color: colors.pillGreenText },
+  badgeTextRed: { color: colors.pillRedText },
+  btnEdit: { width: 34, height: 34, borderRadius: 8, backgroundColor: colors.blueLight, alignItems: 'center', justifyContent: 'center' },
+  btnEditText: { color: colors.blue, fontSize: 16, fontWeight: '700' },
+  btnDelete: { width: 34, height: 34, borderRadius: 8, backgroundColor: colors.redLight, alignItems: 'center', justifyContent: 'center' },
+  btnDeleteText: { color: colors.red, fontSize: 16, fontWeight: '700' },
+  chevron: { fontSize: 22, color: '#10b981', marginLeft: 2 },
+  // Vet section
+  vetToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
+    backgroundColor: '#f0fdf4',
+    borderTopWidth: 1,
+    borderTopColor: '#d1fae5',
   },
-  vetBlockBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+  vetToggleIcon: { fontSize: 14 },
+  vetToggleName: { flex: 1, fontSize: 13, fontWeight: '700', color: '#065f46' },
+  vetToggleArrow: { fontSize: 11, color: '#065f46' },
+  vetDetails: {
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
   },
-  vetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  vetInfo: {
-    flex: 1,
-  },
-  vetName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#065f46',
-    marginBottom: 2,
-  },
-  vetAddr: {
-    fontSize: 11,
-    color: colors.textLight,
-    lineHeight: 15,
-  },
+  vetAddr: { fontSize: 12, color: colors.textLight },
   vetCallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    alignSelf: 'flex-start',
     backgroundColor: '#d1fae5',
     borderRadius: 8,
     paddingHorizontal: spacing.sm,
     paddingVertical: 7,
-    flexShrink: 0,
   },
-  vetCallIcon: {
-    fontSize: 13,
-  },
-  vetCallText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#065f46',
-  },
+  vetCallIcon: { fontSize: 13 },
+  vetCallText: { fontSize: 12, fontWeight: '700', color: '#065f46' },
+  // Form
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  error: { color: colors.red, fontSize: 12, marginTop: spacing.xs },
+  modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.lg },
+  modalActions: { flexDirection: 'row', gap: spacing.sm },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 1, borderColor: colors.inputBorder, alignItems: 'center', justifyContent: 'center' },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxMark: { color: colors.white, fontWeight: '700' },
+  checkboxLabel: { fontSize: 14, color: colors.text },
+  vetSectionTitle: { fontSize: 14, fontWeight: '700', color: colors.text, marginTop: spacing.sm, marginBottom: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
 });
