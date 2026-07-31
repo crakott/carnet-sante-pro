@@ -1888,66 +1888,15 @@
                     </section>
 
                     {/* ── GUIDE SANTÉ ── */}
-                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                    <section style={{ padding: '64px 20px', background: '#f9fafb' }}>
+                        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
                                 Guide de la santé animale
                             </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '52px', fontSize: '16px' }}>Tout ce qu'il faut savoir pour assurer le bien-être de votre animal au quotidien.</p>
-
-                            {/* Article 1 */}
-                            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '5px solid #10b981' }}>
-                                <h3 style={{ fontWeight: '800', fontSize: '20px', color: '#064e3b', marginBottom: '16px' }}>💉 Calendrier vaccinal du chien et du chat</h3>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
-                                    La vaccination est le pilier de la prévention des maladies infectieuses chez l'animal de compagnie. Elle doit débuter dès les premières semaines de vie et se poursuivre tout au long de la vie de l'animal, avec des rappels réguliers pour maintenir une immunité efficace.
-                                </p>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
-                                    <strong>Chez le chien</strong>, les vaccins essentiels (dit "core") sont : la maladie de Carré, la parvovirose, l'hépatite de Rubarth et la toux du chenil (trachéobronchite infectieuse). Le premier protocole commence à 6–8 semaines avec deux injections espacées de 3 à 4 semaines, puis un rappel à 1 an, et ensuite tous les 1 à 3 ans selon le vaccin et les recommandations du vétérinaire.
-                                </p>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '0' }}>
-                                    <strong>Chez le chat</strong>, les vaccins fondamentaux protègent contre la typhus (panleucopénie), le coryza (rhinotrachéite et calicivirose) et la leucose féline (FeLV). Le protocole débute entre 8 et 12 semaines, suivi d'un rappel à 1 an, puis tous les 1 à 3 ans. Le vaccin antirabique est obligatoire pour tout voyage à l'étranger ou dans certaines régions françaises. Carnet Santé PRO vous envoie un rappel automatique avant chaque échéance vaccinale, pour que vous ne ratiez jamais une injection.
-                                </p>
-                            </div>
-
-                            {/* Article 2 */}
-                            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '5px solid #7c3aed' }}>
-                                <h3 style={{ fontWeight: '800', fontSize: '20px', color: '#064e3b', marginBottom: '16px' }}>🦟 Antiparasitaires et vermifuges : fréquences recommandées</h3>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
-                                    Les parasites internes (vers) et externes (puces, tiques, moustiques) sont une menace permanente pour la santé de votre animal, et parfois pour la vôtre. Un protocole de prévention régulier est indispensable, même si votre animal ne sort pas ou peu.
-                                </p>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
-                                    <strong>Antiparasitaires externes :</strong> les puces sont actives toute l'année (y compris en intérieur grâce au chauffage). Les pipettes, colliers ou comprimés antiparasitaires doivent être renouvelés toutes les 4 à 12 semaines selon le produit. Les tiques sont particulièrement présentes au printemps et en automne et peuvent transmettre des maladies graves comme la maladie de Lyme ou la piroplasmose. Un traitement anti-tiques efficace est crucial si votre animal sort en forêt ou dans les hautes herbes.
-                                </p>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '0' }}>
-                                    <strong>Vermifuges :</strong> les chiots et chatons doivent être vermifugés toutes les 2 semaines jusqu'à 3 mois, puis tous les mois jusqu'à 6 mois. Ensuite, un vermifuge tous les 3 mois est recommandé pour les adultes vivant en extérieur, ou deux fois par an pour les animaux strictement d'intérieur. Le ténia (ver plat) se contracte souvent par ingestion de puces — d'où l'importance de coupler vermifuge et antiparasitaire externe. L'onglet Traitements de Carnet Santé PRO vous aide à suivre chaque produit et à planifier les prochains renouvellements.
-                                </p>
-                            </div>
-
-                            {/* Article 3 */}
-                            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b' }}>
-                                <h3 style={{ fontWeight: '800', fontSize: '20px', color: '#064e3b', marginBottom: '16px' }}>🚨 Signes d'alerte : quand consulter en urgence ?</h3>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
-                                    Savoir reconnaître un signe d'alarme peut faire la différence entre la vie et la mort de votre animal. Certains symptômes nécessitent une consultation vétérinaire immédiate, sans attendre le lendemain.
-                                </p>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                                    {[
-                                        { signal: 'Difficulté à respirer ou respiration haletante au repos', urgence: 'Urgence absolue' },
-                                        { signal: 'Abdomen gonflé ou douloureux (surtout chien de grande race)', urgence: 'Urgence absolue' },
-                                        { signal: 'Perte de connaissance ou convulsions', urgence: 'Urgence absolue' },
-                                        { signal: 'Sang dans les urines, les selles ou les vomissements', urgence: 'Consultation rapide' },
-                                        { signal: 'Refus de boire pendant plus de 24 heures', urgence: 'Consultation rapide' },
-                                        { signal: 'Boiterie soudaine ou douleur à la manipulation', urgence: 'Consultation rapide' },
-                                    ].map((s, i) => (
-                                        <div key={i} style={{ background: s.urgence === 'Urgence absolue' ? '#fff1f2' : '#fefce8', borderRadius: '8px', padding: '12px', border: `1px solid ${s.urgence === 'Urgence absolue' ? '#fecdd3' : '#fde68a'}` }}>
-                                            <span style={{ fontSize: '11px', fontWeight: '700', color: s.urgence === 'Urgence absolue' ? '#be123c' : '#92400e', display: 'block', marginBottom: '4px' }}>⚠️ {s.urgence}</span>
-                                            <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: 1.5 }}>{s.signal}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '0' }}>
-                                    En dehors des heures d'ouverture, consultez une clinique vétérinaire de garde. Grâce à la fiche de garde partageable de Carnet Santé PRO, le vétérinaire de garde peut accéder instantanément au dossier complet de votre animal — vaccins, allergies, traitements en cours — via un simple QR code accroché au collier, sans que vous ayez besoin de mémoriser toutes les informations.
-                                </p>
-                            </div>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '40px', fontSize: '16px' }}>Cliquez sur un sujet pour lire nos conseils détaillés.</p>
+                            <FaqItem q="💉 Calendrier vaccinal du chien et du chat" r="La vaccination est le pilier de la prévention des maladies infectieuses chez l'animal de compagnie. Elle doit débuter dès les premières semaines de vie et se poursuivre tout au long de la vie de l'animal, avec des rappels réguliers pour maintenir une immunité efficace. Chez le chien, les vaccins essentiels (dit « core ») sont : la maladie de Carré, la parvovirose, l'hépatite de Rubarth et la toux du chenil. Le premier protocole commence à 6–8 semaines avec deux injections espacées de 3 à 4 semaines, puis un rappel à 1 an, et ensuite tous les 1 à 3 ans. Chez le chat, les vaccins fondamentaux protègent contre la typhus (panleucopénie), le coryza et la leucose féline (FeLV). Le protocole débute entre 8 et 12 semaines, suivi d'un rappel à 1 an, puis tous les 1 à 3 ans. Le vaccin antirabique est obligatoire pour tout voyage à l'étranger. Carnet Santé PRO vous envoie un rappel automatique avant chaque échéance vaccinale." />
+                            <FaqItem q="🦟 Antiparasitaires et vermifuges : fréquences recommandées" r="Les parasites internes (vers) et externes (puces, tiques, moustiques) sont une menace permanente pour la santé de votre animal, et parfois pour la vôtre. Un protocole de prévention régulier est indispensable, même si votre animal ne sort pas ou peu. Pour les antiparasitaires externes : les pipettes, colliers ou comprimés doivent être renouvelés toutes les 4 à 12 semaines selon le produit. Les tiques sont particulièrement présentes au printemps et en automne et peuvent transmettre des maladies graves comme la piroplasmose. Pour les vermifuges : les chiots et chatons doivent être vermifugés toutes les 2 semaines jusqu'à 3 mois, puis tous les mois jusqu'à 6 mois, puis tous les 3 mois pour un adulte qui sort, ou deux fois par an en intérieur strict. Le ténia se contracte souvent par ingestion de puces — d'où l'importance de coupler vermifuge et antiparasitaire externe." />
+                            <FaqItem q="🚨 Signes d'alerte : quand consulter en urgence ?" r="Certains symptômes nécessitent une consultation vétérinaire immédiate, sans attendre le lendemain. Urgences absolues : difficulté à respirer ou respiration haletante au repos, abdomen gonflé ou douloureux (surtout chez un chien de grande race — risque de dilatation-torsion de l'estomac), perte de connaissance ou convulsions. Consultations rapides (dans les heures qui suivent) : sang dans les urines, selles ou vomissements, refus de boire pendant plus de 24 heures, boiterie soudaine ou vive douleur à la manipulation, œil rouge avec écoulement ou vision altérée. En dehors des heures d'ouverture, la fiche de garde QR code de Carnet Santé PRO permet au vétérinaire de garde d'accéder instantanément aux vaccins, allergies et traitements en cours de votre animal." />
                         </div>
                     </section>
 
