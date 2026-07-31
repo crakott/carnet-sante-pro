@@ -23,7 +23,8 @@ Application React (SPA, fichier unique `index.html`) + Firebase Auth/Firestore/F
 
 ## Branche de développement
 
-`claude/new-session-b39y6h`
+- **Web** : `claude/new-session-b39y6h`
+- **App mobile** : `claude/mobile-app-ios-android-e1ts6l`
 
 ## Espace Vétérinaire (pro) — abonnement payant 49,99 €/mois
 
@@ -54,10 +55,126 @@ ancien document (`userId == uid` mais ID aléatoire) est automatiquement migré 
 Champs :
 - `userId` : uid du propriétaire du document
 - `role` : `'proprietaire'` ou `'veterinaire'`
+- `nom`, `prenom`, `dateNaissance` : profil saisi à l'inscription (app mobile, format ISO pour la date)
 - `reminders` : préférences de rappels (`vaccin`, `medicament`, `antiparasitaire`, `vermifuge`)
+- `notificationsEnabled` (app mobile) : booléen — l'utilisateur a activé les notifications push
 - `subscriptionStatus` (vétérinaires uniquement) : `'inactive' | 'active' | 'past_due' | 'canceled' | ...`
   mis à jour par le webhook Stripe (`functions/index.js`)
 - `stripeCustomerId`, `stripeSubscriptionId` : identifiants Stripe associés au compte
+- `householdId` (app mobile) : identifiant du foyer partagé (voir section "Foyer partagé"
+  ci-dessous), absent/`null` si l'utilisateur n'a pas rejoint de foyer
+
+## App Mobile (`mobile/`)
+
+Dossier `mobile/` — application Expo (SDK 54 / React Native 0.81.5).
+
+> ⚠️ Le projet a été rétrogradé de SDK 56 à SDK 54 : Expo Go 56.0.1 a un bug connu
+> ([#46846](https://github.com/expo/expo/issues/46846)) rejetant tous les projets SDK 56.
+> SDK 54 est la dernière version stable disponible sur l'App Store / Play Store.
+
+### Stack mobile
+
+- Expo SDK 54 + React Native 0.81.5
+- Firebase v10 (Auth + Firestore — même projet que le web)
+- `expo-notifications` : notifications push locales planifiées
+- `expo-location` : géolocalisation pour trouver les vétérinaires (Overpass/OSM)
+- `expo-image-picker` : photo de profil des animaux (base64)
+- `expo-audio`, `expo-video` : journal de vie (enregistrements + vidéos locales)
+- `expo-file-system`, `expo-sharing`, `expo-document-picker` : export/import JSON
+- `react-native-qrcode-svg` : QR code Play Store dans Paramètres
+- `@react-native-async-storage/async-storage` : stockage local léger
+
+### Navigation
+
+Bottom Tab Navigator (`OwnerNavigator.js`) avec 5 onglets :
+
+| Onglet | Stack | Écrans |
+|--------|-------|--------|
+| 🏠 Accueil | AccueilStack | AccueilMain, Parametres |
+| 📋 Dossier | DossierStack | DossierMain, Vaccins, Medicaments, Chirurgies, Aliment, Notes, Messages, Journal, Documents, Videos, Poids, Planning, Budget |
+| ＋ (FAB) | — | Ouvre la modale "Ajouter un animal" sur AccueilMain via `route.params.openAdd` |
+| 🐾 Vétérinaires | VetStack | VeterinairesMain |
+| ⏰ Rappels | RappelsStack | RappelsMain |
+
+La roue dentée ⚙️ dans le header d'AccueilMain navigue vers `Parametres` (dans AccueilStack).
+
+### Contextes
+
+- **`AuthContext`** : auth Firebase, chargement de `settings/{uid}`, expose `user`, `userRole`,
+  `reminderSettings`, `householdId`, `nom`, `prenom`, `notificationsEnabled`, `reloadSettings`,
+  `signup(email, password, isVet, profile)`, `login`, `logout`, `resetPassword`, `saveReminderSettings`
+- **`AnimalsContext`** : liste des animaux (query `userId==uid` + `householdId==hId`), `selectedAnimal`,
+  `saveAnimal`, `deleteAnimal`, `updateAnimalFields`, `createHousehold`, `joinHousehold`, `leaveHousehold`
+
+### Écrans principaux
+
+**AccueilScreen** (`owner/AccueilScreen.js`)
+- Liste des animaux avec badge rappels (vert "À jour" / rouge "X rappels")
+- Modales Ajouter/Modifier animal (AnimalForm)
+- Champ date de naissance : saisie JJ/MM/AAAA (auto-slash), stockage AAAA-MM-JJ en Firestore
+
+**RappelsScreen** (`owner/RappelsScreen.js`)
+- Section "À FAIRE URGEMMENT" : items dont la date est dépassée ou proche du seuil (`getReminders`)
+- Sections par animal : toutes les échéances sans seuil (`getAnimalAllScheduled`)
+- Badges countdown : 🟢 "Dans X j" / 🔴 "En retard de X j"
+- Bouton 📅 par item urgent → email pré-rempli
+
+**VeterinairesScreen** (`owner/VeterinairesScreen.js`)
+- Géolocalisation → requête Overpass API (25 km, timeout 15s côté client)
+- Si Overpass OK → vrais vétérinaires OSM triés par distance
+- Si Overpass échoue/vide → bouton "🗺️ Chercher sur Google Maps" centré sur la position réelle
+- Avant géolocalisation → exemples fictifs (prévisualisation UI)
+
+**ParametresScreen** (`owner/ParametresScreen.js`) — accordéons :
+- 👤 Mon profil : email + nom/prénom (depuis l'inscription)
+- ⏰ Délais de rappels : seuils en jours par type (sauvegardés dans `settings/{uid}.reminders`)
+- 🔔 Notifications : toggle push + (si activé) délais par type + bouton "Planifier les rappels push"
+- 👥 Foyer partagé : créer/rejoindre/quitter
+- 📦 Sauvegarde : export JSON (avec/sans photos) + import
+- 📱 Partager l'app : QR code Play Store + bouton partage
+- ❓ FAQ : 32+ questions santé animale en 9 catégories + disclaimer
+- 💡 Suggestions : textarea → mailto carnetsante2@gmail.com
+
+**AuthScreen** (`auth/AuthScreen.js`) — inscription :
+- Mode inscription : Prénom, Nom, Date de naissance (JJ/MM/AAAA), Email, Mot de passe, case Vétérinaire
+- Mode connexion : Email, Mot de passe + lien "Mot de passe oublié"
+
+### Utilitaires clés
+
+- `utils/dates.js` : `formatDate`, `isoToDisplay`, `displayToIso`, `formatDateInput`, `computeAge`, `getCountdown`
+- `utils/reminders.js` : `getReminders` (seuil + overdue), `getAnimalAllScheduled` (tout sans seuil)
+- `utils/notifications.js` : `scheduleAnimalNotifications` (vaccins + traitements + antiparasitaires + vermifuges), `cancelAllNotifications`, `setupNotificationChannel`
+- `utils/vets.js` : `getDistanceKm` (Haversine), `fetchNearbyVets` (Overpass, 2 endpoints, AbortController 15s)
+
+### Notifications push
+
+- Planifiées localement via `expo-notifications` (`scheduleNotificationAsync`)
+- Déclencheur : `{ date: eventDate - X jours à 9h00 }`
+- Android : canal `carnet-sante-rappels` (HIGH importance)
+- Rescheduler via "🔔 Planifier les rappels push" dans Paramètres > Notifications
+- Préférence sauvegardée dans `settings/{uid}.notificationsEnabled`
+
+### Validation de build
+
+```bash
+cd mobile
+npx expo export --platform android --output-dir /tmp/export-test && rm -rf /tmp/export-test
+```
+
+## Foyer partagé (app mobile)
+
+Fonctionnalité disponible uniquement dans l'app mobile (`mobile/`). Permet à plusieurs comptes
+(ex : les membres d'un même foyer) de partager l'accès complet (lecture/écriture) à leurs
+animaux.
+
+- Collection `households/{householdId}` : `{ members: [uid, ...], createdAt }`. L'identifiant
+  (aléatoire) du document sert de **code d'invitation** : un utilisateur le saisit dans
+  "Paramètres > Foyer partagé > Rejoindre un foyer" pour devenir membre.
+- `settings/{uid}.householdId` : foyer auquel l'utilisateur appartient (le cas échéant).
+- `animals/{id}.householdId` : si renseigné, l'animal est visible et modifiable par tous les
+  membres du foyer correspondant (en plus de son propriétaire).
+- Créer un foyer ou en rejoindre un partage automatiquement tous les animaux du compte avec ce
+  foyer ; quitter un foyer retire le partage des animaux possédés par le compte.
 
 ## Règles Firestore (à jour)
 
@@ -69,7 +186,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /animals/{animalId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId
+
+        // Foyer partagé (mobile) : les membres du même foyer ont un accès complet
+        // aux animaux partagés avec ce foyer (champ householdId)
+        || (resource.data.householdId is string && resource.data.householdId != ''
+            && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members)
+      );
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
 
       // Vétérinaires "pro" abonnés : lecture de tout animal ayant un identifiant, écriture limitée
@@ -85,6 +209,25 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Foyer partagé (mobile) : un foyer est un groupe de comptes ("members") qui partagent
+    // l'accès aux animaux ayant le même householdId. L'identifiant (aléatoire) du document
+    // sert de code d'invitation : tout utilisateur connecté qui le connaît peut le lire pour
+    // rejoindre le foyer.
+    match /households/{householdId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.members == [request.auth.uid];
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && (
+          // un membre existant peut modifier la liste (ex : retirer un membre)
+          request.auth.uid in resource.data.members
+          // ou un nouveau membre peut s'ajouter lui-même (rejoindre via un code)
+          || (request.resource.data.members.size() == resource.data.members.size() + 1
+              && request.resource.data.members.hasAll(resource.data.members)
+              && request.auth.uid in request.resource.data.members)
+        );
     }
   }
 }

@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Carnet Santé PRO",
+    "slug": "carnet-sante-pro",
+    "extra": {
+      "eas": {
+        "projectId": "92e5ea22-a8b9-4ebc-8d26-d88ef3bdd51d"
+      }
+    },
+    "scheme": "carnetsantepro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#f9fafb",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.carnetsantepro.app"
+    },
+    "android": {
+      "package": "com.carnetsantepro.app",
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#10b981"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Carnet Santé PRO utilise votre position pour trouver les vétérinaires à proximité."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Carnet Santé PRO a besoin d'accéder à vos photos pour illustrer les observations de vos animaux."
+        }
+      ],
+      "expo-video",
+      "expo-asset",
+      "expo-web-browser"
+    ]
+  }
+}

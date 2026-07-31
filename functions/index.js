@@ -1,4 +1,5 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
@@ -11,6 +12,49 @@ const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 const stripePriceId = defineString('STRIPE_PRICE_ID');
 const appUrl = defineString('APP_URL');
+
+// Notifie le propriétaire d'un animal quand son vétérinaire lui envoie un message
+exports.onNewMessage = onDocumentCreated(
+  'animals/{animalId}/messages/{messageId}',
+  async (event) => {
+    if (!event.data) return;
+    const message = event.data.data();
+    if (!message || message.from !== 'veterinaire') return;
+
+    const animalId = event.params.animalId;
+    const db = admin.firestore();
+
+    const animalSnap = await db.doc('animals/' + animalId).get();
+    if (!animalSnap.exists) return;
+    const animal = animalSnap.data();
+
+    const settingsSnap = await db.doc('settings/' + animal.userId).get();
+    if (!settingsSnap.exists) return;
+    const fcmToken = settingsSnap.data().fcmToken;
+    if (!fcmToken) return;
+
+    const senderName = message.authorPrenom
+      ? ('Dr. ' + message.authorPrenom + ' ' + (message.authorNom || '')).trim()
+      : 'Votre vétérinaire';
+    const body = message.text
+      ? senderName + ' : ' + message.text.substring(0, 120)
+      : senderName + ' vous a envoyé un message';
+
+    await admin.messaging().send({
+      token: fcmToken,
+      notification: {
+        title: '💬 Nouveau message — ' + (animal.nom || 'votre animal'),
+        body: body,
+      },
+      data: { type: 'message', animalId: animalId },
+      android: {
+        channelId: 'carnet-sante-messages',
+        priority: 'high',
+        notification: { sound: 'default', defaultSound: true },
+      },
+    });
+  }
+);
 
 // Crée une session Stripe Checkout pour l'abonnement mensuel "Espace Vétérinaire" (49,99 €/mois)
 exports.createCheckoutSession = onCall({ region: REGION, secrets: [stripeSecretKey] }, async (request) => {
