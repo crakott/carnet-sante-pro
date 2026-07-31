@@ -1879,7 +1879,66 @@
                         </div>
                     </section>
 
-                    {/* ── 2. ARGUMENT CLÉ — QR CODE URGENCE ── */}
+                    {/* ── POURQUOI UTILISER CARNET SANTÉ PRO ? ── */}
+                    <section style={{ padding: '48px 20px', background: 'white' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
+                                Pourquoi utiliser Carnet Santé PRO ?
+                            </h2>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '32px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+                                {[
+                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose ou le coryza. Un carnet à jour est obligatoire pour certains voyages, la pension ou le toilettage. Une alerte configurée quelques semaines avant vous évite d\'oublier une injection.' },
+                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et moustiques représentent un risque toute l\'année, y compris en appartement. Les tiques véhiculent des maladies sérieuses comme la piroplasmose. Un traitement renouvelé toutes les 4 à 12 semaines protège efficacement votre animal et votre foyer.' },
+                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité touche près d\'un animal sur deux en France. Pesez votre animal chaque mois et suivez la courbe dans l\'app. Une variation rapide peut aussi signaler une maladie à ne pas ignorer.' },
+                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent plus de 80 % des chiens et chats de plus de 3 ans. Un brossage hebdomadaire et un détartrage annuel suffisent à maintenir une bonne santé bucco-dentaire.' },
+                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime dans l\'app pour faciliter les ajustements lors des consultations vétérinaires.' },
+                                    { icon: '📋', title: 'Dossier médical centralisé', text: 'Chirurgies passées, allergies, analyses, traitements en cours : votre vétérinaire a besoin de l\'historique complet. En cas d\'urgence, le QR code du collier lui donne accès en quelques secondes.' },
+                                ].map((c, i) => (
+                                    <div key={i} style={{ background: '#f9fafb', borderRadius: '12px', padding: '22px', border: '1px solid #e5e7eb' }}>
+                                        <div style={{ fontSize: '28px', marginBottom: '10px' }}>{c.icon}</div>
+                                        <h3 style={{ fontWeight: '700', fontSize: '15px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
+                                        <p style={{ color: '#4b5563', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{c.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── FONCTIONNALITÉS ── */}
+                    <section style={{ padding: '48px 20px', background: '#f9fafb' }}>
+                        <div style={{ maxWidth: '980px', margin: '0 auto' }}>
+                            <h2 style={{ textAlign: 'center', fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
+                                Toutes les fonctionnalités
+                            </h2>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '28px', fontSize: '16px' }}>
+                                Du suivi quotidien aux situations d'urgence — une application complète.
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                                {[
+                                    { emoji: '💉', bg: '#ecfdf5', title: 'Vaccins & rappels', desc: 'Enregistrez chaque vaccination et recevez une notification avant la date de rappel. Ne ratez plus jamais une injection importante.' },
+                                    { emoji: '💊', bg: '#eff6ff', title: 'Traitements & médicaments', desc: 'Suivez les traitements en cours, les antiparasitaires et les vermifuges avec leurs dates de renouvellement et heures de prise.' },
+                                    { emoji: '🔍', bg: '#fff1f2', title: 'Affiche perdu / trouvé', desc: 'Générez une affiche A4 imprimable avec photo, QR code et coordonnées — rouge si l\'animal est perdu, verte s\'il est trouvé.' },
+                                    { emoji: '✈️', bg: '#fef3c7', title: 'Fiche voyage', desc: 'Checklist voyage France / Europe / International, rappels vaccins obligatoires, passeport animal — tout dans un PDF imprimable.' },
+                                    { emoji: '🔗', bg: '#f5f3ff', title: 'Fiche de garde QR code', desc: 'QR code à accrocher au collier : le dossier est consultable sans connexion par n\'importe quel vétérinaire de garde.' },
+                                    { emoji: '👨‍👩‍👧', bg: '#fdf4ff', title: 'Foyer partagé', desc: 'Partagez l\'accès aux carnets de tous vos animaux avec les membres de votre famille, en lecture et en écriture.' },
+                                    { emoji: '📶', bg: '#f0fdf4', title: 'Fonctionne hors ligne', desc: 'Consultez et modifiez les dossiers même sans connexion. La synchronisation se fait automatiquement au retour du réseau.' },
+                                    { emoji: '🔔', bg: '#fefce8', title: 'Notifications push', desc: 'Recevez des rappels même téléphone verrouillé : vaccins à venir, doses de médicaments, renouvellements antiparasitaires.' },
+                                    { emoji: '⚖️', bg: '#fff7ed', title: 'Courbe de poids', desc: 'Suivez l\'évolution du poids sur un graphique et fixez un objectif. Idéal pour détecter les variations anormales.' },
+                                ].map((f, i) => (
+                                    <div key={i} style={{ background: 'white', borderRadius: '14px', padding: '24px', border: '1px solid #e5e7eb', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                        <div style={{ width: '46px', height: '46px', background: f.bg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>{f.emoji}</div>
+                                        <div>
+                                            <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '6px', color: '#111827' }}>{f.title}</h3>
+                                            <p style={{ color: '#6b7280', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── QR CODE & URGENCE ── */}
                     <section style={{ padding: '48px 20px', background: '#111827' }}>
                         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
                             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
@@ -1926,7 +1985,56 @@
                         </div>
                     </section>
 
-                    {/* ── 4. COMMENT ÇA MARCHE ── */}
+                    {/* ── 5. ESPACE VÉTÉRINAIRE ── */}
+                    <section style={{ padding: '48px 20px', background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '48px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <div style={{ flex: '1 1 340px', color: 'white' }}>
+                                    <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: '700', marginBottom: '20px', color: '#a7f3d0' }}>🩺 POUR LES PROFESSIONNELS</div>
+                                    <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '16px', lineHeight: 1.2 }}>
+                                        Espace vétérinaire professionnel
+                                    </h2>
+                                    <p style={{ color: '#d1fae5', fontSize: '16px', lineHeight: 1.7, marginBottom: '28px' }}>
+                                        Accédez au dossier complet de vos patients en quelques secondes. Ajoutez des actes médicaux avec badge professionnel, rédigez des notes de consultation et communiquez directement avec les propriétaires.
+                                    </p>
+                                    <div style={{ display: 'grid', gap: '12px', marginBottom: '32px' }}>
+                                        {[
+                                            '🔎 Recherche par numéro de puce ou nom du propriétaire',
+                                            '✅ Actes médicaux identifiés avec badge professionnel',
+                                            '📝 Notes de consultation et comptes-rendus numériques',
+                                            '💬 Messagerie sécurisée avec le propriétaire',
+                                            '📊 Historique complet : vaccins, chirurgies, poids',
+                                        ].map((item, i) => (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ecfdf5', fontSize: '14px' }}>
+                                                <span>{item}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                                        <button onClick={() => { setProMode(true); setShowForm(true); }}
+                                            style={{ padding: '14px 28px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
+                                            Accéder à l'espace vétérinaire →
+                                        </button>
+                                    </div>
+                                </div>
+                                <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '220px' }}>
+                                    {[
+                                        { icon: '⚡', label: 'Accès rapide', desc: 'Dossier patient disponible immédiatement' },
+                                        { icon: '🩺', label: 'Badge professionnel', desc: 'Chaque acte clairement identifié comme acte pro' },
+                                        { icon: '📱', label: 'Zéro installation', desc: '100 % web, fonctionne sur tous les appareils' },
+                                    ].map((stat, i) => (
+                                        <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px 24px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
+                                            <div style={{ fontSize: '28px', marginBottom: '4px' }}>{stat.icon}</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#34d399', marginBottom: '4px' }}>{stat.label}</div>
+                                            <div style={{ fontSize: '12px', color: '#d1fae5' }}>{stat.desc}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── COMMENT ÇA MARCHE ? ── */}
                     <section style={{ padding: '48px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b', textAlign: 'center' }}>
@@ -2004,114 +2112,6 @@
                                     </div>
                                 </div>
 
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* ── 3. FONCTIONNALITÉS ── */}
-                    <section style={{ padding: '48px 20px', background: '#f9fafb' }}>
-                        <div style={{ maxWidth: '980px', margin: '0 auto' }}>
-                            <h2 style={{ textAlign: 'center', fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
-                                Toutes les fonctionnalités
-                            </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '28px', fontSize: '16px' }}>
-                                Du suivi quotidien aux situations d'urgence — une application complète.
-                            </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                                {[
-                                    { emoji: '💉', bg: '#ecfdf5', title: 'Vaccins & rappels', desc: 'Enregistrez chaque vaccination et recevez une notification avant la date de rappel. Ne ratez plus jamais une injection importante.' },
-                                    { emoji: '💊', bg: '#eff6ff', title: 'Traitements & médicaments', desc: 'Suivez les traitements en cours, les antiparasitaires et les vermifuges avec leurs dates de renouvellement et heures de prise.' },
-                                    { emoji: '🔍', bg: '#fff1f2', title: 'Affiche perdu / trouvé', desc: 'Générez une affiche A4 imprimable avec photo, QR code et coordonnées — rouge si l\'animal est perdu, verte s\'il est trouvé.' },
-                                    { emoji: '✈️', bg: '#fef3c7', title: 'Fiche voyage', desc: 'Checklist voyage France / Europe / International, rappels vaccins obligatoires, passeport animal — tout dans un PDF imprimable.' },
-                                    { emoji: '🔗', bg: '#f5f3ff', title: 'Fiche de garde QR code', desc: 'QR code à accrocher au collier : le dossier est consultable sans connexion par n\'importe quel vétérinaire de garde.' },
-                                    { emoji: '👨‍👩‍👧', bg: '#fdf4ff', title: 'Foyer partagé', desc: 'Partagez l\'accès aux carnets de tous vos animaux avec les membres de votre famille, en lecture et en écriture.' },
-                                    { emoji: '📶', bg: '#f0fdf4', title: 'Fonctionne hors ligne', desc: 'Consultez et modifiez les dossiers même sans connexion. La synchronisation se fait automatiquement au retour du réseau.' },
-                                    { emoji: '🔔', bg: '#fefce8', title: 'Notifications push', desc: 'Recevez des rappels même téléphone verrouillé : vaccins à venir, doses de médicaments, renouvellements antiparasitaires.' },
-                                    { emoji: '⚖️', bg: '#fff7ed', title: 'Courbe de poids', desc: 'Suivez l\'évolution du poids sur un graphique et fixez un objectif. Idéal pour détecter les variations anormales.' },
-                                ].map((f, i) => (
-                                    <div key={i} style={{ background: 'white', borderRadius: '14px', padding: '24px', border: '1px solid #e5e7eb', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                                        <div style={{ width: '46px', height: '46px', background: f.bg, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>{f.emoji}</div>
-                                        <div>
-                                            <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '6px', color: '#111827' }}>{f.title}</h3>
-                                            <p style={{ color: '#6b7280', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{f.desc}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* ── 4. POURQUOI C'EST UTILE ── */}
-                    <section style={{ padding: '48px 20px', background: 'white' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
-                                Pourquoi c'est utile ?
-                            </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '32px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé.</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
-                                {[
-                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose ou le coryza. Un carnet à jour est obligatoire pour certains voyages, la pension ou le toilettage. Une alerte configurée quelques semaines avant vous évite d\'oublier une injection.' },
-                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et moustiques représentent un risque toute l\'année, y compris en appartement. Les tiques véhiculent des maladies sérieuses comme la piroplasmose. Un traitement renouvelé toutes les 4 à 12 semaines protège efficacement votre animal et votre foyer.' },
-                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité touche près d\'un animal sur deux en France. Pesez votre animal chaque mois et suivez la courbe dans l\'app. Une variation rapide peut aussi signaler une maladie à ne pas ignorer.' },
-                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent plus de 80 % des chiens et chats de plus de 3 ans. Un brossage hebdomadaire et un détartrage annuel suffisent à maintenir une bonne santé bucco-dentaire.' },
-                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime dans l\'app pour faciliter les ajustements lors des consultations vétérinaires.' },
-                                    { icon: '📋', title: 'Dossier médical centralisé', text: 'Chirurgies passées, allergies, analyses, traitements en cours : votre vétérinaire a besoin de l\'historique complet. En cas d\'urgence, le QR code du collier lui donne accès en quelques secondes.' },
-                                ].map((c, i) => (
-                                    <div key={i} style={{ background: '#f9fafb', borderRadius: '12px', padding: '22px', border: '1px solid #e5e7eb' }}>
-                                        <div style={{ fontSize: '28px', marginBottom: '10px' }}>{c.icon}</div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '15px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
-                                        <p style={{ color: '#4b5563', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{c.text}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* ── 5. ESPACE VÉTÉRINAIRE ── */}
-                    <section style={{ padding: '48px 20px', background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '48px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                <div style={{ flex: '1 1 340px', color: 'white' }}>
-                                    <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: '700', marginBottom: '20px', color: '#a7f3d0' }}>🩺 POUR LES PROFESSIONNELS</div>
-                                    <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '16px', lineHeight: 1.2 }}>
-                                        Espace vétérinaire professionnel
-                                    </h2>
-                                    <p style={{ color: '#d1fae5', fontSize: '16px', lineHeight: 1.7, marginBottom: '28px' }}>
-                                        Accédez au dossier complet de vos patients en quelques secondes. Ajoutez des actes médicaux avec badge professionnel, rédigez des notes de consultation et communiquez directement avec les propriétaires.
-                                    </p>
-                                    <div style={{ display: 'grid', gap: '12px', marginBottom: '32px' }}>
-                                        {[
-                                            '🔎 Recherche par numéro de puce ou nom du propriétaire',
-                                            '✅ Actes médicaux identifiés avec badge professionnel',
-                                            '📝 Notes de consultation et comptes-rendus numériques',
-                                            '💬 Messagerie sécurisée avec le propriétaire',
-                                            '📊 Historique complet : vaccins, chirurgies, poids',
-                                        ].map((item, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ecfdf5', fontSize: '14px' }}>
-                                                <span>{item}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                                        <button onClick={() => { setProMode(true); setShowForm(true); }}
-                                            style={{ padding: '14px 28px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }}>
-                                            Accéder à l'espace vétérinaire →
-                                        </button>
-                                    </div>
-                                </div>
-                                <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '12px', minWidth: '220px' }}>
-                                    {[
-                                        { icon: '⚡', label: 'Accès rapide', desc: 'Dossier patient disponible immédiatement' },
-                                        { icon: '🩺', label: 'Badge professionnel', desc: 'Chaque acte clairement identifié comme acte pro' },
-                                        { icon: '📱', label: 'Zéro installation', desc: '100 % web, fonctionne sur tous les appareils' },
-                                    ].map((stat, i) => (
-                                        <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px 24px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
-                                            <div style={{ fontSize: '28px', marginBottom: '4px' }}>{stat.icon}</div>
-                                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#34d399', marginBottom: '4px' }}>{stat.label}</div>
-                                            <div style={{ fontSize: '12px', color: '#d1fae5' }}>{stat.desc}</div>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
                         </div>
                     </section>
