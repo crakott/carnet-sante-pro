@@ -1831,7 +1831,54 @@
                         </div>
                     </section>
 
-                    {/* ── 2. COMMENT ÇA MARCHE ── */}
+                    {/* ── 2. ARGUMENT CLÉ — QR CODE URGENCE ── */}
+                    <section style={{ padding: '72px 20px', background: '#111827' }}>
+                        <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+                            <div style={{ textAlign: 'center', marginBottom: '52px' }}>
+                                <div style={{ display: 'inline-block', background: '#ef4444', borderRadius: '8px', padding: '6px 16px', fontSize: '13px', fontWeight: '700', color: 'white', marginBottom: '20px', letterSpacing: '0.05em' }}>🚨 EN CAS D'URGENCE</div>
+                                <h2 style={{ fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: '800', color: 'white', lineHeight: 1.2, marginBottom: '16px' }}>
+                                    Les informations vitales de votre animal,<br />accessibles en quelques secondes.
+                                </h2>
+                                <p style={{ color: '#9ca3af', fontSize: '16px', maxWidth: '580px', margin: '0 auto', lineHeight: 1.7 }}>
+                                    Vaccins, allergies, traitements en cours, contacts d'urgence — tout est là, même si vous n'êtes pas joignable.
+                                </p>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
+                                {[
+                                    {
+                                        num: '1', icon: '📋', color: '#3b82f6',
+                                        title: 'Créez le profil de votre animal',
+                                        desc: 'Renseignez son identité, ses vaccins, ses traitements en cours, ses allergies et ses documents médicaux importants.',
+                                    },
+                                    {
+                                        num: '2', icon: '🔗', color: '#10b981',
+                                        title: 'Ajoutez le QR code à son collier',
+                                        desc: 'Un QR code unique est généré. Toute personne qui retrouve votre animal peut accéder aux informations que vous choisissez de partager.',
+                                    },
+                                    {
+                                        num: '3', icon: '🩺', color: '#f59e0b',
+                                        title: 'Le vétérinaire consulte le dossier',
+                                        desc: 'En cas d\'urgence, le vétérinaire de garde accède instantanément aux informations utiles — même sans vous avoir au téléphone.',
+                                    },
+                                ].map((s, i) => (
+                                    <div key={i} style={{ background: '#1f2937', borderRadius: '16px', padding: '28px', border: '1px solid #374151', position: 'relative', overflow: 'hidden' }}>
+                                        <div style={{ position: 'absolute', top: '16px', right: '16px', fontSize: '36px', opacity: 0.08 }}>{s.icon}</div>
+                                        <div style={{ width: '40px', height: '40px', background: s.color, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '800', color: 'white', marginBottom: '18px' }}>{s.num}</div>
+                                        <h3 style={{ fontWeight: '700', fontSize: '16px', color: 'white', marginBottom: '10px', lineHeight: 1.3 }}>{s.title}</h3>
+                                        <p style={{ color: '#9ca3af', fontSize: '14px', lineHeight: 1.7, margin: 0 }}>{s.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+                                <button onClick={() => setShowForm(true)}
+                                    style={{ padding: '14px 32px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
+                                    Créer la fiche de mon animal →
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── 4. COMMENT ÇA MARCHE ── */}
                     <section style={{ padding: '72px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
