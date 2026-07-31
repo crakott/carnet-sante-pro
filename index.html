@@ -1887,20 +1887,87 @@
                         </div>
                     </section>
 
+                    {/* ── GUIDE SANTÉ ── */}
+                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
+                                Guide de la santé animale
+                            </h2>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '52px', fontSize: '16px' }}>Tout ce qu'il faut savoir pour assurer le bien-être de votre animal au quotidien.</p>
+
+                            {/* Article 1 */}
+                            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '5px solid #10b981' }}>
+                                <h3 style={{ fontWeight: '800', fontSize: '20px', color: '#064e3b', marginBottom: '16px' }}>💉 Calendrier vaccinal du chien et du chat</h3>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
+                                    La vaccination est le pilier de la prévention des maladies infectieuses chez l'animal de compagnie. Elle doit débuter dès les premières semaines de vie et se poursuivre tout au long de la vie de l'animal, avec des rappels réguliers pour maintenir une immunité efficace.
+                                </p>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
+                                    <strong>Chez le chien</strong>, les vaccins essentiels (dit "core") sont : la maladie de Carré, la parvovirose, l'hépatite de Rubarth et la toux du chenil (trachéobronchite infectieuse). Le premier protocole commence à 6–8 semaines avec deux injections espacées de 3 à 4 semaines, puis un rappel à 1 an, et ensuite tous les 1 à 3 ans selon le vaccin et les recommandations du vétérinaire.
+                                </p>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '0' }}>
+                                    <strong>Chez le chat</strong>, les vaccins fondamentaux protègent contre la typhus (panleucopénie), le coryza (rhinotrachéite et calicivirose) et la leucose féline (FeLV). Le protocole débute entre 8 et 12 semaines, suivi d'un rappel à 1 an, puis tous les 1 à 3 ans. Le vaccin antirabique est obligatoire pour tout voyage à l'étranger ou dans certaines régions françaises. Carnet Santé PRO vous envoie un rappel automatique avant chaque échéance vaccinale, pour que vous ne ratiez jamais une injection.
+                                </p>
+                            </div>
+
+                            {/* Article 2 */}
+                            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '5px solid #7c3aed' }}>
+                                <h3 style={{ fontWeight: '800', fontSize: '20px', color: '#064e3b', marginBottom: '16px' }}>🦟 Antiparasitaires et vermifuges : fréquences recommandées</h3>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
+                                    Les parasites internes (vers) et externes (puces, tiques, moustiques) sont une menace permanente pour la santé de votre animal, et parfois pour la vôtre. Un protocole de prévention régulier est indispensable, même si votre animal ne sort pas ou peu.
+                                </p>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
+                                    <strong>Antiparasitaires externes :</strong> les puces sont actives toute l'année (y compris en intérieur grâce au chauffage). Les pipettes, colliers ou comprimés antiparasitaires doivent être renouvelés toutes les 4 à 12 semaines selon le produit. Les tiques sont particulièrement présentes au printemps et en automne et peuvent transmettre des maladies graves comme la maladie de Lyme ou la piroplasmose. Un traitement anti-tiques efficace est crucial si votre animal sort en forêt ou dans les hautes herbes.
+                                </p>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '0' }}>
+                                    <strong>Vermifuges :</strong> les chiots et chatons doivent être vermifugés toutes les 2 semaines jusqu'à 3 mois, puis tous les mois jusqu'à 6 mois. Ensuite, un vermifuge tous les 3 mois est recommandé pour les adultes vivant en extérieur, ou deux fois par an pour les animaux strictement d'intérieur. Le ténia (ver plat) se contracte souvent par ingestion de puces — d'où l'importance de coupler vermifuge et antiparasitaire externe. L'onglet Traitements de Carnet Santé PRO vous aide à suivre chaque produit et à planifier les prochains renouvellements.
+                                </p>
+                            </div>
+
+                            {/* Article 3 */}
+                            <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '5px solid #f59e0b' }}>
+                                <h3 style={{ fontWeight: '800', fontSize: '20px', color: '#064e3b', marginBottom: '16px' }}>🚨 Signes d'alerte : quand consulter en urgence ?</h3>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '14px' }}>
+                                    Savoir reconnaître un signe d'alarme peut faire la différence entre la vie et la mort de votre animal. Certains symptômes nécessitent une consultation vétérinaire immédiate, sans attendre le lendemain.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                                    {[
+                                        { signal: 'Difficulté à respirer ou respiration haletante au repos', urgence: 'Urgence absolue' },
+                                        { signal: 'Abdomen gonflé ou douloureux (surtout chien de grande race)', urgence: 'Urgence absolue' },
+                                        { signal: 'Perte de connaissance ou convulsions', urgence: 'Urgence absolue' },
+                                        { signal: 'Sang dans les urines, les selles ou les vomissements', urgence: 'Consultation rapide' },
+                                        { signal: 'Refus de boire pendant plus de 24 heures', urgence: 'Consultation rapide' },
+                                        { signal: 'Boiterie soudaine ou douleur à la manipulation', urgence: 'Consultation rapide' },
+                                    ].map((s, i) => (
+                                        <div key={i} style={{ background: s.urgence === 'Urgence absolue' ? '#fff1f2' : '#fefce8', borderRadius: '8px', padding: '12px', border: `1px solid ${s.urgence === 'Urgence absolue' ? '#fecdd3' : '#fde68a'}` }}>
+                                            <span style={{ fontSize: '11px', fontWeight: '700', color: s.urgence === 'Urgence absolue' ? '#be123c' : '#92400e', display: 'block', marginBottom: '4px' }}>⚠️ {s.urgence}</span>
+                                            <p style={{ fontSize: '13px', color: '#374151', margin: 0, lineHeight: 1.5 }}>{s.signal}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.8, marginBottom: '0' }}>
+                                    En dehors des heures d'ouverture, consultez une clinique vétérinaire de garde. Grâce à la fiche de garde partageable de Carnet Santé PRO, le vétérinaire de garde peut accéder instantanément au dossier complet de votre animal — vaccins, allergies, traitements en cours — via un simple QR code accroché au collier, sans que vous ayez besoin de mémoriser toutes les informations.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
                     {/* ── FAQ ── */}
-                    <section style={{ padding: '64px 20px', background: '#f9fafb' }}>
+                    <section style={{ padding: '64px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '40px', color: '#064e3b' }}>
                                 Questions fréquentes
                             </h2>
                             {[
-                                { q: 'Carnet Santé PRO est-il gratuit ?', r: 'Oui, l\'application est entièrement gratuite pour les propriétaires d\'animaux. Un abonnement mensuel est uniquement requis pour l\'espace vétérinaire professionnel (49,99 €/mois).' },
-                                { q: 'Mes données sont-elles sécurisées ?', r: 'Toutes vos données sont stockées de manière sécurisée sur les serveurs Firebase de Google, chiffrées en transit et au repos. Seuls vous et les vétérinaires que vous autorisez peuvent accéder au dossier de votre animal.' },
-                                { q: 'Puis-je utiliser l\'application sans connexion internet ?', r: 'Oui, Carnet Santé PRO fonctionne hors ligne grâce à la persistance locale. Vos modifications sont synchronisées automatiquement dès que vous retrouvez une connexion.' },
-                                { q: 'Comment fonctionne le partage du dossier avec mon vétérinaire ?', r: 'Votre vétérinaire peut rechercher votre animal par son identifiant (numéro de puce) ou par son nom et vos coordonnées. Il peut consulter le dossier complet et y ajouter des actes médicaux validés.' },
-                                { q: 'Comment activer les notifications de rappels ?', r: 'Dans l\'onglet Paramètres, activez les notifications push et configurez le nombre de jours d\'avance souhaité pour chaque type de rappel (vaccins, traitements, antiparasitaires, vermifuges).' },
-                                { q: 'Puis-je partager les animaux avec ma famille ?', r: 'Oui, la fonctionnalité "Foyer partagé" permet à plusieurs membres d\'une même famille de gérer ensemble les carnets de santé de tous les animaux du foyer.' },
-                                { q: 'Comment installer l\'application sur mon téléphone ?', r: '📱 Android (Chrome) : appuyez sur le menu ⋮ en haut à droite, puis "Ajouter à l\'écran d\'accueil" ou "Installer l\'application". 🍎 iPhone (Safari) : appuyez sur le bouton Partager ⬆️ en bas, puis "Sur l\'écran d\'accueil". L\'app s\'installe comme une application native, sans passer par un store.' },
+                                { q: 'Carnet Santé PRO est-il gratuit ?', r: 'Oui, l\'application est entièrement gratuite pour les propriétaires d\'animaux. Toutes les fonctionnalités — suivi des vaccins et traitements, rappels automatiques, calendrier, fiche voyage, affiche perdu/trouvé, partage en famille — sont incluses sans abonnement ni limite d\'animaux. Un abonnement mensuel (49,99 €/mois) est uniquement requis pour l\'espace vétérinaire professionnel, qui donne accès à la recherche d\'animaux par identifiant et à l\'ajout d\'actes médicaux validés.' },
+                                { q: 'Mes données sont-elles sécurisées ?', r: 'Toutes vos données sont stockées de manière sécurisée sur les serveurs Firebase de Google, certifiés ISO 27001, chiffrées en transit (TLS) et au repos (AES-256). Seuls vous et les vétérinaires que vous autorisez explicitement peuvent accéder au dossier de votre animal. Vous pouvez supprimer votre compte et toutes vos données à tout moment depuis les paramètres de l\'application.' },
+                                { q: 'Combien d\'animaux puis-je enregistrer ?', r: 'Il n\'y a aucune limite au nombre d\'animaux que vous pouvez ajouter dans Carnet Santé PRO. Que vous ayez un seul chat ou une dizaine d\'animaux (chiens, chats, lapins, chevaux, oiseaux, rongeurs…), chaque animal dispose de son propre carnet de santé complet avec photo, profil, historique médical et rappels personnalisés.' },
+                                { q: 'Puis-je utiliser l\'application sans connexion internet ?', r: 'Oui, Carnet Santé PRO fonctionne hors ligne grâce à la persistance locale IndexedDB. Vous pouvez consulter les dossiers de vos animaux, ajouter des informations et recevoir des rappels même sans réseau. Toutes vos modifications sont synchronisées automatiquement dès que vous retrouvez une connexion internet.' },
+                                { q: 'Comment fonctionne le partage du dossier avec mon vétérinaire ?', r: 'Deux options existent. (1) Fiche de garde QR code : activez le partage depuis l\'onglet Dossier de votre animal, puis accrochez le QR code généré au collier. N\'importe quel vétérinaire peut scanner ce QR pour voir le dossier résumé (vaccins, traitements, allergies) sans avoir de compte. (2) Espace vétérinaire pro : votre vétérinaire abonné peut rechercher votre animal par numéro de puce ou par votre nom, consulter le dossier complet et y ajouter des actes médicaux validés avec son badge professionnel.' },
+                                { q: 'À quelle fréquence faut-il vermifuger son chien ou son chat ?', r: 'Les recommandations générales sont : toutes les 2 semaines jusqu\'à 3 mois, puis une fois par mois jusqu\'à 6 mois, puis tous les 3 mois pour un animal qui sort régulièrement, ou deux fois par an pour un animal strictement d\'intérieur. Ces fréquences peuvent varier selon le mode de vie de l\'animal et les conseils de votre vétérinaire. Carnet Santé PRO vous envoie un rappel automatique avant chaque renouvellement.' },
+                                { q: 'Comment activer les notifications de rappels ?', r: 'Dans l\'onglet Paramètres de l\'application, appuyez sur "Activer les notifications push" et acceptez la demande de permission de votre navigateur. Vous pouvez ensuite configurer individuellement le nombre de jours d\'avance pour chaque type de rappel : vaccins, traitements médicamenteux, antiparasitaires et vermifuges. Les rappels fonctionnent même lorsque l\'application est fermée, et arrivent même sur un téléphone verrouillé si la clé VAPID est configurée.' },
+                                { q: 'Puis-je partager les animaux avec ma famille ?', r: 'Oui, la fonctionnalité "Foyer partagé" (dans Paramètres) permet à plusieurs membres d\'une même famille de gérer ensemble les carnets de santé de tous les animaux du foyer. Le créateur du foyer génère un QR code d\'invitation ; chaque membre qui le scanne (et accepte) obtient un accès complet (lecture et écriture) à tous les animaux partagés, exactement comme le propriétaire principal.' },
+                                { q: 'Comment installer l\'application sur mon téléphone ?', r: '📱 Android (Chrome) : appuyez sur le menu ⋮ en haut à droite, puis "Ajouter à l\'écran d\'accueil" ou "Installer l\'application". 🍎 iPhone (Safari) : appuyez sur le bouton Partager ⬆️ en bas, puis "Sur l\'écran d\'accueil". L\'app s\'installe comme une application native, sans passer par un store, sans publicité obligatoire, et se met à jour automatiquement à chaque ouverture.' },
+                                { q: 'Quels animaux sont compatibles avec Carnet Santé PRO ?', r: 'L\'application est conçue pour tous les animaux de compagnie : chiens, chats, lapins, hamsters, cochons d\'Inde, oiseaux, reptiles, chevaux, et bien d\'autres. Le suivi est entièrement personnalisable : vous saisissez l\'espèce, la race et adaptez les informations selon votre animal. Les vétérinaires équins ou spécialisés peuvent également utiliser l\'espace vétérinaire professionnel.' },
                             ].map((faq, i) => (
                                 <FaqItem key={i} q={faq.q} r={faq.r} />
                             ))}
@@ -1930,12 +1997,12 @@
                             <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '48px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé tout au long de l'année.</p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '24px' }}>
                                 {[
-                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves. Notez chaque injection et configurez une alerte avant la date de rappel pour ne jamais l\'oublier.' },
-                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et vers représentent un risque tout au long de l\'année. Un traitement préventif tous les 1 à 3 mois suffit à protéger efficacement chien et chat.' },
-                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité est la première cause de maladies chroniques chez les animaux de compagnie. Pesez votre animal chaque mois et suivez l\'évolution sur un graphique dédié.' },
-                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent 80 % des chiens et chats de plus de 3 ans. Un brossage régulier et une surveillance des gencives prolongent l\'espérance de vie.' },
-                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime alimentaire de votre animal pour faciliter les consultations vétérinaires.' },
-                                    { icon: '📋', title: 'Dossier médical complet', text: 'Un dossier centralisé avec vaccins, traitements, chirurgies et observations permet à votre vétérinaire de mieux suivre la santé globale de votre animal au fil des années.' },
+                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose, la maladie de Carré ou le coryza. Un carnet à jour est aussi obligatoire pour certains voyages, la pension ou le toilettage. Notez chaque injection et configurez une alerte quelques semaines avant la date de rappel pour ne jamais manquer une vaccination importante.' },
+                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et moustiques représentent un risque sanitaire toute l\'année, y compris en appartement. Les puces peuvent transmettre des vers, et les tiques véhiculent des maladies sérieuses comme la piroplasmose. Un traitement préventif adapté (pipette, collier, comprimé) renouvelé toutes les 4 à 12 semaines protège efficacement votre animal et votre foyer.' },
+                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité touche près d\'un animal de compagnie sur deux en France et est la première cause de maladies chroniques : diabète, arthrose, problèmes cardiaques. Pesez votre animal une fois par mois et suivez la courbe sur le graphique dédié de l\'application. Une perte ou une prise de poids rapide peut aussi signaler une maladie sous-jacente à explorer avec votre vétérinaire.' },
+                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent plus de 80 % des chiens et chats de plus de 3 ans : tartre, gingivite, douleur chronique. Les bactéries buccales peuvent même atteindre le cœur et les reins par la circulation sanguine. Un brossage hebdomadaire, des jouets dentaires adaptés et un détartrage vétérinaire annuel suffisent à maintenir une bonne santé bucco-dentaire et à prolonger l\'espérance de vie.' },
+                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, la race, l\'âge (chiot/adulte/senior), le niveau d\'activité et l\'état de santé (stérilisé, en surpoids…). Une alimentation inadaptée entraîne carence, obésité ou insuffisance rénale. Consignez le régime actuel, les marques et les quantités dans l\'application pour faciliter les ajustements lors des consultations vétérinaires.' },
+                                    { icon: '📋', title: 'Dossier médical centralisé', text: 'Chirurgies passées, allergies médicamenteuses, résultats d\'analyses, traitements en cours : votre vétérinaire a besoin de l\'historique complet pour prendre les meilleures décisions. Un dossier numérique centralisé, toujours à portée de main sur votre téléphone, évite les oublis et les redondances d\'examens. En cas d\'urgence, votre vétérinaire de garde y accède en quelques secondes via le QR code du collier.' },
                                 ].map((c, i) => (
                                     <div key={i} style={{ background: '#f0fdf4', borderRadius: '12px', padding: '24px', borderLeft: '4px solid #10b981' }}>
                                         <div style={{ fontSize: '32px', marginBottom: '12px' }}>{c.icon}</div>
