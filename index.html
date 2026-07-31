@@ -1805,29 +1805,60 @@
                     </nav>
 
                     {/* ── 1. HERO ── */}
-                    <section style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%)', padding: '60px 20px' }}>
-                        <div style={{ maxWidth: '1060px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '48px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                            <div style={{ flex: '1 1 340px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '64px', marginBottom: '16px' }}>🐾</div>
-                                <h1 style={{ fontSize: 'clamp(26px, 5vw, 46px)', fontWeight: '800', color: '#064e3b', lineHeight: 1.2, marginBottom: '20px' }}>
-                                    Le carnet de santé numérique de votre animal, toujours avec vous.
-                                </h1>
-                                <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: '#065f46', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 32px' }}>
-                                    Vaccins, traitements, documents vétérinaires et informations importantes réunis au même endroit.
-                                </p>
-                                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
-                                    <button onClick={() => setShowForm(true)}
-                                        style={{ padding: '16px 36px', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '18px', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
-                                        Commencer gratuitement →
-                                    </button>
-                                    <button onClick={() => setShowForm(true)}
-                                        style={{ padding: '14px 20px', background: 'transparent', color: '#065f46', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer', fontSize: '15px', textDecoration: 'underline', textUnderlineOffset: '3px', opacity: 0.75 }}>
-                                        Se connecter
-                                    </button>
-                                </div>
-                                <p style={{ fontSize: '13px', color: '#6b7280' }}>✅ Gratuit · ✅ Sans publicité intrusive · ✅ Données sécurisées</p>
+                    <section style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%)', padding: '72px 20px 56px' }}>
+                        <div style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center' }}>
+                            <div style={{ fontSize: '56px', marginBottom: '20px' }}>🐾</div>
+                            <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: '800', color: '#064e3b', lineHeight: 1.15, marginBottom: '20px' }}>
+                                Le carnet de santé numérique de votre animal, toujours avec vous.
+                            </h1>
+                            <p style={{ fontSize: 'clamp(16px, 2vw, 19px)', color: '#065f46', lineHeight: 1.7, maxWidth: '520px', margin: '0 auto 36px' }}>
+                                Vaccins, traitements, documents vétérinaires et informations importantes réunis au même endroit.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
+                                <button onClick={() => setShowForm(true)}
+                                    style={{ padding: '16px 40px', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '18px', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
+                                    Commencer gratuitement →
+                                </button>
+                                <button onClick={() => setShowForm(true)}
+                                    style={{ padding: '14px 20px', background: 'transparent', color: '#065f46', border: 'none', borderRadius: '8px', fontWeight: '500', cursor: 'pointer', fontSize: '15px', textDecoration: 'underline', textUnderlineOffset: '3px', opacity: 0.75 }}>
+                                    Se connecter
+                                </button>
                             </div>
-                            <PhoneMockup />
+                            <p style={{ fontSize: '13px', color: '#6b7280' }}>✅ Gratuit · ✅ Sans publicité intrusive · ✅ Données sécurisées</p>
+                        </div>
+                    </section>
+
+                    {/* ── PRODUCT SHOWCASE ── */}
+                    <section style={{ background: 'white', padding: '64px 20px' }}>
+                        <div style={{ maxWidth: '860px', margin: '0 auto', textAlign: 'center' }}>
+                            <p style={{ fontSize: '13px', fontWeight: '700', color: '#10b981', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '12px' }}>Aperçu de l'application</p>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
+                                Votre animal mérite son propre dossier santé.
+                            </h2>
+                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '48px' }}>Voilà ce que vous aurez dès votre inscription — en moins de 3 minutes.</p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                                <PhoneMockup />
+                                <div style={{ background: '#1c1c2e', borderRadius: '32px', padding: '12px', boxShadow: '0 32px 64px rgba(0,0,0,0.25)', maxWidth: '220px', flexShrink: 0 }}>
+                                    <div style={{ background: '#f9fafb', borderRadius: '22px', overflow: 'hidden', fontSize: '12px' }}>
+                                        <div style={{ background: '#10b981', padding: '10px 14px', color: 'white', fontWeight: '700', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            🐕 Max — Dossier santé
+                                        </div>
+                                        <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                                            {[
+                                                { label: '💉 Vaccin rage', date: 'Rappel dans 47 j', bg: '#fef3c7', color: '#92400e' },
+                                                { label: '🦟 Antiparasitaire', date: 'À renouveler dans 12 j', bg: '#fee2e2', color: '#991b1b' },
+                                                { label: '💊 Métacam', date: 'En cours · 5 j restants', bg: '#eff6ff', color: '#1e40af' },
+                                                { label: '⚖️ Poids : 28,4 kg', date: 'Mesuré le 15 juil.', bg: '#f0fdf4', color: '#065f46' },
+                                            ].map((r, i) => (
+                                                <div key={i} style={{ background: 'white', borderRadius: '8px', padding: '7px 9px', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+                                                    <div style={{ fontWeight: '600', fontSize: '11px', color: '#111827', marginBottom: '2px' }}>{r.label}</div>
+                                                    <span style={{ fontSize: '10px', background: r.bg, color: r.color, padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>{r.date}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
@@ -1879,20 +1910,83 @@
                     </section>
 
                     {/* ── 4. COMMENT ÇA MARCHE ── */}
-                    <section style={{ padding: '72px 20px', background: 'white' }}>
-                        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b' }}>
+                    <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', marginBottom: '12px', color: '#064e3b', textAlign: 'center' }}>
                                 Comment ça marche ?
                             </h2>
-                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '52px' }}>Démarrez en moins de 3 minutes, sans installation ni carte bancaire.</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px' }}>
-                                {STEPS.map((s, i) => (
-                                    <div key={i} style={{ textAlign: 'center', position: 'relative' }}>
-                                        <div style={{ width: '64px', height: '64px', background: '#10b981', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: '800', margin: '0 auto 18px', boxShadow: '0 4px 12px rgba(16,185,129,0.3)' }}>{s.num}</div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '17px', marginBottom: '8px', color: '#111827' }}>{s.title}</h3>
-                                        <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.7 }}>{s.desc}</p>
+                            <p style={{ color: '#6b7280', fontSize: '16px', marginBottom: '56px', textAlign: 'center' }}>Démarrez en moins de 3 minutes, sans installation ni carte bancaire.</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
+                                {/* Étape 01 */}
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '32px', display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                                    <div style={{ flex: '1 1 280px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#10b981', letterSpacing: '0.1em', marginBottom: '10px' }}>🟢 ÉTAPE 01</div>
+                                        <h3 style={{ fontWeight: '800', fontSize: '22px', color: '#111827', marginBottom: '12px' }}>Créez votre compte</h3>
+                                        <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.7, margin: 0 }}>30 secondes suffisent. Inscription gratuite avec votre adresse e-mail ou votre compte Google. Aucune carte bancaire requise.</p>
                                     </div>
-                                ))}
+                                    <div style={{ flex: '0 0 auto', background: '#f9fafb', borderRadius: '16px', padding: '20px', minWidth: '200px', border: '1px solid #e5e7eb' }}>
+                                        <div style={{ marginBottom: '10px' }}>
+                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', fontWeight: '600' }}>Adresse e-mail</div>
+                                            <div style={{ background: 'white', border: '2px solid #10b981', borderRadius: '8px', padding: '9px 12px', fontSize: '13px', color: '#374151' }}>vous@exemple.fr</div>
+                                        </div>
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', fontWeight: '600' }}>Mot de passe</div>
+                                            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '9px 12px', fontSize: '13px', color: '#9ca3af' }}>••••••••</div>
+                                        </div>
+                                        <div style={{ background: '#10b981', color: 'white', borderRadius: '8px', padding: '10px', textAlign: 'center', fontSize: '13px', fontWeight: '700' }}>Créer mon compte</div>
+                                        <div style={{ textAlign: 'center', fontSize: '11px', color: '#9ca3af', margin: '8px 0' }}>— ou —</div>
+                                        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#374151' }}>🔵 Continuer avec Google</div>
+                                    </div>
+                                </div>
+
+                                {/* Étape 02 */}
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '32px', display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap-reverse', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                                    <div style={{ flex: '0 0 auto', background: '#f9fafb', borderRadius: '16px', padding: '20px', minWidth: '200px', border: '1px solid #e5e7eb' }}>
+                                        <div style={{ background: 'white', borderRadius: '12px', padding: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                            <div style={{ width: '52px', height: '52px', background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', flexShrink: 0 }}>🐕</div>
+                                            <div>
+                                                <div style={{ fontWeight: '800', fontSize: '15px', color: '#111827' }}>Max</div>
+                                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>Golden Retriever · 3 ans</div>
+                                                <div style={{ fontSize: '11px', color: '#9ca3af' }}>Né le 12 mars 2022</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            {['💉 Vaccins', '🦟 Antiparasitaires', '📄 Documents'].map((t, i) => (
+                                                <div key={i} style={{ background: 'white', borderRadius: '6px', padding: '7px 10px', fontSize: '12px', color: '#374151', fontWeight: '600', border: '1px solid #e5e7eb' }}>{t}</div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: '1 1 280px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#f59e0b', letterSpacing: '0.1em', marginBottom: '10px' }}>🐶 ÉTAPE 02</div>
+                                        <h3 style={{ fontWeight: '800', fontSize: '22px', color: '#111827', marginBottom: '12px' }}>Ajoutez votre compagnon</h3>
+                                        <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.7, margin: 0 }}>Ajoutez sa photo, son identité, sa race, sa date de naissance et toutes les informations importantes. Chaque animal dispose de son propre dossier complet.</p>
+                                    </div>
+                                </div>
+
+                                {/* Étape 03 */}
+                                <div style={{ background: 'white', borderRadius: '20px', padding: '32px', display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                                    <div style={{ flex: '1 1 280px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#8b5cf6', letterSpacing: '0.1em', marginBottom: '10px' }}>💉 ÉTAPE 03</div>
+                                        <h3 style={{ fontWeight: '800', fontSize: '22px', color: '#111827', marginBottom: '12px' }}>Suivez sa santé</h3>
+                                        <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: 1.7, margin: 0 }}>Vaccins, traitements, rappels automatiques, documents vétérinaires… tout est regroupé dans son dossier. Recevez une notification avant chaque échéance importante.</p>
+                                    </div>
+                                    <div style={{ flex: '0 0 auto', background: '#f9fafb', borderRadius: '16px', padding: '20px', minWidth: '200px', border: '1px solid #e5e7eb' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', marginBottom: '8px' }}>PROCHAINS RAPPELS</div>
+                                        {[
+                                            { label: '💉 Vaccin rage', tag: 'Dans 47 j', bg: '#fef3c7', c: '#92400e' },
+                                            { label: '🦟 Antiparasitaire', tag: 'Dans 12 j', bg: '#fee2e2', c: '#991b1b' },
+                                            { label: '🪱 Vermifuge', tag: 'Dans 3 j', bg: '#fee2e2', c: '#991b1b' },
+                                            { label: '💊 Métacam', tag: 'Ce soir 20h', bg: '#eff6ff', c: '#1e40af' },
+                                        ].map((r, i) => (
+                                            <div key={i} style={{ background: 'white', borderRadius: '8px', padding: '8px 10px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                                <span style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>{r.label}</span>
+                                                <span style={{ fontSize: '10px', background: r.bg, color: r.c, padding: '2px 7px', borderRadius: '4px', fontWeight: '700', whiteSpace: 'nowrap' }}>{r.tag}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </section>
@@ -2004,7 +2098,61 @@
                         </div>
                     </section>
 
-                    {/* ── 6. FAQ ── */}
+                    {/* ── 6. SANTÉ CHIEN & CHAT ── */}
+                    <section style={{ padding: '72px 20px', background: 'white' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
+                                Guide santé de votre animal
+                            </h2>
+                            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '16px', marginBottom: '52px' }}>Informations essentielles pour prendre soin de votre compagnon au quotidien.</p>
+
+                            {/* Chien */}
+                            <div style={{ marginBottom: '48px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                    <span style={{ fontSize: '36px' }}>🐶</span>
+                                    <h3 style={{ fontWeight: '800', fontSize: '24px', color: '#111827', margin: 0 }}>Santé du chien</h3>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                                    {[
+                                        { icon: '💉', title: 'Vaccination du chien', body: 'Pourquoi vacciner son chien ? Les vaccins essentiels (maladie de Carré, parvovirose, hépatite de Rubarth) doivent débuter à 6–8 semaines. Un rappel est nécessaire à 1 an, puis tous les 1 à 3 ans selon le vaccin. Le carnet de vaccination à jour est obligatoire pour la pension, le toilettage et certains voyages.' },
+                                        { icon: '🪱', title: 'Vermifugation du chien', body: 'La fréquence dépend du mode de vie : toutes les 2 semaines jusqu\'à 3 mois, mensuelle jusqu\'à 6 mois, puis tous les 3 mois pour un chien qui sort régulièrement (chasse, forêt, contact avec d\'autres animaux), ou deux fois par an pour un chien d\'appartement sans contact extérieur.' },
+                                        { icon: '🦟', title: 'Antiparasitaires du chien', body: 'Puces et tiques représentent un danger toute l\'année. Les pipettes ou comprimés antiparasitaires doivent être renouvelés toutes les 4 à 12 semaines. Les tiques peuvent transmettre la piroplasmose, potentiellement mortelle. Pensez à traiter aussi l\'environnement (litière, tapis) en cas d\'infestation de puces.' },
+                                        { icon: '🚨', title: 'Symptômes à surveiller', body: 'Consultez sans attendre si votre chien présente : difficultés à respirer, abdomen gonflé ou douloureux, refus de boire plus de 24h, convulsions ou perte de connaissance, sang dans les selles ou vomissements, douleur intense à la palpation. Ces signes peuvent indiquer une urgence vitale.' },
+                                    ].map((c, i) => (
+                                        <div key={i} style={{ background: '#fafafa', borderRadius: '12px', padding: '20px', border: '1px solid #e5e7eb' }}>
+                                            <div style={{ fontSize: '24px', marginBottom: '8px' }}>{c.icon}</div>
+                                            <h4 style={{ fontWeight: '700', fontSize: '15px', color: '#111827', marginBottom: '8px' }}>{c.title}</h4>
+                                            <p style={{ color: '#4b5563', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{c.body}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Chat */}
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                    <span style={{ fontSize: '36px' }}>🐱</span>
+                                    <h3 style={{ fontWeight: '800', fontSize: '24px', color: '#111827', margin: 0 }}>Santé du chat</h3>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+                                    {[
+                                        { icon: '💉', title: 'Vaccination du chat', body: 'Les vaccins fondamentaux protègent contre le coryza (rhinotrachéite + calicivirose), la typhus (panleucopénie) et la leucose féline (FeLV). Le protocole débute entre 8 et 12 semaines, avec un rappel à 1 an, puis tous les 1 à 3 ans. La rage est obligatoire pour tout séjour en pension ou voyage à l\'étranger.' },
+                                        { icon: '🪱', title: 'Vermifugation du chat', body: 'Les chats d\'intérieur peuvent également contracter des vers (par les puces ou des proies). Vermifugez tous les 3 mois pour un chat qui sort, deux fois par an pour un chat strictement d\'intérieur. Les chatons doivent être vermifugés toutes les 2 semaines jusqu\'à 3 mois, puis mensuellement jusqu\'à 6 mois.' },
+                                        { icon: '🦟', title: 'Antiparasitaires du chat', body: 'Les puces sont la première cause de démangeaisons chez le chat. Même un chat d\'intérieur peut être infesté (via les chaussures ou les vêtements). Un traitement mensuel (pipette, comprimé) suffit à prévenir les infestations. Attention : certains produits pour chien sont toxiques pour les chats — vérifiez toujours l\'étiquette.' },
+                                        { icon: '🚨', title: 'Symptômes à surveiller', body: 'Consultez rapidement si votre chat présente : blocage urinaire (cris en urinant, absence d\'urine — urgence absolue chez le mâle), difficultés à respirer, absence de nourriture et de boisson depuis plus de 24h, troisième paupière visible, troubles de l\'équilibre ou désorientation, perte de poids rapide inexpliquée.' },
+                                    ].map((c, i) => (
+                                        <div key={i} style={{ background: '#fafafa', borderRadius: '12px', padding: '20px', border: '1px solid #e5e7eb' }}>
+                                            <div style={{ fontSize: '24px', marginBottom: '8px' }}>{c.icon}</div>
+                                            <h4 style={{ fontWeight: '700', fontSize: '15px', color: '#111827', marginBottom: '8px' }}>{c.title}</h4>
+                                            <p style={{ color: '#4b5563', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{c.body}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ── 7. FAQ ── */}
                     <section style={{ padding: '72px 20px', background: '#f9fafb' }}>
                         <div style={{ maxWidth: '760px', margin: '0 auto' }}>
                             <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
