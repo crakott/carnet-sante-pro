@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-MVNX7BHT');</script>
+    <!-- End Google Tag Manager -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="À propos de Carnet Santé PRO — pourquoi cette application a été créée, comment elle fonctionne, à qui elle s'adresse et comment vos données sont protégées.">
+    <meta name="google-adsense-account" content="ca-pub-2220007721302800">
+    <title>À propos — Carnet Santé PRO</title>
+    <link rel="canonical" href="https://carnet-sante-pro.web.app/about.html">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="theme-color" content="#10b981">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fafb; color: #1f2937; line-height: 1.7; }
+
+        header { background: linear-gradient(135deg, #064e3b, #065f46); color: white; padding: 28px 20px 36px; }
+        .header-inner { max-width: 760px; margin: 0 auto; }
+        header a { color: #a7f3d0; text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; opacity: 0.9; }
+        header a:hover { opacity: 1; }
+        .header-badge { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 700; color: #a7f3d0; letter-spacing: 0.06em; margin-bottom: 14px; }
+        header h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+        header p { font-size: 16px; opacity: 0.8; max-width: 560px; }
+
+        main { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+
+        .card { background: white; border-radius: 14px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+        .card-accent { border-left: 5px solid #10b981; }
+        .card-warn { border-left: 5px solid #f59e0b; }
+        .card-blue { border-left: 5px solid #3b82f6; }
+        .card-red { border-left: 5px solid #ef4444; }
+
+        h2 { font-size: 20px; font-weight: 800; color: #064e3b; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+        h3 { font-size: 16px; font-weight: 700; color: #111827; margin: 20px 0 8px; }
+        p { color: #4b5563; margin-bottom: 14px; font-size: 15px; line-height: 1.75; }
+        p:last-child { margin-bottom: 0; }
+        ul { color: #4b5563; margin: 8px 0 16px 0; font-size: 15px; list-style: none; }
+        ul li { padding: 5px 0 5px 24px; position: relative; line-height: 1.6; }
+        ul li::before { content: '✓'; position: absolute; left: 0; color: #10b981; font-weight: 700; }
+        ul.cross li::before { content: '✗'; color: #ef4444; }
+        ul.bullet li::before { content: '•'; color: #9ca3af; }
+
+        .highlight { background: #f0fdf4; border: 1px solid #d1fae5; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; font-size: 15px; color: #065f46; }
+        .highlight strong { color: #064e3b; }
+
+        .warn { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; font-size: 15px; color: #92400e; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .mini-card { background: #f9fafb; border-radius: 10px; padding: 18px; border: 1px solid #e5e7eb; }
+        .mini-card h4 { font-weight: 700; font-size: 14px; color: #111827; margin-bottom: 6px; }
+        .mini-card p { font-size: 13px; margin: 0; }
+
+        .tag { display: inline-block; background: #d1fae5; color: #065f46; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; margin: 3px 3px 3px 0; }
+        .tag-grey { background: #f3f4f6; color: #6b7280; }
+
+        .contact-box { background: linear-gradient(135deg, #064e3b, #065f46); color: white; border-radius: 14px; padding: 32px; text-align: center; margin-top: 32px; }
+        .contact-box h2 { color: white; justify-content: center; }
+        .contact-box p { color: #d1fae5; }
+        .contact-box a { color: #34d399; text-decoration: none; font-weight: 700; }
+        .contact-box a:hover { text-decoration: underline; }
+
+        footer { background: #111827; color: #9ca3af; padding: 24px 20px; text-align: center; font-size: 13px; }
+        footer a { color: #6b7280; text-decoration: underline; margin: 0 8px; }
+        footer a:hover { color: #9ca3af; }
+
+        @media (max-width: 600px) {
+            .card { padding: 22px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MVNX7BHT" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+<header>
+    <div class="header-inner">
+        <a href="/">← Retour à l'application</a>
+        <div class="header-badge">🐾 CARNET SANTÉ PRO</div>
+        <h1>À propos de Carnet Santé PRO</h1>
+        <p>Transparence sur le projet, son fonctionnement et la façon dont vos données sont protégées.</p>
+    </div>
+</header>
+
+<main>
+
+    <!-- Origine du projet -->
+    <div class="card card-accent">
+        <h2>🌱 Pourquoi ce projet a été créé</h2>
+        <p>
+            Carnet Santé PRO est né d'un constat simple : les propriétaires d'animaux jonglent entre des carnets de vaccination papier, des rappels notés sur un coin de table, des ordonnances éparpillées et des messages WhatsApp au vétérinaire pour retrouver une date de traitement.
+        </p>
+        <p>
+            Quand l'animal est malade — ou pire, en urgence chez un vétérinaire de garde un dimanche soir — personne ne se souvient exactement de la date du dernier vaccin antirabique, du nom du médicament en cours ou de la dose prescrite.
+        </p>
+        <p>
+            L'idée était donc d'avoir un seul endroit, toujours disponible sur son téléphone, où toutes les informations importantes de l'animal sont centralisées. Et qu'en cas d'urgence, même sans être joignable, n'importe quel vétérinaire de garde puisse y accéder en quelques secondes via un QR code accroché au collier.
+        </p>
+        <div class="highlight">
+            <strong>Mission :</strong> permettre à chaque propriétaire d'animaux d'avoir, en permanence sur lui, un dossier santé complet et partageable — gratuitement, sans installation, sur n'importe quel téléphone.
+        </div>
+    </div>
+
+    <!-- Problème résolu -->
+    <div class="card card-warn">
+        <h2>🔍 Quel problème l'application résout</h2>
+        <div class="grid-2">
+            <div class="mini-card">
+                <h4>😰 Avant</h4>
+                <ul class="bullet">
+                    <li>Carnet de vaccination papier perdu ou oublié</li>
+                    <li>Date du dernier traitement inconnue</li>
+                    <li>Ordonnances introuvables</li>
+                    <li>Aucune alerte avant les rappels</li>
+                    <li>Vétérinaire de garde sans aucune info</li>
+                </ul>
+            </div>
+            <div class="mini-card">
+                <h4>✅ Avec Carnet Santé PRO</h4>
+                <ul>
+                    <li>Dossier complet sur votre téléphone</li>
+                    <li>Rappels automatiques avant chaque échéance</li>
+                    <li>Documents médicaux numérisés</li>
+                    <li>QR code d'urgence sur le collier</li>
+                    <li>Accès au dossier même hors connexion</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comment ça fonctionne -->
+    <div class="card">
+        <h2>⚙️ Comment fonctionne l'application</h2>
+        <p>
+            Carnet Santé PRO est une <strong>application web progressive (PWA)</strong>. Cela signifie qu'elle s'ouvre dans un navigateur web, mais peut s'installer sur l'écran d'accueil d'un téléphone comme une application native — sans passer par l'App Store ou le Google Play Store.
+        </p>
+        <h3>Technologie</h3>
+        <p>
+            L'application est construite avec <strong>React</strong> côté interface et <strong>Firebase</strong> (Google) pour l'authentification, le stockage des données et les notifications push. Les données sont hébergées en Europe sur les serveurs de Google Cloud.
+        </p>
+        <p>
+            Une fonctionnalité de <strong>persistance locale (IndexedDB)</strong> permet à l'application de fonctionner entièrement hors connexion : vous pouvez consulter et modifier les dossiers de vos animaux même sans réseau. La synchronisation s'effectue automatiquement dès le retour d'internet.
+        </p>
+        <h3>Notifications push</h3>
+        <p>
+            Les rappels (vaccins, traitements, antiparasitaires…) sont envoyés via <strong>Firebase Cloud Messaging (FCM)</strong>. Avec la permission accordée dans les paramètres, les notifications arrivent même lorsque l'application est fermée ou que le téléphone est verrouillé.
+        </p>
+        <h3>Fiche de garde QR code</h3>
+        <p>
+            Chaque animal peut disposer d'une <strong>fiche de garde publique</strong>, activée à la demande du propriétaire. Un QR code unique est généré et peut être imprimé ou affiché sur le collier. En le scannant, n'importe quelle personne (ou vétérinaire de garde) accède à une fiche résumée de l'animal — vaccins, traitements en cours, allergies, contacts — sans avoir besoin de créer un compte.
+        </p>
+    </div>
+
+    <!-- À qui elle s'adresse -->
+    <div class="card card-blue">
+        <h2>👥 À qui s'adresse Carnet Santé PRO</h2>
+        <p>L'application s'adresse à toute personne ayant un ou plusieurs animaux de compagnie :</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 20px;">
+            <span class="tag">🐶 Propriétaires de chiens</span>
+            <span class="tag">🐱 Propriétaires de chats</span>
+            <span class="tag">🐰 Lapins & rongeurs</span>
+            <span class="tag">🐦 Oiseaux</span>
+            <span class="tag">🐴 Chevaux & équidés</span>
+            <span class="tag">🦎 Reptiles & NAC</span>
+            <span class="tag">👨‍👩‍👧 Familles avec plusieurs animaux</span>
+        </div>
+        <p>
+            Un <strong>espace vétérinaire professionnel</strong> est également disponible, permettant aux vétérinaires et cliniques de rechercher les dossiers de leurs patients, d'y ajouter des actes médicaux validés, d'émettre des ordonnances numériques et de communiquer avec les propriétaires via une messagerie sécurisée.
+        </p>
+    </div>
+
+    <!-- Ce que l'application fait et ne fait pas -->
+    <div class="card">
+        <h2>✅ Ce que fait l'application — et ce qu'elle ne fait pas</h2>
+        <div class="grid-2">
+            <div>
+                <h3 style="color: #065f46;">Ce que fait Carnet Santé PRO</h3>
+                <ul>
+                    <li>Centraliser les informations de santé de vos animaux</li>
+                    <li>Envoyer des rappels automatiques avant les échéances</li>
+                    <li>Générer un QR code d'urgence pour le collier</li>
+                    <li>Numériser et stocker des documents médicaux</li>
+                    <li>Permettre le partage avec un vétérinaire ou la famille</li>
+                    <li>Fonctionner hors connexion</li>
+                    <li>Générer des fiches voyage et des affiches perdu/trouvé</li>
+                </ul>
+            </div>
+            <div>
+                <h3 style="color: #991b1b;">Ce que ne fait pas Carnet Santé PRO</h3>
+                <ul class="cross">
+                    <li>Donner des conseils médicaux ou remplacer un vétérinaire</li>
+                    <li>Permettre des consultations à distance</li>
+                    <li>Assurer un suivi médical professionnel</li>
+                    <li>Accéder aux données sans votre consentement</li>
+                    <li>Revendre vos données à des tiers</li>
+                    <li>Envoyer de la publicité par e-mail</li>
+                </ul>
+            </div>
+        </div>
+        <div class="warn">
+            ⚠️ <strong>Important :</strong> Carnet Santé PRO est un outil de suivi et d'organisation. Il ne remplace en aucun cas l'avis d'un professionnel de santé vétérinaire. En cas d'urgence ou de doute sur la santé de votre animal, consultez un vétérinaire.
+        </div>
+    </div>
+
+    <!-- Protection des données -->
+    <div class="card card-blue">
+        <h2>🔒 Comment sont protégées vos données</h2>
+        <p>
+            La confidentialité de vos données est une priorité. Voici concrètement comment elles sont traitées :
+        </p>
+        <h3>Hébergement et chiffrement</h3>
+        <p>
+            Toutes les données sont stockées sur <strong>Firebase Firestore</strong> (Google Cloud), hébergé en Europe, certifié <strong>ISO 27001, SOC 1, SOC 2 et SOC 3</strong>. Les données sont chiffrées en transit via <strong>TLS 1.2+</strong> et au repos via <strong>AES-256</strong>.
+        </p>
+        <h3>Accès aux données</h3>
+        <p>
+            Seuls vous et les personnes que vous autorisez explicitement (membres du foyer partagé, vétérinaire) peuvent accéder aux données de vos animaux. Les règles de sécurité Firestore sont configurées pour que chaque utilisateur n'accède qu'à ses propres données.
+        </p>
+        <h3>Fiche de garde publique</h3>
+        <p>
+            La fiche de garde partagée par QR code est <strong>activée uniquement à votre demande</strong>. Elle ne contient pas vos données personnelles (ni nom, ni adresse, ni coordonnées bancaires) — uniquement les informations médicales de l'animal que vous avez choisi de partager.
+        </p>
+        <h3>Suppression des données</h3>
+        <p>
+            Vous pouvez supprimer votre compte et l'ensemble de vos données à tout moment depuis les paramètres de l'application. La suppression est immédiate et définitive.
+        </p>
+        <h3>Cookies et traceurs</h3>
+        <p>
+            L'application utilise <strong>Google Tag Manager</strong> à des fins d'analyse d'audience (nombre de visiteurs, pages consultées) et <strong>Google AdSense</strong> pour afficher des publicités contextuelles. Aucun cookie publicitaire tiers n'est utilisé pour du ciblage comportemental sans votre consentement.
+        </p>
+        <p>
+            Pour plus de détails, consultez notre <a href="privacy.html" style="color: #10b981; font-weight: 600;">Politique de confidentialité complète</a>.
+        </p>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact-box">
+        <h2>📬 Nous contacter</h2>
+        <p style="margin-bottom: 20px;">
+            Une question, un bug à signaler, une suggestion d'amélioration ou une demande concernant vos données personnelles ?
+        </p>
+        <p style="font-size: 16px; margin-bottom: 8px;">
+            <strong style="color: white;">Email :</strong> <a href="mailto:carnetsante2@gmail.com">carnetsante2@gmail.com</a>
+        </p>
+        <p style="margin-top: 16px; font-size: 14px; opacity: 0.75;">
+            Nous répondons généralement dans un délai de 48 à 72 heures ouvrées.
+        </p>
+    </div>
+
+</main>
+
+<footer>
+    <p style="margin-bottom: 8px;">🐾 Carnet Santé PRO — © 2025. All rights reserved.</p>
+    <div>
+        <a href="/">Accueil</a>
+        <a href="about.html">À propos</a>
+        <a href="privacy.html">Politique de confidentialité</a>
+        <a href="terms.html">CGU</a>
+    </div>
+</footer>
+
+</body>
+</html>
