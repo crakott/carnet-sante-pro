@@ -24,7 +24,7 @@ try {
   });
 } catch (e) { /* FCM unavailable — caching and other SW features still work */ }
 
-const CACHE = 'carnet-sante-v19';
+const CACHE = 'carnet-sante-v20';
 const PRECACHE = [
   './',
   'manifest.json',
