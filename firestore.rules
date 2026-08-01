@@ -11,14 +11,17 @@ service cloud.firestore {
         && resource.data.householdId != null
         && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
-      // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
-      // aux actes médicaux (pas le profil, le budget ou les partages).
+      // Vétérinaires "pro" abonnés : lecture et écriture médicale limitées aux animaux dont
+      // le propriétaire a explicitement autorisé ce vétérinaire (champ authorizedVets).
       // Le statut est vérifié via un Custom Claim Firebase Auth (vetPro),
-      // positionné exclusivement par le webhook Stripe côté serveur — le client
-      // ne peut pas le modifier.
-      allow read: if request.auth != null && request.auth.token.vetPro == true;
+      // positionné exclusivement par le webhook Stripe côté serveur — le client ne peut pas le modifier.
+      allow read: if request.auth != null
+        && request.auth.token.vetPro == true
+        && request.auth.uid in resource.data.authorizedVets;
+
       allow update: if request.auth != null
         && request.auth.token.vetPro == true
+        && request.auth.uid in resource.data.authorizedVets
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
@@ -29,24 +32,27 @@ service cloud.firestore {
 
     // Messagerie sécurisée propriétaire <-> vétérinaire, par animal
     match /animals/{animalId}/messages/{messageId} {
-      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire abonné
+      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire autorisé
       allow read: if request.auth != null
         && (
           request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
           || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
               && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
-          || request.auth.token.vetPro == true
+          || (request.auth.token.vetPro == true
+              && request.auth.uid in get(/databases/$(database)/documents/animals/$(animalId)).data.authorizedVets)
         );
 
       // Création : même conditions d'accès, et l'auteur déclaré ("from") doit correspondre
-      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire abonné = 'veterinaire')
+      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire autorisé = 'veterinaire')
       allow create: if request.auth != null
         && (
           (request.resource.data.from == 'proprietaire'
             && (request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
                 || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
                     && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)))
-          || (request.resource.data.from == 'veterinaire' && request.auth.token.vetPro == true)
+          || (request.resource.data.from == 'veterinaire'
+              && request.auth.token.vetPro == true
+              && request.auth.uid in get(/databases/$(database)/documents/animals/$(animalId)).data.authorizedVets)
         );
     }
 
@@ -67,6 +73,10 @@ service cloud.firestore {
       allow read: if request.auth != null
         && resource.data.householdId != null
         && resource.data.householdId == get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.householdId;
+
+      // Profil vétérinaire : un propriétaire connecté peut lire le nom d'un vétérinaire
+      // pour vérifier son identité avant de l'autoriser sur un animal.
+      allow read: if request.auth != null && resource.data.role == 'veterinaire';
     }
 
     match /households/{householdId} {

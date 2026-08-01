@@ -3340,6 +3340,10 @@
             const [lostForm, setLostForm] = React.useState({ mode: 'perdu', dateEvt: new Date().toISOString().split('T')[0], lieuEvt: '', telephone: animal.contactUrgence || '', description: '', photo: '' });
             const [editContact, setEditContact] = React.useState(false);
             const [contactValue, setContactValue] = React.useState(animal.contactUrgence || '');
+            const [vetCodeInput, setVetCodeInput] = React.useState('');
+            const [vetLookupResult, setVetLookupResult] = React.useState(null);
+            const [vetLookupError, setVetLookupError] = React.useState('');
+            const [vetLookupLoading, setVetLookupLoading] = React.useState(false);
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
@@ -3364,6 +3368,53 @@
                 navigator.clipboard.writeText(shareUrl);
                 setShareLinkCopied(true);
                 setTimeout(() => setShareLinkCopied(false), 2000);
+            };
+
+            const lookupVet = async () => {
+                const code = vetCodeInput.trim();
+                if (!code) return;
+                setVetLookupError('');
+                setVetLookupResult(null);
+                setVetLookupLoading(true);
+                try {
+                    const snap = await getDoc(doc(db, 'settings', code));
+                    if (!snap.exists() || snap.data().role !== 'veterinaire') {
+                        setVetLookupError("Code introuvable. Vérifiez le code communiqué par votre vétérinaire.");
+                    } else {
+                        const d = snap.data();
+                        setVetLookupResult({ uid: code, nom: d.nom || '', prenom: d.prenom || '' });
+                    }
+                } catch (err) {
+                    setVetLookupError("Erreur lors de la vérification : " + err.message);
+                } finally {
+                    setVetLookupLoading(false);
+                }
+            };
+
+            const addAuthorizedVet = () => {
+                if (!vetLookupResult) return;
+                const { uid, nom, prenom } = vetLookupResult;
+                const currentVets = animal.authorizedVets || [];
+                if (currentVets.includes(uid)) {
+                    setVetLookupError("Ce vétérinaire est déjà autorisé.");
+                    return;
+                }
+                const currentNames = animal.authorizedVetsNames || {};
+                saveAnimal({
+                    ...animal,
+                    authorizedVets: [...currentVets, uid],
+                    authorizedVetsNames: { ...currentNames, [uid]: `Dr. ${[prenom, nom].filter(Boolean).join(' ')}` },
+                });
+                setVetCodeInput('');
+                setVetLookupResult(null);
+                setVetLookupError('');
+            };
+
+            const removeAuthorizedVet = (uid) => {
+                const newVets = (animal.authorizedVets || []).filter(v => v !== uid);
+                const newNames = { ...(animal.authorizedVetsNames || {}) };
+                delete newNames[uid];
+                saveAnimal({ ...animal, authorizedVets: newVets, authorizedVetsNames: newNames });
             };
 
             return (
@@ -3479,6 +3530,41 @@
                         </div>
                         {animal.shareEnabled && (
                             <button onClick={() => openCollarTagReport(animal, shareUrl)} style={{ width: '100%', marginTop: '10px', padding: '8px 12px', background: '#111827', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>🏷️ Générer l'étiquette collier (QR code)</button>
+                        )}
+                    </div>
+
+                    <div style={{ marginTop: '20px', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '4px' }}>🩺 Accès vétérinaire</h4>
+                        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '12px' }}>Autorisez un vétérinaire abonné à consulter et compléter le carnet de santé de {animal.nom}. Demandez-lui son code vétérinaire.</p>
+
+                        {(animal.authorizedVets || []).length > 0 && (
+                            <div style={{ marginBottom: '12px' }}>
+                                {(animal.authorizedVets || []).map(uid => (
+                                    <div key={uid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#047857' }}>✅ {(animal.authorizedVetsNames || {})[uid] || uid}</span>
+                                        <button onClick={() => removeAuthorizedVet(uid)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Révoquer</button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <input type="text" placeholder="Code vétérinaire" value={vetCodeInput}
+                                onChange={e => { setVetCodeInput(e.target.value); setVetLookupResult(null); setVetLookupError(''); }}
+                                onKeyDown={e => { if (e.key === 'Enter') lookupVet(); }}
+                                style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }} />
+                            <button onClick={lookupVet} disabled={vetLookupLoading || !vetCodeInput.trim()} style={{ padding: '8px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', opacity: (!vetCodeInput.trim() || vetLookupLoading) ? 0.6 : 1 }}>
+                                {vetLookupLoading ? '…' : 'Vérifier'}
+                            </button>
+                        </div>
+
+                        {vetLookupError && <p style={{ color: '#ef4444', fontSize: '13px', marginBottom: '8px' }}>{vetLookupError}</p>}
+
+                        {vetLookupResult && (
+                            <div style={{ padding: '10px 12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '600', color: '#047857' }}>🩺 {vetLookupResult.prenom} {vetLookupResult.nom}</span>
+                                <button onClick={addAuthorizedVet} style={{ padding: '6px 14px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Autoriser</button>
+                            </div>
                         )}
                     </div>
 
@@ -7030,19 +7116,13 @@
             const [subStatus, setSubStatus] = React.useState(null); // null (chargement) | 'active' | 'inactive' | 'past_due' | 'canceled' | ...
             const [checkoutLoading, setCheckoutLoading] = React.useState(false);
             const [billingError, setBillingError] = React.useState('');
-            const [searchMode, setSearchMode] = React.useState('identifiant'); // 'identifiant' | 'nom'
-            const [identifiant, setIdentifiant] = React.useState('');
-            const [animalNomSearch, setAnimalNomSearch] = React.useState('');
-            const [proprietaireNomSearch, setProprietaireNomSearch] = React.useState('');
-            const [proprietairePrenomSearch, setProprietairePrenomSearch] = React.useState('');
-            const [proprietaireDateNaissanceSearch, setProprietaireDateNaissanceSearch] = React.useState('');
-            const [searchResults, setSearchResults] = React.useState([]);
+            const [authorizedAnimals, setAuthorizedAnimals] = React.useState(null); // null = chargement
             const [animal, setAnimal] = React.useState(null);
             const [error, setError] = React.useState('');
-            const [searching, setSearching] = React.useState(false);
             const [activeTab, setActiveTab] = React.useState('vaccins');
             const [vetProfile, setVetProfile] = React.useState({ nom: '', prenom: '' });
             const [view, setView] = React.useState('home'); // 'home' | 'dashboard'
+            const [vetCodeCopied, setVetCodeCopied] = React.useState(false);
 
             // Synchronise le Custom Claim vetPro au montage (migration des abonnés existants).
             // Si le claim est absent alors que le statut Firestore est 'active', on appelle
@@ -7084,6 +7164,22 @@
                 return () => unsub();
             }, [user.uid]);
 
+            // Chargement en temps réel des animaux autorisés par leurs propriétaires
+            React.useEffect(() => {
+                if (subStatus !== 'active') return;
+                const q = query(collection(db, 'animals'), where('authorizedVets', 'array-contains', user.uid));
+                const unsub = onSnapshot(q, (snap) => {
+                    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setAuthorizedAnimals(list);
+                    // Garder l'animal sélectionné en sync si toujours autorisé
+                    setAnimal(prev => prev ? (list.find(a => a.id === prev.id) || null) : null);
+                }, (err) => {
+                    console.error('Erreur animaux autorisés:', err);
+                    setAuthorizedAnimals([]);
+                });
+                return () => unsub();
+            }, [subStatus]);
+
             const handleSubscribe = async () => {
                 setBillingError('');
                 setCheckoutLoading(true);
@@ -7105,62 +7201,6 @@
                     window.location.href = result.data.url;
                 } catch (err) {
                     setBillingError("Erreur : " + err.message);
-                }
-            };
-
-            const handleSearchIdentifiant = async () => {
-                const id = identifiant.trim();
-                setError('');
-                setAnimal(null);
-                setSearchResults([]);
-                if (!id) return;
-                setSearching(true);
-                try {
-                    const q = query(collection(db, 'animals'), where('identifiant', '==', id));
-                    const querySnapshot = await getDocs(q);
-                    if (querySnapshot.empty) {
-                        setError("Aucun animal trouvé avec cet identifiant.");
-                    } else {
-                        const docSnap = querySnapshot.docs[0];
-                        setAnimal({ id: docSnap.id, ...docSnap.data() });
-                    }
-                } catch (err) {
-                    setError("Erreur lors de la recherche : " + err.message);
-                } finally {
-                    setSearching(false);
-                }
-            };
-
-            const handleSearchNom = async () => {
-                const animalNom = animalNomSearch.trim();
-                const ownerNom = proprietaireNomSearch.trim();
-                const ownerPrenom = proprietairePrenomSearch.trim();
-                const ownerDateNaissance = proprietaireDateNaissanceSearch.trim();
-                setError('');
-                setAnimal(null);
-                setSearchResults([]);
-                if (!animalNom || !ownerNom) return;
-                setSearching(true);
-                try {
-                    const filters = [where('nom', '==', animalNom), where('proprietaireNom', '==', ownerNom)];
-                    if (ownerPrenom) filters.push(where('proprietairePrenom', '==', ownerPrenom));
-                    if (ownerDateNaissance) filters.push(where('proprietaireDateNaissance', '==', ownerDateNaissance));
-                    const q = query(collection(db, 'animals'), ...filters);
-                    const querySnapshot = await getDocs(q);
-                    if (querySnapshot.empty) {
-                        setError("Aucun animal trouvé avec ce nom et ce propriétaire.");
-                    } else {
-                        const results = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                        if (results.length === 1) {
-                            setAnimal(results[0]);
-                        } else {
-                            setSearchResults(results);
-                        }
-                    }
-                } catch (err) {
-                    setError("Erreur lors de la recherche : " + err.message);
-                } finally {
-                    setSearching(false);
                 }
             };
 
@@ -7211,7 +7251,7 @@
                             <div style={{ fontSize: '48px', marginBottom: '12px' }}>🩺</div>
                             <h2 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '12px' }}>Abonnement Espace Vétérinaire</h2>
                             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
-                                Recherchez les animaux de vos patients par identifiant (puce électronique) ou par nom de l'animal et du propriétaire, et ajoutez vaccins, médicaments, chirurgies, antiparasitaires, vermifuges, observations et pesées directement dans leur carnet de santé.
+                                Accédez aux carnets de santé de vos patients avec leur consentement : le propriétaire vous autorise en entrant votre code vétérinaire. Ajoutez vaccins, médicaments, chirurgies, antiparasitaires, vermifuges, observations et pesées directement dans le carnet.
                             </p>
                             <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 4px 14px rgba(0,0,0,0.08)', marginBottom: '20px' }}>
                                 <p style={{ fontSize: '36px', fontWeight: '800', color: '#10b981', marginBottom: '4px' }}>49,99 €<span style={{ fontSize: '15px', fontWeight: '500', color: '#6b7280' }}> / mois</span></p>
@@ -7239,7 +7279,7 @@
                         <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button onClick={() => setView(view === 'dashboard' ? 'home' : 'dashboard')} style={{ padding: '8px 16px', background: view === 'dashboard' ? '#10b981' : '#f3f4f6', color: view === 'dashboard' ? 'white' : '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
-                                {view === 'dashboard' ? '🔍 Recherche' : '📊 Tableau de bord'}
+                                {view === 'dashboard' ? '🐾 Mes patients' : '📊 Tableau de bord'}
                             </button>
                             <button onClick={handleManageSubscription} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
                                 ⚙️ Abonnement
@@ -7261,82 +7301,50 @@
                         {view === 'dashboard' && <VetDashboard db={db} />}
 
                         {view === 'home' && (<>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '20px' }}>
-                            <div onClick={() => { setSearchMode('identifiant'); setError(''); setAnimal(null); setSearchResults([]); }}
-                                style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', cursor: 'pointer', border: searchMode === 'identifiant' ? '2px solid #10b981' : '2px solid transparent', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', background: '#d1fae5', color: '#059669' }}>🔍</div>
-                                <div style={{ fontWeight: '700', fontSize: '15px' }}>Rechercher par identifiant</div>
-                                <div style={{ fontSize: '12px', color: '#6b7280' }}>Numéro de puce électronique de l'animal</div>
-                            </div>
-                            <div onClick={() => { setSearchMode('nom'); setError(''); setAnimal(null); setSearchResults([]); }}
-                                style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', cursor: 'pointer', border: searchMode === 'nom' ? '2px solid #10b981' : '2px solid transparent', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '19px', background: '#dbeafe', color: '#2563eb' }}>👤</div>
-                                <div style={{ fontWeight: '700', fontSize: '15px' }}>Rechercher par nom</div>
-                                <div style={{ fontSize: '12px', color: '#6b7280' }}>Nom de l'animal et de son propriétaire</div>
+                        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 6px' }}>🆔 Mon code vétérinaire</h3>
+                            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 12px' }}>Communiquez ce code aux propriétaires pour qu'ils vous autorisent à accéder au carnet de santé de leur animal.</p>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <code style={{ flex: 1, padding: '10px 14px', background: '#f3f4f6', borderRadius: '8px', fontSize: '12px', fontFamily: 'monospace', wordBreak: 'break-all', color: '#1f2937' }}>{user.uid}</code>
+                                <button onClick={() => { navigator.clipboard.writeText(user.uid); setVetCodeCopied(true); setTimeout(() => setVetCodeCopied(false), 2000); }}
+                                    style={{ padding: '10px 14px', background: vetCodeCopied ? '#d1fae5' : '#10b981', color: vetCodeCopied ? '#059669' : 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', flexShrink: 0, transition: 'background 0.2s' }}>
+                                    {vetCodeCopied ? '✅ Copié' : '📋 Copier'}
+                                </button>
                             </div>
                         </div>
 
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                            {searchMode === 'identifiant' ? (
-                                <div>
-                                    <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez l'identifiant vétérinaire (puce électronique…) renseigné par le propriétaire dans le profil de l'animal.</p>
-                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                        <input type="text" placeholder="Identifiant vétérinaire" value={identifiant}
-                                            onChange={(e) => setIdentifiant(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchIdentifiant(); }}
-                                            style={{ flex: 1, minWidth: '200px', padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
-                                        <button onClick={handleSearchIdentifiant} disabled={searching} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
-                                            {searching ? 'Recherche…' : 'Rechercher'}
-                                        </button>
-                                    </div>
+                        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 12px' }}>🐾 Mes patients autorisés</h3>
+                            {authorizedAnimals === null ? (
+                                <p style={{ color: '#6b7280', fontSize: '14px' }}>Chargement…</p>
+                            ) : authorizedAnimals.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                                    <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔐</div>
+                                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '0 0 6px' }}>Aucun animal ne vous a encore autorisé.</p>
+                                    <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0 }}>Partagez votre code ci-dessus avec vos clients : ils entrent ce code dans l'onglet Dossier de leur animal pour vous donner accès.</p>
                                 </div>
                             ) : (
-                                <div>
-                                    <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '12px' }}>Saisissez le nom de l'animal ainsi que le nom (et éventuellement le prénom et la date de naissance) de son propriétaire.</p>
-                                    <div style={{ display: 'grid', gap: '8px', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: '12px' }}>
-                                        <input type="text" placeholder="Nom de l'animal" value={animalNomSearch}
-                                            onChange={(e) => setAnimalNomSearch(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
-                                            style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
-                                        <input type="text" placeholder="Nom du propriétaire" value={proprietaireNomSearch}
-                                            onChange={(e) => setProprietaireNomSearch(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
-                                            style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
-                                        <input type="text" placeholder="Prénom du propriétaire (optionnel)" value={proprietairePrenomSearch}
-                                            onChange={(e) => setProprietairePrenomSearch(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
-                                            style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px' }} />
-                                        <div>
-                                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', color: '#6b7280' }}>Date de naissance du propriétaire (optionnel)</label>
-                                            <input type="date" value={proprietaireDateNaissanceSearch}
-                                                onChange={(e) => setProprietaireDateNaissanceSearch(e.target.value)}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchNom(); }}
-                                                style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '16px', width: '100%' }} />
-                                        </div>
-                                    </div>
-                                    <button onClick={handleSearchNom} disabled={searching} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
-                                        {searching ? 'Recherche…' : 'Rechercher'}
-                                    </button>
-                                </div>
-                            )}
-
-                            {error && <p style={{ color: '#ef4444', marginTop: '10px', fontSize: '14px' }}>{error}</p>}
-
-                            {searchResults.length > 0 && (
-                                <div style={{ marginTop: '16px' }}>
-                                    <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>{searchResults.length} résultats trouvés :</p>
-                                    {searchResults.map(a => (
-                                        <button key={a.id} onClick={() => { setAnimal(a); setSearchResults([]); }}
-                                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px', marginBottom: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer' }}>
-                                            <strong>{a.nom}</strong> — {a.espece} • Propriétaire : {a.proprietairePrenom} {a.proprietaireNom}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {authorizedAnimals.map(a => (
+                                        <button key={a.id} onClick={() => { setAnimal(a); setActiveTab('vaccins'); }}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: animal?.id === a.id ? '#f0fdf4' : '#f9fafb', border: animal?.id === a.id ? '2px solid #10b981' : '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', textAlign: 'left' }}>
+                                            <AnimalAvatar animal={a} size={28} />
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: '700', fontSize: '14px' }}>{a.nom}</div>
+                                                <div style={{ fontSize: '12px', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.espece}{a.race ? ` • ${a.race}` : ''}{a.proprietairePrenom || a.proprietaireNom ? ` — ${[a.proprietairePrenom, a.proprietaireNom].filter(Boolean).join(' ')}` : ''}</div>
+                                            </div>
+                                            <span style={{ color: '#d1d5db', fontSize: '18px' }}>›</span>
                                         </button>
                                     ))}
                                 </div>
                             )}
                         </div>
 
+                        {error && <p style={{ color: '#ef4444', marginBottom: '12px', fontSize: '14px' }}>{error}</p>}
+
                         {animal && (
                             <div>
+                                <button onClick={() => setAnimal(null)} style={{ marginBottom: '14px', padding: '7px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>← Retour à la liste</button>
                                 <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '24px', textAlign: 'center', marginBottom: '16px' }}>
                                     <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 10px' }}>
                                         <AnimalAvatar animal={animal} size={32} />
