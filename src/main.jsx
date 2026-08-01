@@ -64,7 +64,7 @@ import CropModal from './components/CropModal';
             { id: 'grenoble', nom: 'Maison des Urgences Vétérinaires — Échirolles', lat: 45.1402, lng: 5.7172, telephone: '04 80 42 33 23', horaires: '19h30–7h30 sem. / 12h+ sam. / 24h/24 dim. & fériés', adresse: '32 rue de Comboire, 38130 Échirolles', specialites: ['Urgences'], emergency: true },
             { id: 'rouen', nom: 'V2TU Tourville-la-Rivière (Rouen)', lat: 49.3442, lng: 1.0842, telephone: '02 35 87 94 94', horaires: 'Nuits + WE', adresse: '5 rue Parc en Seine, 76410 Tourville-la-Rivière', specialites: ['Urgences'], emergency: true },
             { id: 'clermont', nom: 'V2TU Clermont-Ferrand', lat: 45.7797, lng: 3.0862, telephone: '04 88 60 20 50', horaires: 'Nuits + WE', adresse: '1 rue Roland Moreno, 63100 Clermont-Ferrand', specialites: ['Urgences'], emergency: true },
-            { id: 'montpellier', nom: 'V2TU Montpellier', lat: 43.6016, lng: 3.8878, telephone: '04 67 45 46 84', horaires: 'Nuits + WE', adresse: '137 rue Claude Balbastre, 34070 Montpellier', specialites: ['Urgences'], emergency: true },
+            { id: 'v2tu-montpellier', nom: 'V2TU Montpellier', lat: 43.6016, lng: 3.8878, telephone: '04 67 45 46 84', horaires: 'Nuits + WE', adresse: '137 rue Claude Balbastre, 34070 Montpellier', specialites: ['Urgences'], emergency: true },
             { id: 'dijon', nom: 'Clinique Ducs de Bourgogne — Dijon', lat: 47.3220, lng: 5.0415, telephone: '03 80 51 63 16', horaires: '24h/24, 7j/7', adresse: '11 ter Rue Paul Langevin, 21300 Chenôve', specialites: ['Urgences'], emergency: true },
         ];
 
@@ -619,7 +619,7 @@ import CropModal from './components/CropModal';
 
             // Auth State
             React.useEffect(() => {
-                onAuthStateChanged(auth, async (currentUser) => {
+                const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
                     setUser(currentUser);
                     setLoading(false);
                     if (currentUser) {
@@ -633,6 +633,7 @@ import CropModal from './components/CropModal';
                         setUserRole(null);
                     }
                 });
+                return unsubscribe;
             }, []);
 
             // Responsive layout: switch between sidebar (desktop) and hamburger menu (mobile)
@@ -644,7 +645,7 @@ import CropModal from './components/CropModal';
 
             // Load Animals from Firestore. Members of a shared household see every animal of
             // the household (theirs and other members'); otherwise only their own animals.
-            const loadAnimalsFromFirestore = async (uid, hId = householdId) => {
+            const loadAnimalsFromFirestore = async (uid, hId = householdId, keepSelected = false) => {
                 try {
                     const q = hId
                         ? query(collection(db, 'animals'), where('householdId', '==', hId))
@@ -655,13 +656,18 @@ import CropModal from './components/CropModal';
                         const data = docSnap.data();
                         ARRAY_FIELDS.forEach(field => {
                             if (Array.isArray(data[field])) {
-                                data[field] = data[field].map((item, idx) => item.id ? item : { ...item, id: `${docSnap.id}_${field}_${idx}_${Date.now()}` });
+                                data[field] = data[field].map((item, idx) => item.id ? item : { ...item, id: `${docSnap.id}_${field}_${idx}` });
                             }
                         });
                         return { id: docSnap.id, ...data };
                     });
                     setAnimals(animalsData);
-                    if (animalsData.length > 0) setSelectedAnimal(animalsData[0].id);
+                    if (!keepSelected && animalsData.length > 0) {
+                        setSelectedAnimal(prev => {
+                            const stillExists = animalsData.some(a => a.id === prev);
+                            return stillExists ? prev : animalsData[0].id;
+                        });
+                    }
                 } catch (error) {
                     console.error('Erreur loading animals:', error);
                 }
@@ -779,8 +785,9 @@ import CropModal from './components/CropModal';
             const saveAnimal = async (animalData) => {
                 try {
                     if (animalData.id && animals.find(a => a.id === animalData.id)) {
-                        // Update existing
-                        await updateDoc(doc(db, 'animals', animalData.id), animalData);
+                        // Update existing — exclude the local `id` field from the Firestore document
+                        const { id: _id, ...dataWithoutId } = animalData;
+                        await updateDoc(doc(db, 'animals', animalData.id), dataWithoutId);
                         // Sync public card — only safe fields, never the full document
                         if (animalData.shareEnabled) {
                             await setDoc(doc(db, 'publicAnimalCards', animalData.id), buildPublicCard(animalData));
@@ -801,7 +808,7 @@ import CropModal from './components/CropModal';
                         });
                         animalData.id = docRef.id;
                     }
-                    loadAnimalsFromFirestore(user.uid);
+                    loadAnimalsFromFirestore(user.uid, householdId, true);
                 } catch (error) {
                     console.error('Erreur saving animal:', error);
                 }
@@ -4576,7 +4583,7 @@ import CropModal from './components/CropModal';
                                         {m.text && <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{m.text}</p>}
                                         {m.photo && <img src={m.photo} alt="Pièce jointe" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: m.text ? '8px' : 0 }} />}
                                     </div>
-                                    <p style={{ fontSize: '11px', color: '#9ca3af', margin: '4px 6px 0', textAlign: mine ? 'right' : 'left' }}>{new Date(m.date).toLocaleString('fr-FR')}</p>
+                                    <p style={{ fontSize: '11px', color: '#9ca3af', margin: '4px 6px 0', textAlign: mine ? 'right' : 'left' }}>{(m.date?.toDate ? m.date.toDate() : new Date(m.date)).toLocaleString('fr-FR')}</p>
                                 </div>
                             );
                         })}

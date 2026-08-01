@@ -432,36 +432,3 @@ exports.searchAnimalsForVet = onCall({ region: REGION }, async (request) => {
 
   return { results };
 });
-
-// Recherche d'animaux pour un vétérinaire — retourne uniquement les champs publics.
-// Accessible uniquement aux vétérinaires avec le Custom Claim vetPro: true.
-// Ne retourne jamais userId, authorizedVets, données médicales, documents ou budget.
-exports.searchAnimalsForVet = onCall({ region: REGION }, async (request) => {
-  if (!request.auth || !request.auth.token.vetPro) {
-    throw new HttpsError('permission-denied', 'Réservé aux vétérinaires abonnés.');
-  }
-  const { proprietaireNom, proprietairePrenom, animalNom } = request.data;
-  if (!proprietaireNom || proprietaireNom.trim().length < 2) {
-    throw new HttpsError('invalid-argument', 'Nom du propriétaire requis (min. 2 caractères).');
-  }
-
-  let q = admin.firestore().collection('animals')
-    .where('proprietaireNom', '==', proprietaireNom.trim());
-  if (proprietairePrenom && proprietairePrenom.trim()) {
-    q = q.where('proprietairePrenom', '==', proprietairePrenom.trim());
-  }
-
-  const snap = await q.get();
-  const results = snap.docs
-    .filter(doc => !animalNom || (doc.data().nom || '').toLowerCase().includes(animalNom.toLowerCase()))
-    .map(doc => ({
-      animalId: doc.id,
-      animalNom: doc.data().nom || '',
-      espece: doc.data().espece || '',
-      proprietaireNom: doc.data().proprietaireNom || '',
-      proprietairePrenom: doc.data().proprietairePrenom || '',
-      alreadyAuthorized: Array.isArray(doc.data().authorizedVets) && doc.data().authorizedVets.includes(request.auth.uid),
-    }));
-
-  return { results };
-});

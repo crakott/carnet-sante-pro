@@ -79,17 +79,22 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys()
              .hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'role']);
 
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      // Création : interdire les champs gérés côté serveur (même protection que allow update).
+      // role est autorisé à la création (choix vétérinaire/propriétaire à l'inscription).
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && !request.resource.data.keys().hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId']);
 
       // Foyer partagé : un membre du même foyer peut lire les settings (nom/prénom) des
       // autres membres pour afficher la liste des membres du foyer
-      allow read: if request.auth != null
+      allow get: if request.auth != null
         && resource.data.householdId != null
         && resource.data.householdId == get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.householdId;
 
       // Profil vétérinaire : un propriétaire connecté peut lire le nom d'un vétérinaire
       // pour vérifier son identité avant de l'autoriser sur un animal.
-      allow read: if request.auth != null && resource.data.role == 'veterinaire';
+      // allow get (pas allow read) pour empêcher l'énumération de tous les vétérinaires.
+      allow get: if request.auth != null && resource.data.role == 'veterinaire';
     }
 
     match /households/{householdId} {
