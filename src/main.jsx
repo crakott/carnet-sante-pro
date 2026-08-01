@@ -545,6 +545,12 @@ import CropModal from './components/CropModal';
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
             });
+            // When a new SW takes over (skipWaiting + clients.claim), reload so the
+            // user gets the updated app immediately instead of seeing the old version.
+            let swRefreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!swRefreshing) { swRefreshing = true; window.location.reload(); }
+            });
         }
 
         // Send local push notifications for due/overdue reminders via the service worker.
