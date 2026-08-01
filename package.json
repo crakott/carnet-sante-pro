@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:rules": "firebase emulators:exec --only firestore --project carnet-sante-pro-test 'vitest run tests/firestore.rules.test.js'"
   },
   "dependencies": {
     "firebase": "^10.7.0",
