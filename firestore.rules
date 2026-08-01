@@ -25,9 +25,22 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
-      // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
-      // a activé le partage via un lien/QR code (champ shareEnabled)
-      allow get: if resource.data.shareEnabled == true;
+    }
+
+    // Fiche de garde publique — document filtré, sans données privées.
+    // Écrit par le propriétaire (ou membre du foyer) via l'app quand shareEnabled = true.
+    // Contient uniquement : nom, espèce, photo, vaccins, traitements, contact urgence…
+    // N'inclut PAS : budget, documents, partages, authorizedVets, userId…
+    match /publicAnimalCards/{animalId} {
+      allow read: if true; // entièrement public (c'est l'objectif du QR code)
+      allow write: if request.auth != null
+        && (
+          get(/databases/$(database)/documents/animals/$(animalId)).data.userId == request.auth.uid
+          || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+              && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
+        );
+      allow delete: if request.auth != null
+        && get(/databases/$(database)/documents/animals/$(animalId)).data.userId == request.auth.uid;
     }
 
     // Messagerie sécurisée propriétaire <-> vétérinaire, par animal

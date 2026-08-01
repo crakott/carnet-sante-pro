@@ -292,6 +292,21 @@
             'Chien': '🐕', 'Chat': '🐈', 'Lapin': '🐰', 'Hamster': '🐹',
             'Cheval': '🐴', 'Oiseau': '🦜', 'Tortue': '🐢', 'Gerbille': '🐭'
         };
+
+        // Champs exposés publiquement dans la fiche de garde QR code.
+        // NE PAS y inclure : budget, documents, partages, authorizedVets,
+        // authorizedVetsNames, householdId, userId, proprietaire*, fcmToken, stripeCustomerId
+        const PUBLIC_CARD_FIELDS = [
+            'nom', 'espece', 'race', 'sexe', 'dateNaissance', 'photo', 'sterilise',
+            'identifiant', 'alimentationInfo', 'contactUrgence', 'veterinaire',
+            'vaccins', 'medicaments', 'antiparasitaires', 'vermifuges',
+            'chirurgies', 'observations', 'poids', 'poidsObjectif',
+        ];
+        const buildPublicCard = (animalData) => {
+            const card = {};
+            PUBLIC_CARD_FIELDS.forEach(f => { if (animalData[f] !== undefined) card[f] = animalData[f]; });
+            return card;
+        };
         const VACCINS_COURANTS = {
             'Chien': ['Rage', 'DTP', 'Parvovirose', 'Leptospirose'],
             'Chat': ['Rage', 'Typhus félin', 'Calicivirose', 'Rhinotrachéite', 'Coryza', 'Chlamydophilose', 'Leucose féline'],
@@ -1324,6 +1339,15 @@
                     if (animalData.id && animals.find(a => a.id === animalData.id)) {
                         // Update existing
                         await updateDoc(doc(db, 'animals', animalData.id), animalData);
+                        // Sync public card — only safe fields, never the full document
+                        if (animalData.shareEnabled) {
+                            await setDoc(doc(db, 'publicAnimalCards', animalData.id), buildPublicCard(animalData));
+                        } else {
+                            const prev = animals.find(a => a.id === animalData.id);
+                            if (prev && prev.shareEnabled) {
+                                await deleteDoc(doc(db, 'publicAnimalCards', animalData.id));
+                            }
+                        }
                     } else {
                         // Create new (owner nom/prénom/date de naissance are denormalized so vets can search by owner identity)
                         const docRef = await addDoc(collection(db, 'animals'), {
@@ -1345,6 +1369,8 @@
             const deleteAnimalFromFirestore = async (animalId) => {
                 try {
                     await deleteDoc(doc(db, 'animals', animalId));
+                    // Remove public card if it exists (ignore errors — may not exist)
+                    deleteDoc(doc(db, 'publicAnimalCards', animalId)).catch(() => {});
                     loadAnimalsFromFirestore(user.uid);
                     setSelectedAnimal(null);
                 } catch (error) {
@@ -2425,8 +2451,10 @@
             React.useEffect(() => {
                 (async () => {
                     try {
-                        const snap = await getDoc(doc(db, 'animals', animalId));
-                        if (snap.exists() && snap.data().shareEnabled) {
+                        // Read from the filtered public card — never from the full animals document.
+                        // The public card contains only safe fields (no budget, documents, partages, etc.)
+                        const snap = await getDoc(doc(db, 'publicAnimalCards', animalId));
+                        if (snap.exists()) {
                             setAnimal({ id: snap.id, ...snap.data() });
                             setStatus('ok');
                         } else {
