@@ -307,6 +307,13 @@
             PUBLIC_CARD_FIELDS.forEach(f => { if (animalData[f] !== undefined) card[f] = animalData[f]; });
             return card;
         };
+
+        // Génère un token aléatoire pour les liens d'invitation foyer
+        const generateInviteToken = () => {
+            try { return crypto.randomUUID(); } catch {
+                return Math.random().toString(36).substring(2, 11) + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+            }
+        };
         const VACCINS_COURANTS = {
             'Chien': ['Rage', 'DTP', 'Parvovirose', 'Leptospirose'],
             'Chat': ['Rage', 'Typhus félin', 'Calicivirose', 'Rhinotrachéite', 'Coryza', 'Chlamydophilose', 'Leucose féline'],
@@ -1293,7 +1300,9 @@
             // existing animals are stamped with the new household id so future members see them.
             const createHousehold = async () => {
                 try {
-                    const ref = await addDoc(collection(db, 'households'), { members: [user.uid] });
+                    const token = generateInviteToken();
+                    const ref = await addDoc(collection(db, 'households'), { members: [user.uid], currentInviteToken: token });
+                    await setDoc(doc(db, 'invitationLinks', token), { householdId: ref.id, createdBy: user.uid, createdAt: new Date() });
                     await setDoc(doc(db, 'settings', user.uid), { householdId: ref.id }, { merge: true });
                     await setOwnAnimalsHousehold(ref.id);
                     setHouseholdId(ref.id);
@@ -1302,6 +1311,17 @@
                     console.error('Erreur creating household:', error);
                     throw error;
                 }
+            };
+
+            const regenerateInviteLink = async () => {
+                if (!householdId) return null;
+                const newToken = generateInviteToken();
+                const snap = await getDoc(doc(db, 'households', householdId));
+                const oldToken = snap.data()?.currentInviteToken;
+                if (oldToken) await deleteDoc(doc(db, 'invitationLinks', oldToken)).catch(() => {});
+                await setDoc(doc(db, 'invitationLinks', newToken), { householdId, createdBy: user.uid, createdAt: new Date() });
+                await updateDoc(doc(db, 'households', householdId), { currentInviteToken: newToken });
+                return newToken;
             };
 
             // Join a household via its invitation link/QR code
@@ -1525,6 +1545,7 @@
                             householdId={householdId}
                             createHousehold={createHousehold}
                             leaveHousehold={leaveHousehold}
+                            regenerateInviteLink={regenerateInviteLink}
                         />
                         </div>
                     </div>
@@ -2901,33 +2922,81 @@
 
         // Shown when the user opens an invitation link (?join=<householdId>) for a shared
         // household. Lets them accept or decline before joining.
+        // Shown when the user opens an invitation link (?invite=<token>) for a shared household.
+        // Reads invitationLinks/{token} to resolve the householdId — the ID itself is never in the URL.
+        // Legacy ?join=<householdId> links show a deprecation notice instead of a join button.
         function JoinHouseholdBanner({ householdId, joinHousehold, leaveHousehold }) {
-            const targetId = new URLSearchParams(window.location.search).get('join');
-            const [status, setStatus] = React.useState('idle'); // idle | joining | error
+            const params = new URLSearchParams(window.location.search);
+            const inviteToken = params.get('invite');
+            const legacyJoinId = params.get('join');
+            const [inviteData, setInviteData] = React.useState(null);
+            const [status, setStatus] = React.useState(inviteToken ? 'loading' : 'idle');
             const [dismissed, setDismissed] = React.useState(false);
 
-            const clearParam = () => {
+            const clearParams = () => {
                 const url = new URL(window.location.href);
+                url.searchParams.delete('invite');
                 url.searchParams.delete('join');
                 window.history.replaceState({}, '', url.toString());
                 setDismissed(true);
             };
 
-            // If we just joined this household (e.g. after accepting the invite below),
-            // clean up the ?join= param from the URL.
             React.useEffect(() => {
-                if (targetId && targetId === householdId) clearParam();
-            }, [targetId, householdId]);
+                if (!inviteToken) return;
+                (async () => {
+                    try {
+                        const snap = await getDoc(doc(db, 'invitationLinks', inviteToken));
+                        if (snap.exists()) {
+                            setInviteData(snap.data());
+                            setStatus('ready');
+                        } else {
+                            setStatus('invalid');
+                        }
+                    } catch {
+                        setStatus('invalid');
+                    }
+                })();
+            }, [inviteToken]);
 
-            if (!targetId || targetId === householdId || dismissed) return null;
+            React.useEffect(() => {
+                if (inviteData && inviteData.householdId === householdId) clearParams();
+            }, [inviteData, householdId]);
+
+            if (dismissed) return null;
+
+            if (!inviteToken && legacyJoinId) {
+                return (
+                    <div style={{ background: '#fef3c7', padding: '14px 16px', margin: '16px', borderRadius: '8px', border: '1px solid #fbbf24' }}>
+                        <p style={{ fontSize: '13px', color: '#92400e', marginBottom: '8px' }}>⚠️ Ce lien d'invitation est obsolète. Demandez un nouveau lien à l'administrateur du foyer.</p>
+                        <button onClick={clearParams} style={{ padding: '5px 12px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Ignorer</button>
+                    </div>
+                );
+            }
+
+            if (!inviteToken) return null;
+
+            if (status === 'loading') {
+                return <div style={{ padding: '14px 16px', margin: '16px', textAlign: 'center', color: '#6b7280', fontSize: '14px' }}>Vérification du lien d'invitation…</div>;
+            }
+
+            if (status === 'invalid') {
+                return (
+                    <div style={{ background: '#fee2e2', padding: '14px 16px', margin: '16px', borderRadius: '8px', border: '1px solid #fca5a5' }}>
+                        <p style={{ fontSize: '13px', color: '#dc2626', marginBottom: '8px' }}>❌ Lien d'invitation invalide ou révoqué. Demandez un nouveau lien à l'administrateur du foyer.</p>
+                        <button onClick={clearParams} style={{ padding: '5px 12px', background: '#f3f4f6', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>Ignorer</button>
+                    </div>
+                );
+            }
+
+            if (!inviteData || inviteData.householdId === householdId) return null;
 
             const handleJoin = async () => {
                 setStatus('joining');
                 try {
                     if (householdId) await leaveHousehold();
-                    await joinHousehold(targetId);
-                    clearParam();
-                } catch (error) {
+                    await joinHousehold(inviteData.householdId);
+                    clearParams();
+                } catch {
                     setStatus('error');
                 }
             };
@@ -2936,8 +3005,7 @@
                 <div className="animate-fade-in" style={{ background: '#ecfdf5', padding: '16px', margin: '16px', borderRadius: '8px', border: '1px solid #6ee7b7' }}>
                     <h3 style={{ marginBottom: '8px', fontWeight: '700' }}>👨‍👩‍👧 Invitation à un foyer partagé</h3>
                     <p style={{ fontSize: '14px', color: '#374151', marginBottom: '12px' }}>
-                        Vous avez été invité(e) à rejoindre un foyer partagé. Les membres peuvent consulter et
-                        modifier les carnets de tous les animaux du foyer.
+                        Vous avez été invité(e) à rejoindre un foyer partagé. Les membres peuvent consulter et modifier les carnets de tous les animaux du foyer.
                         {householdId && ' Si vous acceptez, vous quitterez votre foyer actuel.'}
                     </p>
                     {status === 'error' && <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '12px' }}>❌ Impossible de rejoindre ce foyer.</p>}
@@ -2945,7 +3013,7 @@
                         <button onClick={handleJoin} disabled={status === 'joining'} style={{ padding: '10px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                             {status === 'joining' ? 'Adhésion…' : '✅ Rejoindre le foyer'}
                         </button>
-                        <button onClick={clearParam} style={{ padding: '10px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                        <button onClick={clearParams} style={{ padding: '10px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                             Ignorer
                         </button>
                     </div>
@@ -6489,13 +6557,15 @@
             );
         }
 
-        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth, userProfile, saveUserProfile, householdId, createHousehold, leaveHousehold }) {
+        function ParametresTab({ reminderSettings, setReminderSettings, user, db, animals, saveAnimal, auth, userProfile, saveUserProfile, householdId, createHousehold, leaveHousehold, regenerateInviteLink }) {
             const [importing, setImporting] = React.useState(false);
             const [importMsg, setImportMsg] = React.useState('');
             const [linkCopied, setLinkCopied] = React.useState(false);
             const [householdLinkCopied, setHouseholdLinkCopied] = React.useState(false);
             const [householdMembers, setHouseholdMembers] = React.useState([]);
             const [householdBusy, setHouseholdBusy] = React.useState(false);
+            const [currentInviteToken, setCurrentInviteToken] = React.useState('');
+            const [regenerating, setRegenerating] = React.useState(false);
             const [contacts, setContacts] = React.useState([]);
             const [contactsLoaded, setContactsLoaded] = React.useState(false);
             const [showContactForm, setShowContactForm] = React.useState(false);
@@ -6530,20 +6600,35 @@
             const appUrl = window.location.origin + window.location.pathname;
 
             React.useEffect(() => {
-                if (!householdId) { setHouseholdMembers([]); return; }
+                if (!householdId) { setHouseholdMembers([]); setCurrentInviteToken(''); return; }
                 (async () => {
                     try {
                         const q = query(collection(db, 'settings'), where('householdId', '==', householdId));
                         const snap = await getDocs(q);
                         setHouseholdMembers(snap.docs.map(d => d.data()));
+                        // Charger le token d'invitation depuis le document households
+                        const hSnap = await getDoc(doc(db, 'households', householdId));
+                        setCurrentInviteToken(hSnap.data()?.currentInviteToken || '');
                     } catch (error) {
-                        console.error('Erreur loading household members:', error);
+                        console.error('Erreur loading household:', error);
                     }
                 })();
             }, [householdId]);
 
+            const handleRegenerateInvite = async () => {
+                if (!window.confirm("Regénérer le lien d'invitation ? L'ancien lien et QR code seront immédiatement révoqués.")) return;
+                setRegenerating(true);
+                try {
+                    const newToken = await regenerateInviteLink();
+                    if (newToken) setCurrentInviteToken(newToken);
+                } catch {
+                    alert("Erreur lors de la régénération du lien.");
+                }
+                setRegenerating(false);
+            };
+
             const copyHouseholdLink = () => {
-                navigator.clipboard.writeText(`${appUrl}?join=${householdId}`);
+                navigator.clipboard.writeText(`${appUrl}?invite=${currentInviteToken}`);
                 setHouseholdLinkCopied(true);
                 setTimeout(() => setHouseholdLinkCopied(false), 2000);
             };
@@ -6827,13 +6912,20 @@
                                         👤 Membres : {householdMembers.map(m => `${m.prenom || ''} ${m.nom || ''}`.trim() || 'Membre').join(', ')}
                                     </p>
                                 )}
-                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px' }}>Invitez un membre en partageant ce lien ou ce QR code :</p>
-                                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-                                    <ShareQRCode size={140} value={`${appUrl}?join=${householdId}`} />
-                                </div>
+                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px' }}>Invitez un membre en partageant ce lien ou ce QR code. Le lien est révocable à tout moment.</p>
+                                {currentInviteToken ? (
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                                        <ShareQRCode size={140} value={`${appUrl}?invite=${currentInviteToken}`} />
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '16px', textAlign: 'center' }}>Chargement du lien d'invitation…</p>
+                                )}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <button onClick={copyHouseholdLink} style={{ padding: '10px 16px', background: householdLinkCopied ? '#d1fae5' : '#f3f4f6', color: householdLinkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                                    <button onClick={copyHouseholdLink} disabled={!currentInviteToken} style={{ padding: '10px 16px', background: householdLinkCopied ? '#d1fae5' : '#f3f4f6', color: householdLinkCopied ? '#10b981' : '#374151', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', opacity: currentInviteToken ? 1 : 0.5 }}>
                                         {householdLinkCopied ? '✅ Lien copié !' : "🔗 Copier le lien d'invitation"}
+                                    </button>
+                                    <button onClick={handleRegenerateInvite} disabled={regenerating || householdBusy} style={{ padding: '10px 16px', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                                        {regenerating ? '⏳ Régénération…' : '🔄 Révoquer & regénérer le lien'}
                                     </button>
                                     <button onClick={handleLeaveHousehold} disabled={householdBusy} style={{ padding: '10px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
                                         Quitter le foyer
