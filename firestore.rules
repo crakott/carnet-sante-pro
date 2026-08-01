@@ -25,6 +25,11 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
+      // Recherche par nom de proprio : un vétérinaire vetPro peut lister
+      // les animaux par proprietaireNom pour envoyer une demande d'accès
+      allow list: if request.auth != null
+        && request.auth.token.vetPro == true;
+
     }
 
     // Fiche de garde publique — document filtré, sans données privées.
@@ -115,6 +120,26 @@ service cloud.firestore {
       allow update: if request.auth != null
         && request.auth.uid in resource.data.members
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentInviteToken']);
+    }
+
+    // Demandes d'accès vétérinaire — flux invitation/acceptation propriétaire
+    match /vetAccessRequests/{requestId} {
+      // Lecture : le vétérinaire concerné OU le propriétaire de l'animal
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.vetUid
+            || request.auth.uid == resource.data.ownerUid);
+
+      // Création : uniquement par un vétérinaire vetPro (claim Firebase Auth)
+      allow create: if request.auth != null
+        && request.auth.token.vetPro == true
+        && request.auth.uid == request.resource.data.vetUid
+        && request.resource.data.status == 'pending';
+
+      // Mise à jour du statut : uniquement par le propriétaire de l'animal
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.ownerUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['accepted', 'refused'];
     }
 
     // Liens d'invitation foyer — le token UUID est le secret.

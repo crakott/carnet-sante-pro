@@ -3327,10 +3327,42 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             const [vetLookupResult, setVetLookupResult] = React.useState(null);
             const [vetLookupError, setVetLookupError] = React.useState('');
             const [vetLookupLoading, setVetLookupLoading] = React.useState(false);
+            const [pendingVetRequests, setPendingVetRequests] = React.useState([]);
 
             React.useEffect(() => {
                 getVideosForAnimal(animal.id).then(list => setVideoCount(list.length)).catch(() => setVideoCount(0));
             }, [animal.id]);
+
+            React.useEffect(() => {
+                const q = query(
+                    collection(db, 'vetAccessRequests'),
+                    where('animalId', '==', animal.id),
+                    where('status', '==', 'pending')
+                );
+                const unsub = onSnapshot(q, (snap) => {
+                    setPendingVetRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                }, () => setPendingVetRequests([]));
+                return () => unsub();
+            }, [animal.id]);
+
+            const handleVetRequestAccept = async (req) => {
+                try {
+                    await updateDoc(doc(db, 'vetAccessRequests', req.id), { status: 'accepted' });
+                    const currentVets = animal.authorizedVets || [];
+                    const currentNames = animal.authorizedVetsNames || {};
+                    saveAnimal({
+                        ...animal,
+                        authorizedVets: [...currentVets, req.vetUid],
+                        authorizedVetsNames: { ...currentNames, [req.vetUid]: `Dr. ${[req.vetPrenom, req.vetNom].filter(Boolean).join(' ')}` },
+                    });
+                } catch (e) { console.error('Erreur acceptation demande vétérinaire:', e); }
+            };
+
+            const handleVetRequestRefuse = async (req) => {
+                try {
+                    await updateDoc(doc(db, 'vetAccessRequests', req.id), { status: 'refused' });
+                } catch (e) { console.error('Erreur refus demande vétérinaire:', e); }
+            };
 
             // Record the share, then open the user's email client with the dossier pre-filled for the vétérinaire
             const handleShare = () => {
@@ -3405,6 +3437,21 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                     <AnimalSwitcher animals={animals} selectedAnimal={selectedAnimal} setSelectedAnimal={setSelectedAnimal} />
 
                     <AnimalProfileCard animal={animal} />
+
+                    {pendingVetRequests.length > 0 && (
+                        <div style={{ marginBottom: '16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '10px', padding: '14px 16px' }}>
+                            <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#92400e', margin: '0 0 10px' }}>🔔 Demandes d'accès en attente</h4>
+                            {pendingVetRequests.map(req => (
+                                <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid #fde68a' }}>
+                                    <span style={{ fontSize: '13px', color: '#374151', flex: 1, marginRight: '10px' }}>🩺 Dr. {[req.vetPrenom, req.vetNom].filter(Boolean).join(' ')} demande l'accès au dossier de {animal.nom}</span>
+                                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                                        <button onClick={() => handleVetRequestAccept(req)} style={{ padding: '5px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>✅ Autoriser</button>
+                                        <button onClick={() => handleVetRequestRefuse(req)} style={{ padding: '5px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>❌ Refuser</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     {DOSSIER_GROUPS.map(group => {
                         const cards = DOSSIER_CARDS.filter(c => c.group === group);
@@ -7243,6 +7290,14 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             const [vetCodeCopied, setVetCodeCopied] = React.useState(false);
             const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 768);
             const [sidebarOpen, setSidebarOpen] = React.useState(false);
+            const [searchNom, setSearchNom] = React.useState('');
+            const [searchPrenom, setSearchPrenom] = React.useState('');
+            const [searchAnimalNom, setSearchAnimalNom] = React.useState('');
+            const [searchResults, setSearchResults] = React.useState(null); // null = pas encore cherché
+            const [searchLoading, setSearchLoading] = React.useState(false);
+            const [searchError, setSearchError] = React.useState('');
+            const [pendingRequestedIds, setPendingRequestedIds] = React.useState(new Set());
+            const [requestLoading, setRequestLoading] = React.useState(null); // animalId en cours
 
             // Synchronise le Custom Claim vetPro au montage (migration des abonnés existants).
             // Si le claim est absent alors que le statut Firestore est 'active', on appelle
@@ -7299,6 +7354,64 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                 });
                 return () => unsub();
             }, [subStatus]);
+
+            // Suivi en temps réel des demandes d'accès déjà envoyées (status: pending)
+            React.useEffect(() => {
+                if (subStatus !== 'active') return;
+                const q = query(
+                    collection(db, 'vetAccessRequests'),
+                    where('vetUid', '==', user.uid),
+                    where('status', '==', 'pending')
+                );
+                const unsub = onSnapshot(q, (snap) => {
+                    setPendingRequestedIds(new Set(snap.docs.map(d => d.data().animalId)));
+                }, () => {});
+                return () => unsub();
+            }, [subStatus]);
+
+            const handleSearchAnimals = async () => {
+                const nom = searchNom.trim();
+                if (!nom) { setSearchError("Veuillez saisir le nom du propriétaire."); return; }
+                setSearchError('');
+                setSearchLoading(true);
+                setSearchResults(null);
+                try {
+                    const constraints = [where('proprietaireNom', '==', nom)];
+                    if (searchPrenom.trim()) constraints.push(where('proprietairePrenom', '==', searchPrenom.trim()));
+                    const snap = await getDocs(query(collection(db, 'animals'), ...constraints));
+                    let results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    if (searchAnimalNom.trim()) {
+                        const animalNomLower = searchAnimalNom.trim().toLowerCase();
+                        results = results.filter(a => a.nom && a.nom.toLowerCase().includes(animalNomLower));
+                    }
+                    setSearchResults(results);
+                } catch (err) {
+                    setSearchError("Erreur de recherche : " + err.message);
+                } finally {
+                    setSearchLoading(false);
+                }
+            };
+
+            const handleRequestAccess = async (animalData) => {
+                setRequestLoading(animalData.id);
+                try {
+                    await addDoc(collection(db, 'vetAccessRequests'), {
+                        vetUid: user.uid,
+                        vetNom: vetProfile.nom,
+                        vetPrenom: vetProfile.prenom,
+                        animalId: animalData.id,
+                        animalNom: animalData.nom,
+                        ownerUid: animalData.userId,
+                        status: 'pending',
+                        createdAt: new Date(),
+                    });
+                    setPendingRequestedIds(prev => new Set([...prev, animalData.id]));
+                } catch (err) {
+                    setSearchError("Erreur lors de la demande : " + err.message);
+                } finally {
+                    setRequestLoading(null);
+                }
+            };
 
             // Responsive split-pane : détecter desktop (≥768px)
             React.useEffect(() => {
@@ -7461,6 +7574,82 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                                     {vetCodeCopied ? '✅ Copié' : '📋 Copier'}
                                 </button>
                             </div>
+                        </div>)}
+
+                        {!animal && (<div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 6px' }}>🔍 Demander l'accès à un nouveau patient</h3>
+                            <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 12px' }}>Recherchez un animal par le nom de son propriétaire pour envoyer une demande d'accès au dossier.</p>
+                            <div style={{ display: 'grid', gap: '8px', marginBottom: '10px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Nom du propriétaire *"
+                                    value={searchNom}
+                                    onChange={e => setSearchNom(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleSearchAnimals(); }}
+                                    style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px' }}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Prénom du propriétaire (optionnel)"
+                                    value={searchPrenom}
+                                    onChange={e => setSearchPrenom(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleSearchAnimals(); }}
+                                    style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px' }}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Nom de l'animal (optionnel)"
+                                    value={searchAnimalNom}
+                                    onChange={e => setSearchAnimalNom(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter') handleSearchAnimals(); }}
+                                    style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '13px' }}
+                                />
+                            </div>
+                            <button
+                                onClick={handleSearchAnimals}
+                                disabled={searchLoading || !searchNom.trim()}
+                                style={{ width: '100%', padding: '10px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: (searchLoading || !searchNom.trim()) ? 'not-allowed' : 'pointer', opacity: (searchLoading || !searchNom.trim()) ? 0.6 : 1 }}
+                            >
+                                {searchLoading ? 'Recherche…' : '🔍 Rechercher'}
+                            </button>
+                            {searchError && <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>{searchError}</p>}
+                            {searchResults !== null && (
+                                <div style={{ marginTop: '12px' }}>
+                                    {searchResults.length === 0 ? (
+                                        <p style={{ fontSize: '13px', color: '#6b7280', textAlign: 'center', padding: '16px 0' }}>Aucun animal trouvé. Vérifiez l'orthographe du nom du propriétaire.</p>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {searchResults.map(a => {
+                                                const alreadyAuthorized = (authorizedAnimals || []).some(aa => aa.id === a.id);
+                                                const alreadyRequested = pendingRequestedIds.has(a.id);
+                                                const isLoading = requestLoading === a.id;
+                                                return (
+                                                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+                                                        <AnimalAvatar animal={a} size={28} />
+                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                            <div style={{ fontWeight: '700', fontSize: '14px' }}>{a.nom}</div>
+                                                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{a.espece}{a.race ? ` · ${a.race}` : ''} — {[a.proprietairePrenom, a.proprietaireNom].filter(Boolean).join(' ')}</div>
+                                                        </div>
+                                                        {alreadyAuthorized ? (
+                                                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#047857', background: '#d1fae5', padding: '4px 10px', borderRadius: '6px' }}>✅ Autorisé</span>
+                                                        ) : alreadyRequested ? (
+                                                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px' }}>⏳ Demande envoyée</span>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleRequestAccess(a)}
+                                                                disabled={isLoading}
+                                                                style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: isLoading ? 'wait' : 'pointer', opacity: isLoading ? 0.6 : 1, flexShrink: 0 }}
+                                                            >
+                                                                {isLoading ? '…' : 'Demander l\'accès'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>)}
 
                         {!animal && authorizedAnimals != null && authorizedAnimals.length > 0 && (

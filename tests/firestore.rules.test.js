@@ -147,6 +147,18 @@ async function seedFirestore() {
       createdBy:   'uid-owner-a',
       createdAt:   new Date(),
     })
+
+    // Demande d'accès vétérinaire en attente (vetB demande l'accès à animal-1 d'ownerA)
+    await setDoc(doc(db, 'vetAccessRequests', 'request-1'), {
+      vetUid:    'uid-vet-b',
+      vetNom:    'Leclerc',
+      vetPrenom: 'Paul',
+      animalId:  'animal-1',
+      animalNom: 'Rex',
+      ownerUid:  'uid-owner-a',
+      status:    'pending',
+      createdAt: new Date(),
+    })
   })
 }
 
@@ -438,6 +450,75 @@ describe("invitationLinks/{token} — création", () => {
         createdBy:   'uid-owner-b',
         createdAt:   new Date(),
       })
+    )
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// vetAccessRequests/{requestId} — flux invitation vétérinaire
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('vetAccessRequests — création', () => {
+  it('vetA (claim vetPro) peut créer une demande d\'accès', async () => {
+    await assertSucceeds(
+      setDoc(doc(vetADb, 'vetAccessRequests', 'request-by-vetA'), {
+        vetUid:    'uid-vet-a',
+        vetNom:    'Martin',
+        vetPrenom: 'Sophie',
+        animalId:  'animal-1',
+        animalNom: 'Rex',
+        ownerUid:  'uid-owner-a',
+        status:    'pending',
+        createdAt: new Date(),
+      })
+    )
+  })
+
+  it('vetFake (sans claim vetPro) ne peut PAS créer une demande', async () => {
+    await assertFails(
+      setDoc(doc(vetFakeDb, 'vetAccessRequests', 'request-by-fake'), {
+        vetUid:    'uid-vet-fake',
+        vetNom:    'Hacker',
+        vetPrenom: 'Evil',
+        animalId:  'animal-1',
+        animalNom: 'Rex',
+        ownerUid:  'uid-owner-a',
+        status:    'pending',
+        createdAt: new Date(),
+      })
+    )
+  })
+
+  it('ownerA (sans claim vetPro) ne peut PAS créer une demande', async () => {
+    await assertFails(
+      setDoc(doc(ownerADb, 'vetAccessRequests', 'request-by-owner'), {
+        vetUid:    'uid-owner-a',
+        vetNom:    'Dupont',
+        vetPrenom: 'Jean',
+        animalId:  'animal-1',
+        animalNom: 'Rex',
+        ownerUid:  'uid-owner-a',
+        status:    'pending',
+        createdAt: new Date(),
+      })
+    )
+  })
+})
+
+describe('vetAccessRequests — lecture et mise à jour du statut', () => {
+  it('ownerA peut lire les demandes en attente sur ses animaux', async () => {
+    await assertSucceeds(getDoc(doc(ownerADb, 'vetAccessRequests', 'request-1')))
+  })
+
+  it('ownerA peut accepter une demande (status → accepted)', async () => {
+    await assertSucceeds(
+      updateDoc(doc(ownerADb, 'vetAccessRequests', 'request-1'), { status: 'accepted' })
+    )
+  })
+
+  it('vetA ne peut PAS modifier le statut (seul le propriétaire peut accepter/refuser)', async () => {
+    await assertFails(
+      updateDoc(doc(vetADb, 'vetAccessRequests', 'request-1'), { status: 'accepted' })
     )
   })
 })
