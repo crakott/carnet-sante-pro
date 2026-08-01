@@ -25,11 +25,6 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
-      // Recherche par nom de proprio : un vétérinaire vetPro peut lister
-      // les animaux par proprietaireNom pour envoyer une demande d'accès
-      allow list: if request.auth != null
-        && request.auth.token.vetPro == true;
-
     }
 
     // Fiche de garde publique — document filtré, sans données privées.
@@ -124,10 +119,10 @@ service cloud.firestore {
 
     // Demandes d'accès vétérinaire — flux invitation/acceptation propriétaire
     match /vetAccessRequests/{requestId} {
-      // Lecture : le vétérinaire concerné OU le propriétaire de l'animal
+      // Lecture : le vétérinaire concerné OU le propriétaire réel de l'animal (vérifié côté serveur)
       allow read: if request.auth != null
         && (request.auth.uid == resource.data.vetUid
-            || request.auth.uid == resource.data.ownerUid);
+            || request.auth.uid == get(/databases/$(database)/documents/animals/$(resource.data.animalId)).data.userId);
 
       // Création : uniquement par un vétérinaire vetPro (claim Firebase Auth)
       allow create: if request.auth != null
@@ -135,9 +130,9 @@ service cloud.firestore {
         && request.auth.uid == request.resource.data.vetUid
         && request.resource.data.status == 'pending';
 
-      // Mise à jour du statut : uniquement par le propriétaire de l'animal
+      // Mise à jour du statut : uniquement par le propriétaire réel de l'animal (vérifié côté serveur)
       allow update: if request.auth != null
-        && request.auth.uid == resource.data.ownerUid
+        && request.auth.uid == get(/databases/$(database)/documents/animals/$(resource.data.animalId)).data.userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && request.resource.data.status in ['accepted', 'refused'];
     }

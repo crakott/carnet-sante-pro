@@ -2470,28 +2470,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             );
         }
 
-        // Reusable AdSense banner (real client ID; slot IDs are placeholders to replace with real ones from AdSense)
-        function AdBanner({ format = 'horizontal', slot = 'xxxxxxxxxx', className = '', style = {} }) {
-            React.useEffect(() => {
-                try {
-                    if (window.adsbygoogle) window.adsbygoogle.push({});
-                } catch (e) {}
-            }, []);
-
-            return (
-                <div className={`ad-banner ${className}`} style={style}>
-                    <ins
-                        className="adsbygoogle"
-                        style={{ display: 'block' }}
-                        data-ad-client="ca-pub-2220007721302800"
-                        data-ad-slot={slot}
-                        data-ad-format={format}
-                        data-full-width-responsive="true"
-                    ></ins>
-                    <div className="ad-note">Publicité</div>
-                </div>
-            );
-        }
 
         const NAV_TABS = [
             { id: 'accueil', label: '🏠 Accueil' },
@@ -7146,43 +7124,28 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             );
         }
 
-        // Dashboard overview for the vet space: aggregate stats and upcoming reminders across all animals
-        // (a subscribed veterinarian is allowed to read every animal document, per Firestore rules)
-        function VetDashboard({ db }) {
-            const [loading, setLoading] = React.useState(true);
-            const [error, setError] = React.useState('');
+        // Dashboard overview for the vet space: aggregate stats and upcoming reminders across authorized animals
+        function VetDashboard({ authorizedAnimals }) {
             const [stats, setStats] = React.useState(null);
 
             React.useEffect(() => {
-                let cancelled = false;
-                (async () => {
-                    try {
-                        const snap = await getDocs(collection(db, 'animals'));
-                        const echeances = [];
-                        snap.docs.forEach(d => {
-                            const a = d.data();
-                            const push = (type, nom, dateStr) => {
-                                const c = getCountdown(dateStr);
-                                if (c) echeances.push({ type, nom, animal: a.nom, ...c });
-                            };
-                            (a.vaccins || []).forEach(v => push('vaccin', v.nom, v.rappel || v.date));
-                            (a.medicaments || []).forEach(m => push('medicament', m.nom, m.dateFin));
-                            (a.antiparasitaires || []).forEach(t => push('antiparasitaire', t.nom || 'Antiparasitaire', t.prochainTraitement));
-                            (a.vermifuges || []).forEach(t => push('vermifuge', t.nom || 'Vermifuge', t.prochainTraitement));
-                        });
-                        echeances.sort((x, y) => x.days - y.days);
-                        if (!cancelled) setStats({ total: snap.size, echeances });
-                    } catch (err) {
-                        if (!cancelled) setError("Erreur lors du chargement du tableau de bord : " + err.message);
-                    } finally {
-                        if (!cancelled) setLoading(false);
-                    }
-                })();
-                return () => { cancelled = true; };
-            }, [db]);
+                if (!authorizedAnimals) return;
+                const echeances = [];
+                authorizedAnimals.forEach(a => {
+                    const push = (type, nom, dateStr) => {
+                        const c = getCountdown(dateStr);
+                        if (c) echeances.push({ type, nom, animal: a.nom, ...c });
+                    };
+                    (a.vaccins || []).forEach(v => push('vaccin', v.nom, v.rappel || v.date));
+                    (a.medicaments || []).forEach(m => push('medicament', m.nom, m.dateFin));
+                    (a.antiparasitaires || []).forEach(t => push('antiparasitaire', t.nom || 'Antiparasitaire', t.prochainTraitement));
+                    (a.vermifuges || []).forEach(t => push('vermifuge', t.nom || 'Vermifuge', t.prochainTraitement));
+                });
+                echeances.sort((x, y) => x.days - y.days);
+                setStats({ total: authorizedAnimals.length, echeances });
+            }, [authorizedAnimals]);
 
-            if (loading) return <p style={{ color: '#6b7280', fontSize: '14px' }}>Chargement du tableau de bord…</p>;
-            if (error) return <p style={{ color: '#ef4444', fontSize: '14px' }}>{error}</p>;
+            if (!stats) return <p style={{ color: '#6b7280', fontSize: '14px' }}>Chargement du tableau de bord…</p>;
 
             const upcoming = stats.echeances.filter(e => e.days >= 0);
             const overdue = stats.echeances.filter(e => e.days < 0);
@@ -7376,36 +7339,34 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                 setSearchLoading(true);
                 setSearchResults(null);
                 try {
-                    const constraints = [where('proprietaireNom', '==', nom)];
-                    if (searchPrenom.trim()) constraints.push(where('proprietairePrenom', '==', searchPrenom.trim()));
-                    const snap = await getDocs(query(collection(db, 'animals'), ...constraints));
-                    let results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    if (searchAnimalNom.trim()) {
-                        const animalNomLower = searchAnimalNom.trim().toLowerCase();
-                        results = results.filter(a => a.nom && a.nom.toLowerCase().includes(animalNomLower));
-                    }
-                    setSearchResults(results);
+                    const searchAnimalsForVet = httpsCallable(functions, 'searchAnimalsForVet');
+                    const { data } = await searchAnimalsForVet({
+                        proprietaireNom: nom,
+                        proprietairePrenom: searchPrenom.trim() || undefined,
+                        animalNom: searchAnimalNom.trim() || undefined,
+                    });
+                    setSearchResults(data.results);
                 } catch (err) {
-                    setSearchError("Erreur de recherche : " + err.message);
+                    setSearchError("Erreur de recherche : " + (err.message || String(err)));
                 } finally {
                     setSearchLoading(false);
                 }
             };
 
             const handleRequestAccess = async (animalData) => {
-                setRequestLoading(animalData.id);
+                setRequestLoading(animalData.animalId);
                 try {
                     await addDoc(collection(db, 'vetAccessRequests'), {
                         vetUid: user.uid,
                         vetNom: vetProfile.nom,
                         vetPrenom: vetProfile.prenom,
-                        animalId: animalData.id,
-                        animalNom: animalData.nom,
-                        ownerUid: animalData.userId,
+                        animalId: animalData.animalId,
+                        animalNom: animalData.animalNom,
+                        ownerUid: animalData.ownerUid,
                         status: 'pending',
                         createdAt: new Date(),
                     });
-                    setPendingRequestedIds(prev => new Set([...prev, animalData.id]));
+                    setPendingRequestedIds(prev => new Set([...prev, animalData.animalId]));
                 } catch (err) {
                     setSearchError("Erreur lors de la demande : " + err.message);
                 } finally {
@@ -7561,7 +7522,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                         </div>
                         )}
 
-                        {view === 'dashboard' && <VetDashboard db={db} />}
+                        {view === 'dashboard' && <VetDashboard authorizedAnimals={authorizedAnimals} />}
 
                         {view === 'home' && (<>
                         {!animal && (<div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
@@ -7620,15 +7581,15 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {searchResults.map(a => {
-                                                const alreadyAuthorized = (authorizedAnimals || []).some(aa => aa.id === a.id);
-                                                const alreadyRequested = pendingRequestedIds.has(a.id);
-                                                const isLoading = requestLoading === a.id;
+                                                const alreadyAuthorized = a.alreadyAuthorized || (authorizedAnimals || []).some(aa => aa.id === a.animalId);
+                                                const alreadyRequested = pendingRequestedIds.has(a.animalId);
+                                                const isLoading = requestLoading === a.animalId;
                                                 return (
-                                                    <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
-                                                        <AnimalAvatar animal={a} size={28} />
+                                                    <div key={a.animalId} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+                                                        <AnimalAvatar animal={{ espece: a.espece }} size={28} />
                                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                                            <div style={{ fontWeight: '700', fontSize: '14px' }}>{a.nom}</div>
-                                                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{a.espece}{a.race ? ` · ${a.race}` : ''} — {[a.proprietairePrenom, a.proprietaireNom].filter(Boolean).join(' ')}</div>
+                                                            <div style={{ fontWeight: '700', fontSize: '14px' }}>{a.animalNom}</div>
+                                                            <div style={{ fontSize: '12px', color: '#6b7280' }}>{a.espece} — {[a.proprietairePrenom, a.proprietaireNom].filter(Boolean).join(' ')}</div>
                                                         </div>
                                                         {alreadyAuthorized ? (
                                                             <span style={{ fontSize: '12px', fontWeight: '600', color: '#047857', background: '#d1fae5', padding: '4px 10px', borderRadius: '6px' }}>✅ Autorisé</span>
