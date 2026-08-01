@@ -107,6 +107,7 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MVNX7BHT"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
+    <script>if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}</script>
     <div id="root">
       <div id="app-loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;gap:16px;">
         <div style="font-size:40px;">🐾</div>
@@ -128,18 +129,38 @@
       }
       window.addEventListener('error', function(e) { showDiag('JS: ' + e.message + ' — ' + e.filename + ':' + e.lineno); });
       window.addEventListener('unhandledrejection', function(e) { showDiag('Promise: ' + (e.reason && (e.reason.message || String(e.reason)))); });
-      // If React hasn't mounted within 10s, show diagnostic info
+
+      // At 5s: silent fallback — if static script tag didn't start (no asset in DOM),
+      // inject it dynamically. This covers cases where the browser silently drops the tag.
+      setTimeout(function() {
+        if (window.__scriptOk || window.__scriptErr) return;
+        var assetScripts = document.querySelectorAll('script[src*="assets"]');
+        if (assetScripts.length === 0 && window.__assetSrc && !window.__injected) {
+          window.__injected = true;
+          var el = document.createElement('script');
+          el.src = window.__assetSrc;
+          el.onerror = function() { window.__scriptErr = 1; };
+          el.onload = function() { window.__scriptOk = 1; };
+          document.head.appendChild(el);
+        }
+      }, 5000);
+
+      // At 12s: show diagnostic if app still hasn't mounted
       setTimeout(function() {
         if (!document.getElementById('app-loader')) return;
+        var ver = window.__htmlVer || 'old';
         var step = window.__appStep || 'non-démarré';
         var loaded = window.__scriptOk ? 'ok' : (window.__scriptErr ? 'erreur' : 'en-cours');
         var sw = navigator.serviceWorker && navigator.serviceWorker.controller
           ? 'SW:' + navigator.serviceWorker.controller.scriptURL.split('/').pop()
           : 'SW:aucun';
-        var scripts = document.querySelectorAll('script[src*="assets"]');
-        var src = scripts.length > 0 ? scripts[0].src.split('/').pop() : 'aucun';
-        showDiag('Timeout | étape=' + step + ' | JS=' + loaded + ' | ' + sw + ' | ' + src);
-      }, 10000);
+        var allS = document.querySelectorAll('script').length;
+        var assetS = document.querySelectorAll('script[src*="assets"]').length;
+        var bodyLen = document.body ? document.body.innerHTML.length : 0;
+        var inj = window.__injected ? '(inj)' : '';
+        showDiag(ver + ' | ' + step + ' | ' + loaded + inj + ' | ' + sw
+          + ' | s:' + allS + '/a:' + assetS + ' | b:' + bodyLen);
+      }, 12000);
     </script>
     <script type="module" src="/src/main.jsx"></script>
 </body>
