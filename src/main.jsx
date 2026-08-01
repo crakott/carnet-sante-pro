@@ -6939,6 +6939,59 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             'compte-rendu': '🗒️ Compte-rendu de consultation',
         };
 
+        // Imprime un document vétérinaire dans une nouvelle fenêtre sans dépendance externe
+        const printDocument = (doc, animal, vetProfile) => {
+            const typeLabel = doc.type === 'ordonnance' ? 'Ordonnance'
+                : doc.type === 'certificat' ? 'Certificat / Attestation'
+                : doc.type === 'compte-rendu' ? 'Compte-rendu de consultation'
+                : (doc.type || 'Document');
+            const todayStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+            const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>${typeLabel}${doc.nom ? ` — ${doc.nom}` : ''}</title>
+<style>
+  body { font-family: Georgia, serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #1a1a1a; }
+  @media print { body { padding: 20mm; } }
+  .header { border-bottom: 2px solid #1a1a1a; padding-bottom: 16px; margin-bottom: 24px; }
+  .type-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+  .doc-title { font-size: 22px; font-weight: bold; margin: 4px 0; }
+  .doc-date { font-size: 13px; color: #555; }
+  .animal-block { background: #f5f5f5; padding: 14px 18px; border-radius: 6px; margin-bottom: 24px; }
+  .animal-block p { margin: 2px 0; font-size: 13px; }
+  .content { font-size: 14px; line-height: 1.7; white-space: pre-wrap; min-height: 200px; }
+  .signature { margin-top: 48px; text-align: right; }
+  .vet-name { font-size: 15px; font-weight: bold; }
+  .vet-title { font-size: 13px; color: #555; }
+  .footer { margin-top: 48px; border-top: 1px solid #ccc; padding-top: 10px; font-size: 11px; color: #888; text-align: center; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="type-label">${typeLabel}</div>
+  <div class="doc-title">${esc(doc.nom || typeLabel)}</div>
+  <div class="doc-date">${formatDate(doc.date)}</div>
+</div>
+<div class="animal-block">
+  <p><strong>Animal :</strong> ${esc(animal.nom || '')}</p>
+  <p><strong>Espèce :</strong> ${esc(animal.espece || '—')}</p>
+  ${animal.dateNaissance ? `<p><strong>Date de naissance :</strong> ${formatDate(animal.dateNaissance)}</p>` : ''}
+  ${animal.identifiant ? `<p><strong>N° de puce :</strong> ${esc(animal.identifiant)}</p>` : ''}
+</div>
+<div class="content">${esc(doc.contenu || '')}</div>
+<div class="signature">
+  <div class="vet-name">Dr. ${esc(`${vetProfile.prenom || ''} ${vetProfile.nom || ''}`.trim())}</div>
+  <div class="vet-title">Vétérinaire</div>
+</div>
+<div class="footer">Document émis via Carnet Santé PRO · ${todayStr}</div>
+</body>
+</html>`;
+            const win = window.open('', '_blank');
+            if (win) { win.document.write(html); win.document.close(); win.print(); }
+        };
+
         // Vet space: generate an ordonnance/certificat/compte-rendu, added straight to the
         // owner's "Documents" tab (tagged with the issuing vet's name)
         function VetOrdonnanceTab({ animal, addAnimalItem, vetProfile }) {
@@ -6987,7 +7040,10 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                     <div style={{ display: 'grid', gap: '12px' }}>
                         {issued.length > 0 ? issued.map((d, i) => (
                             <div key={d.id || i} style={{ background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', borderLeft: '4px solid #6366f1' }}>
-                                <p style={{ fontWeight: '600', fontSize: '14px' }}>{ORDONNANCE_TYPES[d.type] || DOCUMENT_TYPES[d.type] || d.type}</p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                                    <p style={{ fontWeight: '600', fontSize: '14px', margin: 0 }}>{ORDONNANCE_TYPES[d.type] || DOCUMENT_TYPES[d.type] || d.type}</p>
+                                    <button onClick={() => printDocument(d, animal, vetProfile)} style={{ padding: '5px 10px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>🖨️ Imprimer</button>
+                                </div>
                                 {d.nom && <p style={{ fontSize: '13px', color: '#374151' }}>{d.nom}</p>}
                                 <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(d.date)}</p>
                                 {d.contenu && <p style={{ fontSize: '13px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{d.contenu}</p>}
@@ -6996,6 +7052,67 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                             <p style={{ color: '#9ca3af', background: 'white', padding: '16px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>Aucun document émis pour le moment</p>
                         )}
                     </div>
+                </div>
+            );
+        }
+
+        // Suivi actif : actions à venir dans les 30 prochains jours pour tous les patients autorisés
+        function VetSuiviActif({ authorizedAnimals, onAnimalSelect }) {
+            const daysUntil = (dateStr) => {
+                if (!dateStr) return null;
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return null;
+                const now = new Date();
+                now.setHours(0, 0, 0, 0);
+                d.setHours(0, 0, 0, 0);
+                return Math.round((d - now) / 86400000);
+            };
+
+            const items = [];
+            (authorizedAnimals || []).forEach(a => {
+                (a.vaccins || []).forEach(v => {
+                    const days = daysUntil(v.prochainRappel);
+                    if (days !== null && days <= 30) items.push({ icon: '💉', category: 'Vaccin', animalNom: a.nom, animal: a, nom: v.nom, days });
+                });
+                (a.medicaments || []).forEach(m => {
+                    const days = daysUntil(m.dateFin);
+                    if (days !== null && days <= 30) items.push({ icon: '💊', category: 'Médicament', animalNom: a.nom, animal: a, nom: m.nom, days });
+                });
+                (a.antiparasitaires || []).forEach(t => {
+                    const days = daysUntil(t.prochainTraitement);
+                    if (days !== null && days <= 30) items.push({ icon: '🦟', category: 'Antiparasitaire', animalNom: a.nom, animal: a, nom: t.nom || 'Antiparasitaire', days });
+                });
+                (a.vermifuges || []).forEach(t => {
+                    const days = daysUntil(t.prochainTraitement);
+                    if (days !== null && days <= 30) items.push({ icon: '🪱', category: 'Vermifuge', animalNom: a.nom, animal: a, nom: t.nom || 'Vermifuge', days });
+                });
+            });
+            items.sort((x, y) => x.days - y.days);
+
+            return (
+                <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 12px' }}>🔔 Suivi actif — 30 prochains jours</h3>
+                    {items.length === 0 ? (
+                        <p style={{ color: '#6b7280', fontSize: '14px', textAlign: 'center', padding: '12px 0', margin: 0 }}>Aucun suivi prévu dans les 30 prochains jours 🎉</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {items.map((item, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#f9fafb', borderRadius: '8px', border: item.days < 0 ? '1px solid #fecaca' : '1px solid #e5e7eb' }}>
+                                    <span style={{ fontSize: '18px', flexShrink: 0 }}>{item.icon}</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div>
+                                            <button onClick={() => onAnimalSelect(item.animal)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontWeight: '700', fontSize: '13px', color: '#059669', textDecoration: 'underline' }}>{item.animalNom}</button>
+                                            <span style={{ fontSize: '13px', color: '#374151' }}> — {item.nom}</span>
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#9ca3af' }}>{item.category}</div>
+                                    </div>
+                                    <span style={{ fontSize: '12px', fontWeight: '600', color: item.days < 0 ? '#ef4444' : item.days === 0 ? '#ef4444' : '#374151', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                                        {item.days < 0 ? `en retard de ${Math.abs(item.days)}j` : item.days === 0 ? "aujourd'hui" : `dans ${item.days}j`}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -7142,6 +7259,8 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             const [vetProfile, setVetProfile] = React.useState({ nom: '', prenom: '' });
             const [view, setView] = React.useState('home'); // 'home' | 'dashboard'
             const [vetCodeCopied, setVetCodeCopied] = React.useState(false);
+            const [isDesktop, setIsDesktop] = React.useState(window.innerWidth >= 768);
+            const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
             // Synchronise le Custom Claim vetPro au montage (migration des abonnés existants).
             // Si le claim est absent alors que le statut Firestore est 'active', on appelle
@@ -7198,6 +7317,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                 });
                 return () => unsub();
             }, [subStatus]);
+
+            // Responsive split-pane : détecter desktop (≥768px)
+            React.useEffect(() => {
+                const onResize = () => setIsDesktop(window.innerWidth >= 768);
+                window.addEventListener('resize', onResize);
+                return () => window.removeEventListener('resize', onResize);
+            }, []);
 
             const handleSubscribe = async () => {
                 setBillingError('');
