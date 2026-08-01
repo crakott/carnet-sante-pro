@@ -10,7 +10,7 @@ const iifeScriptTag = {
   transformIndexHtml(html) {
     return html.replace(
       /<script type="module" crossorigin (src="\/assets\/[^"]+"><\/script>)/g,
-      '<script $1'
+      '<script defer $1'
     );
   },
 };
