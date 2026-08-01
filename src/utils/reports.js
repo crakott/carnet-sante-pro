@@ -12,10 +12,15 @@ const getAnimalDossier = (animal) => {
     return { vaccinNames, lastWeight, currentMedications, observationTypes };
 };
 
-// Build a filtered public card from an animal record (only safe fields, no private data)
+// Build a filtered public card from an animal record (only safe fields, no private data).
+// Strips photo/audio from observations — they can contain sensitive medical images and
+// should never be exposed publicly even when the owner enables QR code sharing.
 export const buildPublicCard = (animalData) => {
     const card = {};
     PUBLIC_CARD_FIELDS.forEach(f => { if (animalData[f] !== undefined) card[f] = animalData[f]; });
+    if (card.observations) {
+        card.observations = card.observations.map(({ photo: _p, audio: _a, ...rest }) => rest);
+    }
     return card;
 };
 
