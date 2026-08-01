@@ -1,0 +1,40 @@
+name: Build and Deploy Carnet Santé PRO
+
+on:
+  push:
+    branches:
+      - "claude/new-session-b39y6h"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Construire l'application
+        run: npm run build
+
+      - name: Vérifier le build
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          echo "✅ Build Vite OK"
+
+      - name: Déployer sur Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          projectId: carnet-sante-pro
+          channelId: live
