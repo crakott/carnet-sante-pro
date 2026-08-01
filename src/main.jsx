@@ -221,18 +221,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             'Hamster': [], 'Gerbille': [], 'Tortue': [],
             'Oiseau': ['Paramyxovirus', 'Newcastle'],
         };
-        const MEDICAMENTS_COURANTS = [
-            { group: 'ANTIBIOTIQUES', items: ['Clamoxyl', 'Augmentin', 'Vibramycine', 'Keflex', 'Baytril', 'Marboflox', 'Zithromax (Azithromycine)'] },
-            { group: 'ANTI-INFLAMMATOIRES', items: ['Metacam', 'Meloxidyl', 'Previcox', 'Feldène', 'Cortancyl', 'Rimadyl', 'Carprieve'] },
-            { group: 'ANTIHISTAMINIQUES & ALLERGIES', items: ['Piriteze', 'Claritine', 'Benadryl', 'Apoquel', 'Omnaris'] },
-            { group: 'PROTECTEURS GASTRIQUES & DIGESTIFS', items: ['Losec', 'Nexium', 'Zantac', 'Eupantol', 'Cerenia', 'Primperan'] },
-            { group: 'COLLYRES & TRAITEMENTS AURICULAIRES', items: ['Tobradex', 'Exocine', 'Ciloxan', 'Pilocar', 'Lamisil ototopique'] },
-            { group: 'ANTIFONGIQUES', items: ['Lamisil', 'Diflucan', 'Sporanox', 'Nizoral', 'Daktarin'] },
-            { group: 'CARDIOLOGIQUES', items: ['Vetmedin', 'Digoxine Nativelle', 'Lasilix', 'Aldactone', 'Renitec'] },
-            { group: 'THYROÏDIENS', items: ['Thyroxine', 'Levaxin', 'Tapazole', 'PTU'] },
-            { group: 'DIABÈTE', items: ['Insuline', 'Humuline', 'Lantus', 'Minidiab', 'Humalog'] },
-            { group: 'DENTAIRE ET AUTRES', items: ['Hibitane', 'Fluoridex'] },
-        ];
         // Cliniques d'urgence vétérinaire réelles (24h/24, 7j/7) — fallback si CNOV et OSM sont indisponibles
         const VETERINAIRES = [
             { id: 'alfort', nom: 'EnvA Alfort — Urgences chiens/chats/NAC', lat: 48.8139, lng: 2.4234, telephone: '01 43 96 72 72', horaires: '24h/24, 7j/7', adresse: '7 av. du Général de Gaulle, 94700 Maisons-Alfort', specialites: ['Urgences', 'NAC', 'Chiens', 'Chats'], emergency: true },
@@ -4086,17 +4074,11 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                     {showForm ? (
                         <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #ec4899' }}>
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un traitement</h3>
+                            <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', color: '#92400e', marginBottom: '4px' }}>
+                                ⚠️ Saisissez uniquement un médicament <strong>prescrit ou recommandé par votre vétérinaire</strong>. Ne donnez jamais de médicament humain à un animal sans avis vétérinaire — certains sont mortels pour les chats et les chiens (paracétamol, ibuprofène…).
+                            </div>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewMed({ ...newMed, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
-                                    <option value="">— Choisir un médicament —</option>
-                                    {MEDICAMENTS_COURANTS.map(g => (
-                                        <optgroup key={g.group} label={g.group}>
-                                            {g.items.map(m => <option key={m} value={m}>{m}</option>)}
-                                        </optgroup>
-                                    ))}
-                                    <option value="autres">Autres</option>
-                                </select>
-                                <input type="text" placeholder="Nom du médicament" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="text" placeholder="Nom du médicament prescrit par le vétérinaire" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                                     <input type="number" placeholder="Dosage" value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                     <select value={newMed.unite} onChange={(e) => setNewMed({ ...newMed, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
