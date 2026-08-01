@@ -7044,12 +7044,39 @@
             const [vetProfile, setVetProfile] = React.useState({ nom: '', prenom: '' });
             const [view, setView] = React.useState('home'); // 'home' | 'dashboard'
 
-            // Live subscription status, kept in sync with the Stripe webhook
+            // Synchronise le Custom Claim vetPro au montage (migration des abonnés existants).
+            // Si le claim est absent alors que le statut Firestore est 'active', on appelle
+            // refreshVetClaim (côté serveur) puis on force le refresh du token.
             React.useEffect(() => {
-                const unsub = onSnapshot(doc(db, 'settings', user.uid), (snap) => {
+                const syncClaim = async () => {
+                    try {
+                        const tokenResult = await user.getIdTokenResult();
+                        if (!tokenResult.claims.vetPro) {
+                            const refreshVetClaimFn = httpsCallable(functions, 'refreshVetClaim');
+                            const result = await refreshVetClaimFn();
+                            if (result.data.vetPro) await user.getIdToken(true);
+                        }
+                    } catch (e) {
+                        console.warn('refreshVetClaim:', e.message);
+                    }
+                };
+                syncClaim();
+            }, []);
+
+            // Live subscription status, kept in sync with the Stripe webhook.
+            // Quand le statut passe à 'active', on force le refresh du token pour que
+            // le Custom Claim vetPro soit immédiatement visible des règles Firestore.
+            React.useEffect(() => {
+                let prevStatus = null;
+                const unsub = onSnapshot(doc(db, 'settings', user.uid), async (snap) => {
                     const data = snap.exists() ? snap.data() : {};
-                    setSubStatus(data.subscriptionStatus || 'inactive');
+                    const newStatus = data.subscriptionStatus || 'inactive';
+                    setSubStatus(newStatus);
                     setVetProfile({ nom: data.nom || '', prenom: data.prenom || '', userId: user.uid });
+                    if (newStatus === 'active' && prevStatus !== null && prevStatus !== 'active') {
+                        try { await user.getIdToken(true); } catch (e) { console.warn('token refresh:', e); }
+                    }
+                    prevStatus = newStatus;
                 }, (err) => {
                     console.error('Erreur abonnement:', err);
                     setSubStatus('inactive');

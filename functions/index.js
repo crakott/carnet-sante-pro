@@ -74,7 +74,15 @@ exports.createPortalSession = onCall({ region: REGION, secrets: [stripeSecretKey
   return { url: session.url };
 });
 
-// Webhook Stripe : tient à jour settings/{uid}.subscriptionStatus selon les événements d'abonnement
+// Positionne (ou retire) le Custom Claim Firebase Auth "vetPro" pour un UID donné.
+// Ce claim est la source d'autorité pour les règles Firestore — le client ne peut pas
+// le modifier directement, contrairement au document Firestore settings/{uid}.
+const setVetClaim = async (uid, isActive) => {
+  await admin.auth().setCustomUserClaims(uid, { vetPro: isActive === true });
+};
+
+// Webhook Stripe : tient à jour settings/{uid}.subscriptionStatus ET le Custom Claim
+// vetPro selon les événements d'abonnement. Les deux sont toujours mis à jour ensemble.
 exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, stripeWebhookSecret] }, async (req, res) => {
   const stripe = new Stripe(stripeSecretKey.value());
   const signature = req.headers['stripe-signature'];
@@ -105,6 +113,7 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
           stripeCustomerId: session.customer,
           stripeSubscriptionId: session.subscription,
         }, { merge: true });
+        await setVetClaim(uid, true);
       }
       break;
     }
@@ -113,11 +122,13 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
       const subscription = event.data.object;
       const uid = subscription.metadata?.firebaseUID || await findUidByCustomerId(subscription.customer);
       if (uid) {
-        const status = ['active', 'trialing'].includes(subscription.status) ? 'active' : subscription.status;
+        const isActive = ['active', 'trialing'].includes(subscription.status);
+        const status = isActive ? 'active' : subscription.status;
         await db.doc(`settings/${uid}`).set({
           subscriptionStatus: status,
           stripeSubscriptionId: subscription.id,
         }, { merge: true });
+        await setVetClaim(uid, isActive);
       }
       break;
     }
@@ -126,6 +137,7 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
       const uid = subscription.metadata?.firebaseUID || await findUidByCustomerId(subscription.customer);
       if (uid) {
         await db.doc(`settings/${uid}`).set({ subscriptionStatus: 'canceled' }, { merge: true });
+        await setVetClaim(uid, false);
       }
       break;
     }
@@ -134,6 +146,21 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
   }
 
   res.json({ received: true });
+});
+
+// Synchronise le Custom Claim vetPro pour le vétérinaire connecté.
+// Appelée côté client au montage de VetApp pour les abonnés existants qui n'auraient
+// pas encore leur claim (migration ou expiration de token). Le statut est lu depuis
+// Firestore côté serveur (champ protégé en écriture pour le client), pas depuis le token.
+exports.refreshVetClaim = onCall({ region: REGION }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Connexion requise.');
+  }
+  const uid = request.auth.uid;
+  const settingsSnap = await admin.firestore().doc(`settings/${uid}`).get();
+  const isActive = settingsSnap.data()?.subscriptionStatus === 'active';
+  await setVetClaim(uid, isActive);
+  return { vetPro: isActive };
 });
 
 // Scheduled daily at 8:00 AM Paris time: send FCM push notifications for upcoming

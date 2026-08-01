@@ -12,13 +12,13 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
       // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
-      // aux actes médicaux (pas le profil, le budget ou les partages). L'écriture sur
-      // "documents" est limitée à l'ajout d'ordonnances/certificats/comptes-rendus
-      // (source: 'veterinaire'), pas aux documents du propriétaire
-      allow read: if request.auth != null
-        && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active';
+      // aux actes médicaux (pas le profil, le budget ou les partages).
+      // Le statut est vérifié via un Custom Claim Firebase Auth (vetPro),
+      // positionné exclusivement par le webhook Stripe côté serveur — le client
+      // ne peut pas le modifier.
+      allow read: if request.auth != null && request.auth.token.vetPro == true;
       allow update: if request.auth != null
-        && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+        && request.auth.token.vetPro == true
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
@@ -35,7 +35,7 @@ service cloud.firestore {
           request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
           || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
               && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
-          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+          || request.auth.token.vetPro == true
         );
 
       // Création : même conditions d'accès, et l'auteur déclaré ("from") doit correspondre
@@ -46,12 +46,20 @@ service cloud.firestore {
             && (request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
                 || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
                     && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)))
-          || (request.resource.data.from == 'veterinaire'
-              && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active')
+          || (request.resource.data.from == 'veterinaire' && request.auth.token.vetPro == true)
         );
     }
+
     match /settings/{settingId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Le propriétaire peut modifier ses propres préférences, mais PAS les champs
+      // gérés exclusivement côté serveur (webhook Stripe ou Admin SDK).
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'role']);
+
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
 
       // Foyer partagé : un membre du même foyer peut lire les settings (nom/prénom) des
@@ -60,6 +68,7 @@ service cloud.firestore {
         && resource.data.householdId != null
         && resource.data.householdId == get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.householdId;
     }
+
     match /households/{householdId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.members;
 
