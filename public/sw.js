@@ -1,4 +1,4 @@
-// Firebase Messaging compat — enables background FCM push notifications.
+// v2 — Firebase Messaging compat — enables background FCM push notifications.
 // Wrapped in try/catch so a CDN failure never crashes the service worker.
 try {
   importScripts('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
