@@ -194,10 +194,12 @@ Permet à plusieurs comptes (membres d'une même famille) de partager l'accès c
 - Carte "👨‍👩‍👧 Foyer partagé" dans Paramètres :
   - **Créer un foyer** : crée le document `households`, fixe `settings/{uid}.householdId` et
     `animals/{animalId}.householdId` (pour les animaux du créateur) sur le nouvel id
-  - **Inviter** : lien/QR `?join=<householdId>` (composant `ShareQRCode`, comme la fiche de
-    garde). Ouvrir ce lien (connecté) affiche `JoinHouseholdBanner` proposant de rejoindre —
-    accepter ajoute l'utilisateur à `members`, met à jour son `householdId` et celui de ses
-    propres animaux (s'il appartenait déjà à un autre foyer, il le quitte d'abord)
+  - **Inviter** : génère un lien/QR `?invite=<uuid>` basé sur un token UUID stocké dans
+    `invitationLinks/{token}`. Le `householdId` n'apparaît jamais dans l'URL — seul le token
+    est le secret. Ouvrir ce lien (connecté) affiche `JoinHouseholdBanner` proposant de
+    rejoindre — accepter ajoute l'utilisateur à `members`, met à jour son `householdId` et
+    celui de ses propres animaux (s'il appartenait déjà à un autre foyer, il le quitte d'abord).
+    Le token peut être regénéré (révoque le précédent lien d'invitation)
   - **Quitter le foyer** : retire l'utilisateur de `members` et remet `householdId` à `null`
     sur son `settings` et ses propres animaux (les animaux des autres membres ne sont pas
     affectés)
@@ -209,8 +211,20 @@ Permet à plusieurs comptes (membres d'une même famille) de partager l'accès c
 
 ## Règles Firestore (à jour)
 
-Le fichier `firestore.rules` à la racine du dépôt contient les règles à jour. À copier dans
+Le fichier `firestore.rules` à la racine du dépôt est la source de vérité. À copier dans
 Firebase Console > Firestore Database > Règles, puis publier.
+
+**Points de sécurité clés :**
+- L'accès vétérinaire repose sur **deux conditions cumulatives** : le Custom Claim Firebase Auth
+  `vetPro: true` (positionné exclusivement par le webhook Stripe côté serveur — immuable depuis
+  le client) **ET** la présence de l'UID du vétérinaire dans `animals/{id}.authorizedVets`
+  (accordée explicitement par le propriétaire de l'animal).
+- `settings/{uid}` : `update` interdit sur `subscriptionStatus`, `role`, `stripeCustomerId`,
+  `stripeSubscriptionId` — ces champs sont gérés exclusivement par les Cloud Functions.
+- Le partage public QR code passe par la collection `publicAnimalCards` (champs filtrés, pas
+  l'animal complet) — la règle `allow get: if shareEnabled` a été supprimée de `animals`.
+- Les invitations foyer passent par `invitationLinks/{token}` (UUID secret) — le `householdId`
+  n'apparaît plus jamais dans les URLs.
 
 ```
 rules_version = '2';
@@ -226,35 +240,52 @@ service cloud.firestore {
         && resource.data.householdId != null
         && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
-      // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
-      // aux actes médicaux (pas le profil, le budget ou les partages). L'écriture sur
-      // "documents" est limitée à l'ajout d'ordonnances/certificats/comptes-rendus
-      // (source: 'veterinaire'), pas aux documents du propriétaire
+      // Vétérinaires "pro" abonnés : lecture et écriture médicale limitées aux animaux dont
+      // le propriétaire a explicitement autorisé ce vétérinaire (champ authorizedVets).
+      // Le statut est vérifié via un Custom Claim Firebase Auth (vetPro),
+      // positionné exclusivement par le webhook Stripe côté serveur — le client ne peut pas le modifier.
       allow read: if request.auth != null
-        && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active';
+        && request.auth.token.vetPro == true
+        && request.auth.uid in resource.data.authorizedVets;
+
       allow update: if request.auth != null
-        && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+        && request.auth.token.vetPro == true
+        && request.auth.uid in resource.data.authorizedVets
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
-      // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
-      // a activé le partage via un lien/QR code (champ shareEnabled)
-      allow get: if resource.data.shareEnabled == true;
+    }
+
+    // Fiche de garde publique — document filtré, sans données privées.
+    // Écrit par le propriétaire (ou membre du foyer) via l'app quand shareEnabled = true.
+    // Contient uniquement : nom, espèce, photo, vaccins, traitements, contact urgence…
+    // N'inclut PAS : budget, documents, partages, authorizedVets, userId…
+    match /publicAnimalCards/{animalId} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && (
+          get(/databases/$(database)/documents/animals/$(animalId)).data.userId == request.auth.uid
+          || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+              && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
+        );
+      allow delete: if request.auth != null
+        && get(/databases/$(database)/documents/animals/$(animalId)).data.userId == request.auth.uid;
     }
 
     // Messagerie sécurisée propriétaire <-> vétérinaire, par animal
     match /animals/{animalId}/messages/{messageId} {
-      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire abonné
+      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire autorisé
       allow read: if request.auth != null
         && (
           request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
           || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
               && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
-          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+          || (request.auth.token.vetPro == true
+              && request.auth.uid in get(/databases/$(database)/documents/animals/$(animalId)).data.authorizedVets)
         );
 
       // Création : même conditions d'accès, et l'auteur déclaré ("from") doit correspondre
-      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire abonné = 'veterinaire')
+      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire autorisé = 'veterinaire')
       allow create: if request.auth != null
         && (
           (request.resource.data.from == 'proprietaire'
@@ -262,11 +293,21 @@ service cloud.firestore {
                 || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
                     && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)))
           || (request.resource.data.from == 'veterinaire'
-              && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active')
+              && request.auth.token.vetPro == true
+              && request.auth.uid in get(/databases/$(database)/documents/animals/$(animalId)).data.authorizedVets)
         );
     }
+
     match /settings/{settingId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Le propriétaire peut modifier ses propres préférences, mais PAS les champs
+      // gérés exclusivement côté serveur (webhook Stripe ou Admin SDK).
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'role']);
+
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
 
       // Foyer partagé : un membre du même foyer peut lire les settings (nom/prénom) des
@@ -274,7 +315,12 @@ service cloud.firestore {
       allow read: if request.auth != null
         && resource.data.householdId != null
         && resource.data.householdId == get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.householdId;
+
+      // Profil vétérinaire : un propriétaire connecté peut lire le nom d'un vétérinaire
+      // pour vérifier son identité avant de l'autoriser sur un animal.
+      allow read: if request.auth != null && resource.data.role == 'veterinaire';
     }
+
     match /households/{householdId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.members;
 
@@ -293,6 +339,23 @@ service cloud.firestore {
             && !(request.auth.uid in request.resource.data.members)
             && request.auth.uid in resource.data.members)
         );
+
+      // Regénération du lien d'invitation par un membre existant du foyer
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentInviteToken']);
+    }
+
+    // Liens d'invitation foyer — le token UUID est le secret.
+    // Lecture publique (quiconque connaît le token peut voir le householdId associé).
+    // Écriture réservée aux membres du foyer concerné.
+    match /invitationLinks/{inviteToken} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(request.resource.data.householdId)).data.members;
+      allow delete: if request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
     }
   }
 }
@@ -486,10 +549,12 @@ Permet à plusieurs comptes (membres d'une même famille) de partager l'accès c
 - Carte "👨‍👩‍👧 Foyer partagé" dans Paramètres :
   - **Créer un foyer** : crée le document `households`, fixe `settings/{uid}.householdId` et
     `animals/{animalId}.householdId` (pour les animaux du créateur) sur le nouvel id
-  - **Inviter** : lien/QR `?join=<householdId>` (composant `ShareQRCode`, comme la fiche de
-    garde). Ouvrir ce lien (connecté) affiche `JoinHouseholdBanner` proposant de rejoindre —
-    accepter ajoute l'utilisateur à `members`, met à jour son `householdId` et celui de ses
-    propres animaux (s'il appartenait déjà à un autre foyer, il le quitte d'abord)
+  - **Inviter** : génère un lien/QR `?invite=<uuid>` basé sur un token UUID stocké dans
+    `invitationLinks/{token}`. Le `householdId` n'apparaît jamais dans l'URL — seul le token
+    est le secret. Ouvrir ce lien (connecté) affiche `JoinHouseholdBanner` proposant de
+    rejoindre — accepter ajoute l'utilisateur à `members`, met à jour son `householdId` et
+    celui de ses propres animaux (s'il appartenait déjà à un autre foyer, il le quitte d'abord).
+    Le token peut être regénéré (révoque le précédent lien d'invitation)
   - **Quitter le foyer** : retire l'utilisateur de `members` et remet `householdId` à `null`
     sur son `settings` et ses propres animaux (les animaux des autres membres ne sont pas
     affectés)
@@ -501,8 +566,20 @@ Permet à plusieurs comptes (membres d'une même famille) de partager l'accès c
 
 ## Règles Firestore (à jour)
 
-Le fichier `firestore.rules` à la racine du dépôt contient les règles à jour. À copier dans
+Le fichier `firestore.rules` à la racine du dépôt est la source de vérité. À copier dans
 Firebase Console > Firestore Database > Règles, puis publier.
+
+**Points de sécurité clés :**
+- L'accès vétérinaire repose sur **deux conditions cumulatives** : le Custom Claim Firebase Auth
+  `vetPro: true` (positionné exclusivement par le webhook Stripe côté serveur — immuable depuis
+  le client) **ET** la présence de l'UID du vétérinaire dans `animals/{id}.authorizedVets`
+  (accordée explicitement par le propriétaire de l'animal).
+- `settings/{uid}` : `update` interdit sur `subscriptionStatus`, `role`, `stripeCustomerId`,
+  `stripeSubscriptionId` — ces champs sont gérés exclusivement par les Cloud Functions.
+- Le partage public QR code passe par la collection `publicAnimalCards` (champs filtrés, pas
+  l'animal complet) — la règle `allow get: if shareEnabled` a été supprimée de `animals`.
+- Les invitations foyer passent par `invitationLinks/{token}` (UUID secret) — le `householdId`
+  n'apparaît plus jamais dans les URLs.
 
 ```
 rules_version = '2';
@@ -518,35 +595,52 @@ service cloud.firestore {
         && resource.data.householdId != null
         && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
 
-      // Vétérinaires "pro" abonnés : lecture de tout animal, écriture limitée
-      // aux actes médicaux (pas le profil, le budget ou les partages). L'écriture sur
-      // "documents" est limitée à l'ajout d'ordonnances/certificats/comptes-rendus
-      // (source: 'veterinaire'), pas aux documents du propriétaire
+      // Vétérinaires "pro" abonnés : lecture et écriture médicale limitées aux animaux dont
+      // le propriétaire a explicitement autorisé ce vétérinaire (champ authorizedVets).
+      // Le statut est vérifié via un Custom Claim Firebase Auth (vetPro),
+      // positionné exclusivement par le webhook Stripe côté serveur — le client ne peut pas le modifier.
       allow read: if request.auth != null
-        && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active';
+        && request.auth.token.vetPro == true
+        && request.auth.uid in resource.data.authorizedVets;
+
       allow update: if request.auth != null
-        && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+        && request.auth.token.vetPro == true
+        && request.auth.uid in resource.data.authorizedVets
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['vaccins', 'medicaments', 'chirurgies', 'antiparasitaires', 'vermifuges', 'observations', 'poids', 'documents']);
 
-      // Fiche de garde : lecture publique (sans connexion) d'un animal dont le propriétaire
-      // a activé le partage via un lien/QR code (champ shareEnabled)
-      allow get: if resource.data.shareEnabled == true;
+    }
+
+    // Fiche de garde publique — document filtré, sans données privées.
+    // Écrit par le propriétaire (ou membre du foyer) via l'app quand shareEnabled = true.
+    // Contient uniquement : nom, espèce, photo, vaccins, traitements, contact urgence…
+    // N'inclut PAS : budget, documents, partages, authorizedVets, userId…
+    match /publicAnimalCards/{animalId} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && (
+          get(/databases/$(database)/documents/animals/$(animalId)).data.userId == request.auth.uid
+          || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
+              && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
+        );
+      allow delete: if request.auth != null
+        && get(/databases/$(database)/documents/animals/$(animalId)).data.userId == request.auth.uid;
     }
 
     // Messagerie sécurisée propriétaire <-> vétérinaire, par animal
     match /animals/{animalId}/messages/{messageId} {
-      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire abonné
+      // Lecture : propriétaire de l'animal, membre du foyer partagé, ou vétérinaire autorisé
       allow read: if request.auth != null
         && (
           request.auth.uid == get(/databases/$(database)/documents/animals/$(animalId)).data.userId
           || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
               && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)
-          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active'
+          || (request.auth.token.vetPro == true
+              && request.auth.uid in get(/databases/$(database)/documents/animals/$(animalId)).data.authorizedVets)
         );
 
       // Création : même conditions d'accès, et l'auteur déclaré ("from") doit correspondre
-      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire abonné = 'veterinaire')
+      // au rôle réel de l'utilisateur (propriétaire/foyer = 'proprietaire', vétérinaire autorisé = 'veterinaire')
       allow create: if request.auth != null
         && (
           (request.resource.data.from == 'proprietaire'
@@ -554,11 +648,21 @@ service cloud.firestore {
                 || (get(/databases/$(database)/documents/animals/$(animalId)).data.householdId != null
                     && request.auth.uid in get(/databases/$(database)/documents/households/$(get(/databases/$(database)/documents/animals/$(animalId)).data.householdId)).data.members)))
           || (request.resource.data.from == 'veterinaire'
-              && get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.subscriptionStatus == 'active')
+              && request.auth.token.vetPro == true
+              && request.auth.uid in get(/databases/$(database)/documents/animals/$(animalId)).data.authorizedVets)
         );
     }
+
     match /settings/{settingId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Le propriétaire peut modifier ses propres préférences, mais PAS les champs
+      // gérés exclusivement côté serveur (webhook Stripe ou Admin SDK).
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'role']);
+
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
 
       // Foyer partagé : un membre du même foyer peut lire les settings (nom/prénom) des
@@ -566,7 +670,12 @@ service cloud.firestore {
       allow read: if request.auth != null
         && resource.data.householdId != null
         && resource.data.householdId == get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.householdId;
+
+      // Profil vétérinaire : un propriétaire connecté peut lire le nom d'un vétérinaire
+      // pour vérifier son identité avant de l'autoriser sur un animal.
+      allow read: if request.auth != null && resource.data.role == 'veterinaire';
     }
+
     match /households/{householdId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.members;
 
@@ -585,6 +694,23 @@ service cloud.firestore {
             && !(request.auth.uid in request.resource.data.members)
             && request.auth.uid in resource.data.members)
         );
+
+      // Regénération du lien d'invitation par un membre existant du foyer
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentInviteToken']);
+    }
+
+    // Liens d'invitation foyer — le token UUID est le secret.
+    // Lecture publique (quiconque connaît le token peut voir le householdId associé).
+    // Écriture réservée aux membres du foyer concerné.
+    match /invitationLinks/{inviteToken} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.createdBy == request.auth.uid
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(request.resource.data.householdId)).data.members;
+      allow delete: if request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/households/$(resource.data.householdId)).data.members;
     }
   }
 }
