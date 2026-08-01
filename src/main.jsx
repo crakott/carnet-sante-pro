@@ -18,6 +18,8 @@ import EmptyList from './components/EmptyList';
 import CropModal from './components/CropModal';
 
 
+        window.__appStep = 'start';
+
         // Firebase Cloud Messaging — push notifications even when phone is locked.
         // VAPID key: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates > Generate key pair
         const VAPID_KEY = 'BPAV-UAO2SzWLDbZQLMdI_hxJqI4BHgN5jYyhPrfkTBsDv2jSLZsNRgnu7QGLHaC9sUYTRWziOvN1Cdqo_d4Sg0';
@@ -541,16 +543,14 @@ import CropModal from './components/CropModal';
         const canShareFiles = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function';
 
         // ── Service Worker registration ──────────────────────────────────
+        window.__appStep = 'sw-reg';
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js').catch(() => {});
             });
-            // When a new SW takes over (skipWaiting + clients.claim), reload so the
-            // user gets the updated app immediately instead of seeing the old version.
-            let swRefreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!swRefreshing) { swRefreshing = true; window.location.reload(); }
-            });
+            // controllerchange reload disabled: in some Android PWA configurations,
+            // this fires during the initial SW installation and causes an infinite
+            // reload loop before React can mount.
         }
 
         // Send local push notifications for due/overdue reminders via the service worker.
@@ -7088,4 +7088,5 @@ import CropModal from './components/CropModal';
         }
 
         // Render App
+        window.__appStep = 'render';
         createRoot(document.getElementById('root')).render(<App />);

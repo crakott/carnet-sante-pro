@@ -128,12 +128,17 @@
       }
       window.addEventListener('error', function(e) { showDiag('JS: ' + e.message + ' — ' + e.filename + ':' + e.lineno); });
       window.addEventListener('unhandledrejection', function(e) { showDiag('Promise: ' + (e.reason && (e.reason.message || String(e.reason)))); });
-      // If React hasn't mounted within 10s, the JS bundle failed to load silently
+      // If React hasn't mounted within 10s, show diagnostic info
       setTimeout(function() {
-        if (document.getElementById('app-loader')) {
-          showDiag('Timeout (10s) : les fichiers JavaScript ne se sont pas chargés. ' +
-            'Solution : Paramètres Android → Applications → Carnet Santé PRO → Stockage → Vider les données, puis relancer.');
-        }
+        if (!document.getElementById('app-loader')) return;
+        var step = window.__appStep || 'non-démarré';
+        var loaded = window.__scriptOk ? 'ok' : (window.__scriptErr ? 'erreur' : 'en-cours');
+        var sw = navigator.serviceWorker && navigator.serviceWorker.controller
+          ? 'SW:' + navigator.serviceWorker.controller.scriptURL.split('/').pop()
+          : 'SW:aucun';
+        var scripts = document.querySelectorAll('script[src*="assets"]');
+        var src = scripts.length > 0 ? scripts[0].src.split('/').pop() : 'aucun';
+        showDiag('Timeout | étape=' + step + ' | JS=' + loaded + ' | ' + sw + ' | ' + src);
       }, 10000);
     </script>
     <script type="module" src="/src/main.jsx"></script>
