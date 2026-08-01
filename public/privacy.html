@@ -55,7 +55,7 @@
     </header>
 
     <main>
-        <p class="date">Dernière mise à jour : juin 2026</p>
+        <p class="date">Dernière mise à jour : août 2026</p>
 
         <!-- 1. Responsable -->
         <div class="card">
@@ -90,7 +90,7 @@
                 <li>Dépenses et budget</li>
                 <li>Vétérinaire assigné</li>
             </ul>
-            <div class="highlight">Ces données ne sont accessibles que par vous. Elles ne sont jamais partagées ni vendues à des tiers.</div>
+            <div class="highlight">Ces données sont accessibles par vous et, lorsque vous le décidez explicitement, par les personnes suivantes : les membres de votre <strong>foyer partagé</strong> que vous avez invités, et les <strong>professionnels vétérinaires</strong> auxquels vous avez accordé un accès depuis la fiche de votre animal. Vous pouvez révoquer ces accès à tout moment. Vos données ne sont jamais vendues ni partagées avec des tiers sans votre consentement explicite.</div>
 
             <h3>2.3 Données de localisation</h3>
             <p>Si vous utilisez la fonctionnalité <em>«&nbsp;Trouver des vétérinaires à proximité&nbsp;»</em>, votre position géographique est transmise à l'API OpenStreetMap (Overpass) pour effectuer la recherche. Cette donnée n'est pas conservée sur nos serveurs.</p>
@@ -132,6 +132,12 @@
                     <td>Google LLC</td>
                     <td>Gestion des balises et statistiques</td>
                     <td><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google</a></td>
+                </tr>
+                <tr>
+                    <td><span class="badge">Paiement</span>Stripe</td>
+                    <td>Stripe, Inc.</td>
+                    <td>Traitement des paiements (abonnement vétérinaire) — nom, email, données de facturation</td>
+                    <td><a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener">Stripe</a></td>
                 </tr>
                 <tr>
                     <td><span class="badge">Carte</span>OpenStreetMap Overpass</td>
@@ -204,8 +210,9 @@
             <ul>
                 <li>Le chiffrement en transit (HTTPS / TLS)</li>
                 <li>Le chiffrement au repos dans Firebase Firestore (AES-256)</li>
-                <li>Des règles de sécurité Firestore : chaque utilisateur ne peut accéder qu'à ses propres données</li>
-                <li>L'authentification obligatoire pour tout accès aux données</li>
+                <li>Des règles de sécurité Firestore appliquées côté serveur : chaque utilisateur n'accède qu'aux données qu'il détient ou auxquelles il a été explicitement autorisé (membre du foyer invité, vétérinaire autorisé par le propriétaire)</li>
+                <li>L'authentification obligatoire pour tout accès aux données personnelles</li>
+                <li>Un modèle de consentement explicite : l'accès d'un vétérinaire à un dossier ne peut être accordé que par le propriétaire de l'animal, et peut être révoqué à tout moment</li>
             </ul>
         </div>
 
