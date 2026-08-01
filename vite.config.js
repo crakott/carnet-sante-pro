@@ -1,31 +1,36 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Vite always injects <script type="module"> regardless of Rollup format.
+// This plugin strips type="module" and crossorigin so the IIFE bundle loads
+// as a plain <script> — required for Android PWA standalone mode where
+// ES module loading silently hangs in some Chrome/WebView configurations.
+const iifeScriptTag = {
+  name: 'iife-script-tag',
+  transformIndexHtml(html) {
+    return html.replace(
+      /<script type="module" crossorigin (src="\/assets\/[^"]+"><\/script>)/g,
+      '<script $1'
+    );
+  },
+};
+
 export default defineConfig({
   plugins: [
     react({
       jsxRuntime: 'classic',
     }),
+    iifeScriptTag,
   ],
   build: {
     outDir: 'dist',
-    // Disable automatic <link rel="modulepreload"> injection: in Android
-    // standalone PWA mode, a failed modulepreload is cached as an error and
-    // causes the module to silently fail when actually requested by the main
-    // script — the app never mounts. Without these hints the modules load
-    // normally on demand (slightly less optimal but always works).
-    modulePreload: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-firebase': [
-            'firebase/app',
-            'firebase/auth',
-            'firebase/firestore',
-            'firebase/functions',
-          ],
-        },
+        format: 'iife',
+        name: '__app',
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
   },

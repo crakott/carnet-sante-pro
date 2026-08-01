@@ -7,7 +7,7 @@
          network-first) will trigger the cleanup on next open. -->
     <script>
     (function() {
-      var KEY = 'pwa-reset-v1';
+      var KEY = 'pwa-reset-v2';
       if (localStorage.getItem(KEY)) return;
       if (!('serviceWorker' in navigator)) { localStorage.setItem(KEY, '1'); return; }
       navigator.serviceWorker.getRegistrations().then(function(regs) {
