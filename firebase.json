@@ -12,8 +12,6 @@
   ],
   "hosting": {
     "public": "dist",
-    "cleanUrls": true,
-    "trailingSlash": false,
     "rewrites": [
       { "source": "/app", "destination": "/index.html" },
       { "source": "/app/**", "destination": "/index.html" }
