@@ -24,7 +24,7 @@ try {
   });
 } catch (e) { /* FCM unavailable — caching and other SW features still work */ }
 
-const CACHE = 'carnet-sante-v20';
+const CACHE = 'carnet-sante-v21';
 const PRECACHE = [
   './',
   'manifest.json',
@@ -50,17 +50,11 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always network-first for Firebase, Firestore, GTM, Overpass
-  if (
-    url.hostname.includes('firebase') ||
-    url.hostname.includes('firestore') ||
-    url.hostname.includes('googleapis') ||
-    url.hostname.includes('gstatic') ||
-    url.hostname.includes('overpass') ||
-    url.hostname.includes('googletagmanager') ||
-    url.hostname.includes('google-analytics')
-  ) {
-    return; // Let browser handle these normally
+  // Pass through all cross-origin requests — let the browser and CDN handle
+  // their own caching. This prevents SW-cached CDN files from conflicting
+  // with SRI integrity checks (crossorigin + integrity attributes).
+  if (url.origin !== self.location.origin) {
+    return;
   }
 
   // Network-first for navigation requests and HTML documents, so users

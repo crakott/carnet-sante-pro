@@ -1,6 +1,28 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <!-- One-time PWA cache reset: clears stale SW caches from older versions
+         that lacked the auto-update mechanism. Runs once per device, before
+         anything else, so even the old SW (which fetches this HTML fresh via
+         network-first) will trigger the cleanup on next open. -->
+    <script>
+    (function() {
+      var KEY = 'pwa-reset-v1';
+      if (localStorage.getItem(KEY)) return;
+      if (!('serviceWorker' in navigator)) { localStorage.setItem(KEY, '1'); return; }
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        return Promise.all([
+          Promise.all(regs.map(function(r) { return r.unregister(); })),
+          window.caches ? caches.keys().then(function(keys) {
+            return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+          }) : Promise.resolve()
+        ]);
+      }).then(function() {
+        localStorage.setItem(KEY, '1');
+        window.location.reload();
+      }).catch(function() { localStorage.setItem(KEY, '1'); });
+    })();
+    </script>
     <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
