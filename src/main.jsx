@@ -7420,7 +7420,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
             return (
                 <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-                    <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
+                    <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px', position: 'sticky', top: 0, zIndex: 10 }}>
                         <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button onClick={() => setView(view === 'dashboard' ? 'home' : 'dashboard')} style={{ padding: '8px 16px', background: view === 'dashboard' ? '#10b981' : '#f3f4f6', color: view === 'dashboard' ? 'white' : '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
@@ -7435,18 +7435,41 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                         </div>
                     </nav>
 
-                    <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+                    {/* Sidebar patients — position fixe, desktop (≥768px) uniquement */}
+                    {isDesktop && authorizedAnimals != null && authorizedAnimals.length > 0 && (
+                        <aside style={{ position: 'fixed', left: 0, top: '60px', width: '260px', height: 'calc(100vh - 60px)', background: 'white', borderRight: '1px solid #e5e7eb', overflowY: 'auto', zIndex: 5, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ padding: '14px 16px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🐾 Mes patients</h3>
+                            </div>
+                            <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {authorizedAnimals.map(a => (
+                                    <button key={a.id} onClick={() => { setAnimal(a); setActiveTab('vaccins'); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: animal?.id === a.id ? '#f0fdf4' : 'transparent', border: animal?.id === a.id ? '1px solid #10b981' : '1px solid transparent', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                                        <AnimalAvatar animal={a} size={26} />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: '700', fontSize: '13px', color: animal?.id === a.id ? '#047857' : '#1f2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.nom}</div>
+                                            <div style={{ fontSize: '11px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.espece}{a.race ? ` · ${a.race}` : ''}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </aside>
+                    )}
+
+                    <div style={{ paddingTop: '20px', paddingRight: '20px', paddingBottom: '20px', paddingLeft: isDesktop && authorizedAnimals != null && authorizedAnimals.length > 0 ? '280px' : '20px', maxWidth: isDesktop && authorizedAnimals != null && authorizedAnimals.length > 0 ? undefined : '900px', margin: isDesktop && authorizedAnimals != null && authorizedAnimals.length > 0 ? undefined : '0 auto' }}>
                         {billingError && <p style={{ color: '#ef4444', fontSize: '14px', marginBottom: '12px' }}>{billingError}</p>}
 
+                        {(!isDesktop || !animal) && (
                         <div style={{ marginBottom: '20px' }}>
                             <h1 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 4px' }}>👋 Bonjour{vetProfile.nom ? `, Dr. ${vetProfile.nom}` : ''}</h1>
                             <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>{view === 'dashboard' ? 'Vue d\'ensemble' : 'Que souhaitez-vous faire ?'}</p>
                         </div>
+                        )}
 
                         {view === 'dashboard' && <VetDashboard db={db} />}
 
                         {view === 'home' && (<>
-                        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
+                        {!animal && (<div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 6px' }}>🆔 Mon code vétérinaire</h3>
                             <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 12px' }}>Communiquez ce code aux propriétaires pour qu'ils vous autorisent à accéder au carnet de santé de leur animal.</p>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -7456,9 +7479,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                                     {vetCodeCopied ? '✅ Copié' : '📋 Copier'}
                                 </button>
                             </div>
-                        </div>
+                        </div>)}
 
-                        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
+                        {!animal && authorizedAnimals != null && authorizedAnimals.length > 0 && (
+                            <VetSuiviActif authorizedAnimals={authorizedAnimals} onAnimalSelect={(a) => { setAnimal(a); setActiveTab('vaccins'); }} />
+                        )}
+
+                        {!isDesktop && !animal && (<div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '18px', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 12px' }}>🐾 Mes patients autorisés</h3>
                             {authorizedAnimals === null ? (
                                 <p style={{ color: '#6b7280', fontSize: '14px' }}>Chargement…</p>
@@ -7472,7 +7499,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {authorizedAnimals.map(a => (
                                         <button key={a.id} onClick={() => { setAnimal(a); setActiveTab('vaccins'); }}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: animal?.id === a.id ? '#f0fdf4' : '#f9fafb', border: animal?.id === a.id ? '2px solid #10b981' : '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', textAlign: 'left' }}>
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', textAlign: 'left' }}>
                                             <AnimalAvatar animal={a} size={28} />
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ fontWeight: '700', fontSize: '14px' }}>{a.nom}</div>
@@ -7483,13 +7510,13 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
                                     ))}
                                 </div>
                             )}
-                        </div>
+                        </div>)}
 
                         {error && <p style={{ color: '#ef4444', marginBottom: '12px', fontSize: '14px' }}>{error}</p>}
 
                         {animal && (
                             <div>
-                                <button onClick={() => setAnimal(null)} style={{ marginBottom: '14px', padding: '7px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>← Retour à la liste</button>
+                                <button onClick={() => setAnimal(null)} style={{ marginBottom: '14px', padding: '7px 14px', background: '#f3f4f6', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>← Retour{isDesktop ? ' à l\'accueil' : ' à la liste'}</button>
                                 <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', padding: '24px', textAlign: 'center', marginBottom: '16px' }}>
                                     <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 10px' }}>
                                         <AnimalAvatar animal={animal} size={32} />
