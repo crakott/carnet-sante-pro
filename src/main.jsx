@@ -673,32 +673,36 @@ import CropModal from './components/CropModal';
                 }
             };
 
+            // Apply loaded settings data to state — shared between fresh and legacy paths
+            const applySettings = (settings, uid) => {
+                const s = settings.reminders || {};
+                setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
+                setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '', userId: uid });
+                setUserRole(settings.role || 'proprietaire');
+                setHouseholdId(settings.householdId || null);
+                return settings.householdId || null;
+            };
+
             // Load Settings (settings/{uid}; migrates legacy docs keyed by a random id)
             const loadSettings = async (uid) => {
                 try {
                     const ref = doc(db, 'settings', uid);
-                    let snap = await getDoc(ref);
-                    if (!snap.exists()) {
-                        const q = query(collection(db, 'settings'), where('userId', '==', uid));
-                        const legacy = await getDocs(q);
-                        if (legacy.docs.length > 0) {
-                            await setDoc(ref, legacy.docs[0].data(), { merge: true });
-                            snap = await getDoc(ref);
-                        }
-                    }
+                    const snap = await getDoc(ref);
                     if (snap.exists()) {
-                        const settings = snap.data();
-                        const s = settings.reminders || {};
-                        setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
-                        setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '', userId: uid });
-                        setUserRole(settings.role || 'proprietaire');
-                        setHouseholdId(settings.householdId || null);
-                        return settings.householdId || null;
-                    } else {
-                        await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
-                        setUserRole('proprietaire');
-                        return null;
+                        return applySettings(snap.data(), uid);
                     }
+                    // Legacy migration: old docs used a random ID with userId field
+                    const q = query(collection(db, 'settings'), where('userId', '==', uid));
+                    const legacy = await getDocs(q);
+                    if (legacy.docs.length > 0) {
+                        const legacyData = legacy.docs[0].data();
+                        await setDoc(ref, legacyData, { merge: true });
+                        return applySettings(legacyData, uid);
+                    }
+                    // New user — create default settings
+                    await setDoc(ref, { userId: uid, role: 'proprietaire', reminders: { vaccin: 3, medicament: 3, antiparasitaire: 14, vermifuge: 14 } });
+                    setUserRole('proprietaire');
+                    return null;
                 } catch (error) {
                     console.error('Erreur loading settings:', error);
                     setUserRole('proprietaire');
@@ -909,11 +913,22 @@ import CropModal from './components/CropModal';
                 return <SharedDossierView animalId={sharedAnimalId} db={db} />;
             }
 
-            if (loading || (user && userRole === null)) return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+            // While auth state is resolving, show login screen directly.
+            // Firebase restores auth from localStorage in <100ms so logged-in users
+            // see at most a brief flash before the app takes over.
+            if (loading) return <LoginScreen auth={auth} db={db} />;
 
             if (!user) {
                 return <LoginScreen auth={auth} db={db} />;
             }
+
+            // User is authenticated but settings (role) not loaded yet — brief moment
+            if (userRole === null) return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px' }}>
+                    <span style={{ fontSize: '32px' }}>🐾</span>
+                    <span style={{ fontSize: '14px', color: '#6b7280' }}>Chargement…</span>
+                </div>
+            );
 
             if (userRole === 'veterinaire') {
                 return <VetApp user={user} auth={auth} db={db} />;
