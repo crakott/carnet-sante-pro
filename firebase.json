@@ -11,16 +11,6 @@
     }
   ],
   "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "functions/**",
-      "CLAUDE.md",
-      "firestore.rules",
-      "firestore.indexes.json",
-      "index_mock_full.html"
-    ]
+    "public": "dist"
   }
 }
