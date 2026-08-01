@@ -24,15 +24,12 @@ try {
   });
 } catch (e) { /* FCM unavailable — caching and other SW features still work */ }
 
-const CACHE = 'carnet-sante-v18';
+const CACHE = 'carnet-sante-v19';
 const PRECACHE = [
   './',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
-  'https://unpkg.com/react@18/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-  'https://unpkg.com/@babel/standalone/babel.min.js',
 ];
 
 self.addEventListener('install', e => {
@@ -53,14 +50,13 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always network-first for Firebase, Firestore, AdSense, GTM, Overpass
+  // Always network-first for Firebase, Firestore, GTM, Overpass
   if (
     url.hostname.includes('firebase') ||
     url.hostname.includes('firestore') ||
     url.hostname.includes('googleapis') ||
     url.hostname.includes('gstatic') ||
     url.hostname.includes('overpass') ||
-    url.hostname.includes('googlesyndication') ||
     url.hostname.includes('googletagmanager') ||
     url.hostname.includes('google-analytics')
   ) {
