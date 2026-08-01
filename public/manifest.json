@@ -2,7 +2,7 @@
   "name": "Carnet Santé PRO",
   "short_name": "Carnet Santé",
   "description": "Suivi santé de vos animaux — vaccins, médicaments, rappels, vétérinaires",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#10b981",

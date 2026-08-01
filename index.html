@@ -64,13 +64,15 @@
     <meta name="apple-mobile-web-app-title" content="Carnet Santé">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <title>🐾 Carnet Santé PRO</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
-            integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
-            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
           integrity="sha512-cyzxRvewl+FOKTtpBzYjW6x6IAYUCZy3sGP40hn+DQkqeluGRCax7qztK2ImL64SA+C7kVWdLI6wvdlStawhyw=="
           crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
+    <!-- defer: non-blocking — these libs are only needed for QR code display and
+         image cropping (user-triggered), so they must not block React from mounting -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+            integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"
             integrity="sha512-6lplKUSl86rUVprDIjiW8DuOniNX8UDoRATqZSds/7t6zCQZfaCe3e5zcGaQwxa8Kpn5RTM9Fvl3X2lLV4grPQ=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
@@ -126,6 +128,13 @@
       }
       window.addEventListener('error', function(e) { showDiag('JS: ' + e.message + ' — ' + e.filename + ':' + e.lineno); });
       window.addEventListener('unhandledrejection', function(e) { showDiag('Promise: ' + (e.reason && (e.reason.message || String(e.reason)))); });
+      // If React hasn't mounted within 10s, the JS bundle failed to load silently
+      setTimeout(function() {
+        if (document.getElementById('app-loader')) {
+          showDiag('Timeout (10s) : les fichiers JavaScript ne se sont pas chargés. ' +
+            'Solution : Paramètres Android → Applications → Carnet Santé PRO → Stockage → Vider les données, puis relancer.');
+        }
+      }, 10000);
     </script>
     <script type="module" src="/src/main.jsx"></script>
 </body>
