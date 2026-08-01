@@ -1,172 +1,22 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from 'firebase/auth';
-import { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from 'firebase/auth';
+import { collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { app, auth, db, functions } from './firebase/config';
+import { formatDate, computeAge, formatReminderDelay, getCountdown } from './utils/format';
+import { readImageAsResizedDataUrl, MAX_DOCUMENT_PDF_SIZE, readFileAsDataUrl, _cropModal, openCropModal } from './utils/image';
+import { openVideoDB, addVideoToDB, getVideosForAnimal, deleteVideoFromDB, MAX_VIDEO_SIZE } from './utils/video';
+import { getDistanceKm, isEmergencyVet } from './utils/geo';
+import { buildPublicCard, generateInviteToken, escapeHtml, dataUrlToFile, buildDossierEmailBody, openDossierReport, openLostPosterReport, openCollarTagReport } from './utils/reports';
+import { EMOJIS_ESPECE, ESPECES, PUBLIC_CARD_FIELDS, TYPE_LABELS, NAV_TABS, SIDEBAR_GROUPS } from './constants';
+import AnimalAvatar from './components/AnimalAvatar';
+import ValidationBadge from './components/ValidationBadge';
+import EditIcon from './components/EditIcon';
+import DeleteIcon from './components/DeleteIcon';
+import EmptyList from './components/EmptyList';
+import CropModal from './components/CropModal';
 
-
-
-        // Format an ISO date string (YYYY-MM-DD) to DD/MM/YYYY for display
-        const formatDate = (dateStr) => {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return dateStr;
-            const d = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
-            return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        };
-
-        // Compute a human-readable age ("2 ans 3 mois") from a birth date
-        const computeAge = (dateNaissance) => {
-            if (!dateNaissance) return null;
-            const birth = new Date(dateNaissance);
-            const now = new Date();
-            let years = now.getFullYear() - birth.getFullYear();
-            let months = now.getMonth() - birth.getMonth();
-            if (now.getDate() < birth.getDate()) months--;
-            if (months < 0) { years--; months += 12; }
-            if (years <= 0) return `${Math.max(months, 0)} mois`;
-            return months > 0 ? `${years} an${years > 1 ? 's' : ''} ${months} mois` : `${years} an${years > 1 ? 's' : ''}`;
-        };
-
-        // Human-readable description of a reminder's due date, including overdue items
-        const formatReminderDelay = (daysUntil) => {
-            if (daysUntil < 0) {
-                const n = Math.abs(daysUntil);
-                return `en retard de ${n} jour${n > 1 ? 's' : ''}`;
-            }
-            if (daysUntil === 0) return `à faire aujourd'hui`;
-            return `dans ${daysUntil} jour${daysUntil > 1 ? 's' : ''}`;
-        };
-
-        // Compute the number of days remaining until a date, with a display label and color
-        const getCountdown = (dateStr) => {
-            if (!dateStr) return null;
-            const target = new Date(dateStr);
-            if (isNaN(target.getTime())) return null;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            target.setHours(0, 0, 0, 0);
-            const days = Math.round((target - today) / (1000 * 60 * 60 * 24));
-            let label, color;
-            if (days < 0) {
-                label = `En retard de ${Math.abs(days)} j`;
-                color = '#ef4444';
-            } else if (days === 0) {
-                label = `Aujourd'hui`;
-                color = '#ef4444';
-            } else if (days <= 7) {
-                label = `Dans ${days} j`;
-                color = '#f59e0b';
-            } else {
-                label = `Dans ${days} j`;
-                color = '#10b981';
-            }
-            return { days, label, color };
-        };
-
-        // Read an image file, downscale it to maxPx and return a JPEG data-URL via callback
-        const readImageAsResizedDataUrl = (file, maxPx, quality, onResult, onError) => {
-            if (!file || !file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-                    const canvas = document.createElement('canvas');
-                    canvas.width = Math.round(img.width * scale);
-                    canvas.height = Math.round(img.height * scale);
-                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                    onResult(canvas.toDataURL('image/jpeg', quality));
-                };
-                img.onerror = () => onError && onError();
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        };
-
-        // Read a file (e.g. a PDF exported from a vet software) as a data-URL, rejecting files above maxBytes
-        const MAX_DOCUMENT_PDF_SIZE = 700 * 1024; // 700 Ko, to stay well under Firestore's 1 Mo document limit
-        const readFileAsDataUrl = (file, maxBytes, onResult, onError) => {
-            if (!file) return;
-            if (file.size > maxBytes) { onError && onError(); return; }
-            const reader = new FileReader();
-            reader.onload = (e) => onResult(e.target.result);
-            reader.onerror = () => onError && onError();
-            reader.readAsDataURL(file);
-        };
-
-        // Global crop-modal controller — openCropModal(src, aspectRatio?) returns a Promise<dataUrl>
-        const _cropModal = { show: null };
-        const openCropModal = (src, aspectRatio) => new Promise((resolve, reject) => {
-            if (!_cropModal.show) { reject(new Error('no modal')); return; }
-            _cropModal.show({ src, aspectRatio: aspectRatio !== undefined ? aspectRatio : NaN, resolve, reject });
-        });
-
-        // Local-only video storage (IndexedDB) — videos never leave this device, no Firestore/cloud sync
-        const VIDEO_DB_NAME = 'carnet-sante-videos';
-        const VIDEO_STORE = 'videos';
-        const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 Mo
-
-        const openVideoDB = () => new Promise((resolve, reject) => {
-            const req = indexedDB.open(VIDEO_DB_NAME, 1);
-            req.onupgradeneeded = () => {
-                const db = req.result;
-                if (!db.objectStoreNames.contains(VIDEO_STORE)) {
-                    const store = db.createObjectStore(VIDEO_STORE, { keyPath: 'id' });
-                    store.createIndex('animalId', 'animalId', { unique: false });
-                }
-            };
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-
-        const addVideoToDB = (animalId, { nom, date, blob, mimeType }) => openVideoDB().then(db => new Promise((resolve, reject) => {
-            const id = Date.now();
-            const tx = db.transaction(VIDEO_STORE, 'readwrite');
-            tx.objectStore(VIDEO_STORE).put({ id, animalId, nom, date, blob, mimeType, size: blob.size });
-            tx.oncomplete = () => resolve(id);
-            tx.onerror = () => reject(tx.error);
-        }));
-
-        const getVideosForAnimal = (animalId) => openVideoDB().then(db => new Promise((resolve, reject) => {
-            const tx = db.transaction(VIDEO_STORE, 'readonly');
-            const req = tx.objectStore(VIDEO_STORE).index('animalId').getAll(animalId);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        }));
-
-        const deleteVideoFromDB = (id) => openVideoDB().then(db => new Promise((resolve, reject) => {
-            const tx = db.transaction(VIDEO_STORE, 'readwrite');
-            tx.objectStore(VIDEO_STORE).delete(id);
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        }));
-
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyDZ_dc_HfSmXL1pjeKwT7uD1xX2lbr48c0",
-            authDomain: "carnet-sante-pro.firebaseapp.com",
-            projectId: "carnet-sante-pro",
-            storageBucket: "carnet-sante-pro.firebasestorage.app",
-            messagingSenderId: "1059301417055",
-            appId: "1:1059301417055:web:8f5f81e0b075063ad4fbea"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        // Persistance locale (IndexedDB) : permet de consulter et modifier les données
-        // déjà chargées hors connexion, avec synchronisation automatique au retour du réseau
-        let db;
-        try {
-            db = initializeFirestore(app, {
-                localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-            });
-        } catch (e) {
-            console.warn('Persistance Firestore indisponible, mode mémoire utilisé:', e);
-            db = getFirestore(app);
-        }
-        const functions = getFunctions(app, 'europe-west1');
 
         // Firebase Cloud Messaging — push notifications even when phone is locked.
         // VAPID key: Firebase Console > Project Settings > Cloud Messaging > Web Push certificates > Generate key pair
@@ -185,34 +35,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             } catch (e) { /* Permission denied, CDN unavailable, or VAPID key not set */ }
         };
 
-        // Reference data for animal profiles, vaccines, medications and vets
-        const ESPECES = ['Chien', 'Chat', 'Lapin', 'Hamster', 'Gerbille', 'Cheval', 'Oiseau', 'Tortue'];
-        const EMOJIS_ESPECE = {
-            'Chien': '🐕', 'Chat': '🐈', 'Lapin': '🐰', 'Hamster': '🐹',
-            'Cheval': '🐴', 'Oiseau': '🦜', 'Tortue': '🐢', 'Gerbille': '🐭'
-        };
-
-        // Champs exposés publiquement dans la fiche de garde QR code.
-        // NE PAS y inclure : budget, documents, partages, authorizedVets,
-        // authorizedVetsNames, householdId, userId, proprietaire*, fcmToken, stripeCustomerId
-        const PUBLIC_CARD_FIELDS = [
-            'nom', 'espece', 'race', 'sexe', 'dateNaissance', 'photo', 'sterilise',
-            'identifiant', 'alimentationInfo', 'contactUrgence', 'veterinaire',
-            'vaccins', 'medicaments', 'antiparasitaires', 'vermifuges',
-            'chirurgies', 'observations', 'poids', 'poidsObjectif',
-        ];
-        const buildPublicCard = (animalData) => {
-            const card = {};
-            PUBLIC_CARD_FIELDS.forEach(f => { if (animalData[f] !== undefined) card[f] = animalData[f]; });
-            return card;
-        };
-
-        // Génère un token aléatoire pour les liens d'invitation foyer
-        const generateInviteToken = () => {
-            try { return crypto.randomUUID(); } catch {
-                return Math.random().toString(36).substring(2, 11) + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-            }
-        };
         const VACCINS_COURANTS = {
             'Chien': ['Rage', 'DTP', 'Parvovirose', 'Leptospirose'],
             'Chat': ['Rage', 'Typhus félin', 'Calicivirose', 'Rhinotrachéite', 'Coryza', 'Chlamydophilose', 'Leucose féline'],
@@ -245,11 +67,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             { id: 'montpellier', nom: 'V2TU Montpellier', lat: 43.6016, lng: 3.8878, telephone: '04 67 45 46 84', horaires: 'Nuits + WE', adresse: '137 rue Claude Balbastre, 34070 Montpellier', specialites: ['Urgences'], emergency: true },
             { id: 'dijon', nom: 'Clinique Ducs de Bourgogne — Dijon', lat: 47.3220, lng: 5.0415, telephone: '03 80 51 63 16', horaires: '24h/24, 7j/7', adresse: '11 ter Rue Paul Langevin, 21300 Chenôve', specialites: ['Urgences'], emergency: true },
         ];
-        const TYPE_LABELS = {
-            comportement: '🐾 Comportement', selles: '💩 Selles', urine: '🚽 Urine',
-            blessure: '🩹 Blessure', maladie: '🤒 Maladie', autres: '➕ Autres'
-        };
-        const MAX_FILE_SIZE = 700 * 1024;
 
         // FAQ shown in Paramètres, grouped by section, with collapsible Q/A
         const FAQ_DATA = [
@@ -335,15 +152,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             },
         ];
 
-        // Distance in km between two lat/lng points (Haversine formula)
-        const getDistanceKm = (lat1, lng1, lat2, lng2) => {
-            const toRad = (deg) => deg * Math.PI / 180;
-            const R = 6371;
-            const dLat = toRad(lat2 - lat1);
-            const dLng = toRad(lng2 - lng1);
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        };
 
         // Récupère le code département INSEE depuis des coordonnées (API Géo gouvernementale)
         const getDepartementCode = async (lat, lng) => {
@@ -452,14 +260,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             return { results: osmResults, source: 'osm' };
         };
 
-        // A vet is considered "urgence" if tagged emergency=yes on OSM, has a "Urgences"
-        // specialty (fallback list), or has 24/7 opening hours
-        const isEmergencyVet = (vet) => {
-            if (vet.emergency) return true;
-            if (vet.specialites && vet.specialites.includes('Urgences')) return true;
-            const h = (vet.horaires || '').toLowerCase();
-            return h.includes('24/7') || h.includes('24h') || h.includes('24 h');
-        };
 
         // Big red button: geolocates the user and lists the nearest 24h/emergency vets,
         // each with a one-tap call button and a directions link
@@ -599,16 +399,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             );
         }
 
-        // Build a clear summary of an animal's record: vaccine names, current weight,
-        // ongoing medications and the kinds of observations logged
-        const getAnimalDossier = (animal) => {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const vaccinNames = (animal.vaccins || []).map(v => v.nom);
-            const lastWeight = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date))[0] || null;
-            const currentMedications = (animal.medicaments || []).filter(m => todayStr >= m.dateDebut && todayStr <= m.dateFin);
-            const observationTypes = [...new Set((animal.observations || []).map(o => o.type))];
-            return { vaccinNames, lastWeight, currentMedications, observationTypes };
-        };
 
         // Cards shown on the per-animal "Dossier" overview, each linking to its corresponding tab
         const DOSSIER_CARDS = [
@@ -714,52 +504,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             }
         };
 
-        // Format an animal's record as plain text, ready to be sent by email to a vétérinaire.
-        // Includes the full written content of every observation (mailto: links can't carry photo/audio attachments,
-        // so those are pointed to the printable dossier report instead).
-        const buildDossierEmailBody = (animal) => {
-            const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
-            const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const obsLines = observations.length > 0
-                ? observations.map(o => {
-                    const label = (TYPE_LABELS[o.type] || o.type).replace(/^\S+\s/, '');
-                    const attachments = [o.photo ? '📷 photo' : null, o.audio ? '🎙️ audio' : null].filter(Boolean).join(' + ');
-                    return `  • [${o.date}] ${label}${o.description ? ' — ' + o.description : ''}${attachments ? ` (${attachments}, voir le dossier complet)` : ''}`;
-                })
-                : ['  • aucune observation enregistrée'];
-            const hasMedia = observations.some(o => o.photo || o.audio);
-
-            return [
-                `Dossier santé de ${animal.nom} (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece}${animal.race ? ', ' + animal.race : ''})`,
-                animal.sexe ? `Sexe : ${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' (stérilisé/castré)' : ''}` : null,
-                animal.dateNaissance ? `Date de naissance : ${formatDate(animal.dateNaissance)}` : null,
-                '',
-                `💉 Vaccins : ${vaccinNames.length > 0 ? vaccinNames.join(', ') : 'aucun enregistré'}`,
-                `⚖️ Poids actuel : ${lastWeight ? `${lastWeight.valeur} kg (mesuré le ${lastWeight.date})` : 'non renseigné'}`,
-                `💊 Médicaments en cours : ${currentMedications.length > 0 ? currentMedications.map(m => `${m.nom} (${m.dosage}${m.unite}, ${m.frequence})`).join(', ') : 'aucun'}`,
-                '',
-                '📋 Observations :',
-                ...obsLines,
-                hasMedia ? "\nℹ️ Certaines observations contiennent des photos ou enregistrements audio : ouvrez le dossier complet (bouton « 🖨️ Dossier complet ») pour les consulter ou les joindre à cet e-mail." : null,
-                '',
-                'Envoyé depuis Carnet Santé PRO'
-            ].filter(line => line !== null).join('\n');
-        };
-
-        // Escape text before injecting it into the printable HTML report (the report is built via document.write)
-        const escapeHtml = (str) => String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-        // Convert a base64 data-URL to a File object suitable for the Web Share API
-        const dataUrlToFile = (dataUrl, baseName) => {
-            const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/s);
-            if (!match) return null;
-            const mime = match[1];
-            const binary = atob(match[2]);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            const ext = mime.split('/')[1].replace('jpeg', 'jpg').split('+')[0];
-            return new File([bytes], `${baseName}.${ext}`, { type: mime });
-        };
 
         // Share a photo or audio via the native OS share sheet (iOS/Android),
         // or fall back to downloading the file if Web Share API isn't available.
@@ -795,215 +539,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
         };
 
         const canShareFiles = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && typeof navigator.canShare === 'function';
-
-        // Open a printable, standalone report with the full written record AND embedded photos/audio,
-        // so the owner can save it as PDF or print it to hand/send to the vétérinaire (mailto: can't carry attachments)
-        const openDossierReport = (animal, sections) => {
-            const s = sections || { vaccins: true, traitements: true, chirurgies: true, antiparasitaires: true, vermifuges: true, rdvs: true, assurance: true, poids: true, budget: true, observations: true };
-            const { vaccinNames, lastWeight, currentMedications } = getAnimalDossier(animal);
-            const observations = [...(animal.observations || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const chirurgies = [...(animal.chirurgies || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const antiparasitaires = [...(animal.antiparasitaires || [])].sort((a, b) => new Date(b.prochainTraitement || b.dernierTraitement) - new Date(a.prochainTraitement || a.dernierTraitement));
-            const vermifuges = [...(animal.vermifuges || [])].sort((a, b) => new Date(b.prochainTraitement || b.dernierTraitement) - new Date(a.prochainTraitement || a.dernierTraitement));
-            const rdvs = [...(animal.rdvs || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const poids = [...(animal.poids || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
-            const budget = (animal.budget || []).reduce((s, b) => s + (parseFloat(b.montant) || 0), 0);
-            const generatedDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-            const win = window.open('', '_blank');
-            if (!win) return;
-
-            const obsHtml = observations.length > 0
-                ? observations.map(o => `
-                    <div class="obs">
-                        <p class="obs-head"><strong>${escapeHtml(TYPE_LABELS[o.type] || o.type)}</strong> — ${escapeHtml(o.date)}</p>
-                        ${o.description ? `<p>${escapeHtml(o.description)}</p>` : ''}
-                        ${o.photo ? `<img src="${escapeHtml(o.photo)}" alt="Photo observation" />` : ''}
-                        ${o.audio ? `<audio controls src="${escapeHtml(o.audio)}"></audio>` : ''}
-                    </div>`).join('')
-                : '<p>Aucune observation enregistrée</p>';
-
-            const chirHtml = chirurgies.length > 0
-                ? chirurgies.map(c => `<div class="obs"><p class="obs-head"><strong>${escapeHtml(c.nom)}</strong> — ${escapeHtml(c.date)}</p>${c.notes ? `<p>${escapeHtml(c.notes)}</p>` : ''}</div>`).join('')
-                : '<p>Aucune chirurgie enregistrée</p>';
-
-            const apHtml = antiparasitaires.length > 0
-                ? antiparasitaires.map(a => `<div class="obs"><p class="obs-head"><strong>🦟 ${escapeHtml(a.nom)}</strong></p><p>Dernier : ${escapeHtml(a.dernierTraitement)} — Prochain : ${escapeHtml(a.prochainTraitement)}</p></div>`).join('')
-                : '<p>Aucun antiparasitaire enregistré</p>';
-
-            const vfHtml = vermifuges.length > 0
-                ? vermifuges.map(v => `<div class="obs"><p class="obs-head"><strong>🪱 ${escapeHtml(v.nom)}</strong></p><p>Dernier : ${escapeHtml(v.dernierTraitement)} — Prochain : ${escapeHtml(v.prochainTraitement)}</p></div>`).join('')
-                : '<p>Aucun vermifuge enregistré</p>';
-
-            const rdvHtml = rdvs.length > 0
-                ? rdvs.map(r => `<div class="obs"><p class="obs-head"><strong>${escapeHtml(r.motif)}</strong> — ${escapeHtml(r.date)}${r.heure ? ' à ' + escapeHtml(r.heure) : ''}</p>${r.lieu ? `<p>📍 ${escapeHtml(r.lieu)}</p>` : ''}${r.notesConsultation ? `<p><em>Notes : ${escapeHtml(r.notesConsultation)}</em></p>` : ''}</div>`).join('')
-                : '<p>Aucun rendez-vous enregistré</p>';
-
-            const poidsHtml = poids.length > 0
-                ? `<table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#f3f4f6"><th style="padding:6px 10px;text-align:left">Date</th><th style="padding:6px 10px;text-align:left">Poids (kg)</th></tr>${poids.map((p, i) => `<tr style="background:${i%2?'#f9fafb':'white'}"><td style="padding:6px 10px">${escapeHtml(p.date)}</td><td style="padding:6px 10px">${escapeHtml(String(p.valeur))}</td></tr>`).join('')}</table>`
-                : '<p>Aucune pesée enregistrée</p>';
-
-            const assurHtml = animal.assurance && animal.assurance.compagnie
-                ? `<div class="obs"><p><strong>Compagnie :</strong> ${escapeHtml(animal.assurance.compagnie)}</p>${animal.assurance.numeroContrat ? `<p><strong>N° contrat :</strong> ${escapeHtml(animal.assurance.numeroContrat)}</p>` : ''}${animal.assurance.telephone ? `<p><strong>Téléphone :</strong> ${escapeHtml(animal.assurance.telephone)}</p>` : ''}${animal.assurance.dateDebut ? `<p><strong>Du</strong> ${escapeHtml(animal.assurance.dateDebut)}${animal.assurance.dateFin ? ` <strong>au</strong> ${escapeHtml(animal.assurance.dateFin)}` : ''}</p>` : ''}${animal.assurance.franchise ? `<p><strong>Franchise :</strong> ${escapeHtml(String(animal.assurance.franchise))} €</p>` : ''}${animal.assurance.plafondAnnuel ? `<p><strong>Plafond annuel :</strong> ${escapeHtml(String(animal.assurance.plafondAnnuel))} €</p>` : ''}${animal.assurance.notes ? `<p><em>${escapeHtml(animal.assurance.notes)}</em></p>` : ''}</div>`
-                : null;
-
-            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Dossier santé - ${escapeHtml(animal.nom)}</title>
-                <style>
-                    body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 800px; margin: 0 auto; }
-                    h1 { color: #10b981; margin-bottom: 4px; }
-                    h2 { margin-top: 28px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; font-size: 18px; }
-                    .obs { margin-bottom: 14px; padding: 12px; background: #f9fafb; border-radius: 8px; }
-                    .obs-head { margin: 0 0 6px; }
-                    img { max-width: 320px; display: block; margin-top: 8px; border-radius: 6px; }
-                    audio { margin-top: 8px; display: block; }
-                    .print-btn { padding: 10px 18px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 20px; }
-                    .stamp { font-size: 12px; color: #9ca3af; margin-bottom: 16px; }
-                    @media print { .print-btn { display: none; } }
-                </style></head>
-                <body>
-                    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
-                    <p class="stamp">Généré le ${generatedDate}</p>
-                    <h1>🐾 Dossier santé de ${escapeHtml(animal.nom)}</h1>
-                    <p>${escapeHtml(EMOJIS_ESPECE[animal.espece] || '')} ${escapeHtml(animal.espece || '')}${animal.race ? ' • ' + escapeHtml(animal.race) : ''}${animal.sexe ? ' • ' + (animal.sexe === 'male' ? 'Mâle' : 'Femelle') : ''}${animal.sterilise ? ' (stérilisé/castré)' : ''}</p>
-                    ${animal.dateNaissance ? `<p>Date de naissance : ${escapeHtml(formatDate(animal.dateNaissance))}</p>` : ''}
-                    ${animal.identifiant ? `<p><strong>Identifiant :</strong> ${escapeHtml(animal.identifiant)}</p>` : ''}
-                    ${s.vaccins ? `<h2>💉 Vaccins</h2><p>${vaccinNames.length > 0 ? escapeHtml(vaccinNames.join(', ')) : 'Aucun enregistré'}</p>` : ''}
-                    ${s.traitements ? `<h2>💊 Traitements en cours</h2><p>${currentMedications.length > 0 ? currentMedications.map(m => `${escapeHtml(m.nom)} — ${escapeHtml(m.dosage)}${escapeHtml(m.unite)}, ${escapeHtml(m.frequence)}`).join('<br>') : 'Aucun'}</p>` : ''}
-                    ${s.chirurgies ? `<h2>🔪 Chirurgies & interventions</h2>${chirHtml}` : ''}
-                    ${s.antiparasitaires ? `<h2>🦟 Antiparasitaires</h2>${apHtml}` : ''}
-                    ${s.vermifuges ? `<h2>🪱 Vermifuges</h2>${vfHtml}` : ''}
-                    ${s.rdvs ? `<h2>📅 Rendez-vous vétérinaires</h2>${rdvHtml}` : ''}
-                    ${s.assurance && assurHtml ? '<h2>🛡️ Assurance</h2>' + assurHtml : ''}
-                    ${s.poids ? `<h2>⚖️ Historique de poids</h2>${poidsHtml}${lastWeight ? `<p>Poids actuel : <strong>${escapeHtml(lastWeight.valeur)} kg</strong> (mesuré le ${escapeHtml(lastWeight.date)})</p>` : ''}` : ''}
-                    ${s.budget ? `<h2>💰 Budget total</h2><p>${budget > 0 ? budget.toFixed(2) + ' €' : 'Aucune dépense enregistrée'}</p>` : ''}
-                    ${s.observations ? `<h2>📋 Observations</h2>${obsHtml}` : ''}
-                </body></html>`);
-            win.document.close();
-        };
-
-        const openLostPosterReport = (animal, lostInfo, shareUrl) => {
-            const { mode = 'perdu', dateEvt, lieuEvt, telephone, description } = lostInfo || {};
-            const isPerdu = mode !== 'trouve';
-            const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
-            const accent = isPerdu ? '#dc2626' : '#16a34a';
-            const accentLight = isPerdu ? '#fef2f2' : '#f0fdf4';
-            const titleIcon = isPerdu ? '🔍' : '✅';
-            const titleText = isPerdu ? 'ANIMAL PERDU' : 'ANIMAL TROUVÉ';
-            const dateLabel = isPerdu ? 'Perdu(e) le' : 'Trouvé(e) le';
-            const lieuLabel = isPerdu ? 'Lieu de disparition' : 'Lieu où trouvé(e)';
-            const ctaLabel = isPerdu ? 'Si vous l\'avez vu(e), appelez le :' : 'Pour contacter le propriétaire :';
-            const footerText = isPerdu
-                ? 'Merci de ne pas garder l\'animal sans en informer le propriétaire.'
-                : 'Merci pour votre aide ! L\'animal sera rendu à son propriétaire dans les plus brefs délais.';
-            const age = (() => {
-                if (!animal.dateNaissance) return null;
-                const diff = (Date.now() - new Date(animal.dateNaissance)) / (365.25 * 86400000);
-                return diff < 1 ? Math.round(diff * 12) + ' mois' : Math.floor(diff) + ' an' + (Math.floor(diff) > 1 ? 's' : '');
-            })();
-            const posterPhoto = lostInfo && lostInfo.photo ? lostInfo.photo : (animal.photo || null);
-            const qrUrl = (shareUrl && animal.shareEnabled)
-                ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}`
-                : null;
-            const win = window.open('', '_blank');
-            if (!win) return;
-            win.document.write(`<!doctype html><html><head><meta charset="utf-8">
-            <title>${titleText} — ${escapeHtml(animal.nom)}</title>
-            <style>
-                *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-                body{font-family:'Helvetica Neue',Arial,sans-serif;background:white;color:#111;width:190mm;padding:10mm;margin:0 auto}
-                .header{background:${accent};color:white;text-align:center;padding:18px 16px;border-radius:12px;margin-bottom:14px}
-                .header-icon{font-size:32px;line-height:1;margin-bottom:4px}
-                .header-title{font-size:42px;font-weight:900;letter-spacing:4px;margin-bottom:4px}
-                .header-name{font-size:26px;font-weight:700;opacity:.95}
-                .body{display:flex;gap:14px;margin-bottom:14px}
-                .photo-col{flex:0 0 44%}
-                .photo-col img,.photo-placeholder{width:100%;height:250px;object-fit:cover;border-radius:10px;display:block}
-                .photo-placeholder{background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:90px}
-                .info-col{flex:1;background:${accentLight};border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:7px}
-                .ir{font-size:14px;line-height:1.5}
-                .ir strong{color:${accent};font-size:12px;display:block;text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px}
-                .ir.hi{background:${accent};color:white;padding:6px 10px;border-radius:6px}
-                .ir.hi strong{color:rgba(255,255,255,.75)}
-                .contact{background:${accent};color:white;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:16px}
-                .contact-text{flex:1}
-                .contact-label{font-size:13px;opacity:.85;margin-bottom:5px}
-                .contact-tel{font-size:34px;font-weight:900;letter-spacing:.5px}
-                .qr-wrap{flex-shrink:0;text-align:center}
-                .qr-wrap img{border-radius:8px;background:white;padding:5px;display:block}
-                .qr-cap{font-size:10px;opacity:.7;margin-top:3px}
-                .footer{font-size:11px;color:#9ca3af;text-align:center;margin-top:10px;line-height:1.5}
-                @media print{body{width:100%;padding:6mm}.no-print{display:none!important}}
-            </style></head><body>
-            <div class="header">
-                <div class="header-icon">${titleIcon}</div>
-                <div class="header-title">${titleText}</div>
-                <div class="header-name">${emoji} ${escapeHtml(animal.nom)}</div>
-            </div>
-            <div class="body">
-                <div class="photo-col">
-                    ${posterPhoto ? `<img src="${posterPhoto}" alt="${escapeHtml(animal.nom)}" />` : `<div class="photo-placeholder">${emoji}</div>`}
-                </div>
-                <div class="info-col">
-                    <div class="ir"><strong>Espèce</strong>${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}</div>
-                    ${animal.sexe ? `<div class="ir"><strong>Sexe</strong>${animal.sexe === 'male' ? 'Mâle' : 'Femelle'}${animal.sterilise ? ' · stérilisé/castré' : ''}</div>` : ''}
-                    ${age ? `<div class="ir"><strong>Âge</strong>${escapeHtml(age)}</div>` : ''}
-                    ${animal.identifiant ? `<div class="ir"><strong>Puce / identifiant</strong>${escapeHtml(animal.identifiant)}</div>` : ''}
-                    ${dateEvt ? `<div class="ir hi"><strong>${escapeHtml(dateLabel)}</strong>${escapeHtml(formatDate(dateEvt))}</div>` : ''}
-                    ${lieuEvt ? `<div class="ir hi"><strong>${escapeHtml(lieuLabel)}</strong>${escapeHtml(lieuEvt)}</div>` : ''}
-                    ${description ? `<div class="ir" style="margin-top:2px"><strong>Signes distinctifs</strong>${escapeHtml(description)}</div>` : ''}
-                </div>
-            </div>
-            <div class="contact">
-                <div class="contact-text">
-                    <div class="contact-label">${escapeHtml(ctaLabel)}</div>
-                    <div class="contact-tel">📞 ${escapeHtml(telephone || '—')}</div>
-                </div>
-                ${qrUrl ? `<div class="qr-wrap"><img src="${qrUrl}" width="110" height="110" alt="QR code" /><div class="qr-cap">Carnet de santé</div></div>` : ''}
-            </div>
-            <p class="footer">${escapeHtml(footerText)}</p>
-            <button class="no-print" onclick="window.print()" style="display:block;margin:14px auto 0;padding:10px 28px;background:${accent};color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">🖨️ Imprimer</button>
-            </body></html>`);
-            win.document.close();
-        };
-
-        const openCollarTagReport = (animal, shareUrl) => {
-            const currentMeds = (animal.medicaments || []).filter(m => !m.dateFin || new Date(m.dateFin) >= new Date());
-            const emoji = EMOJIS_ESPECE[animal.espece] || '🐾';
-            const qrUrl = shareUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}` : null;
-            const win = window.open('', '_blank');
-            if (!win) return;
-            win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Étiquette collier — ${escapeHtml(animal.nom)}</title><style>
-                *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Helvetica Neue',Arial,sans-serif;padding:20px;background:#f9fafb}
-                .card{background:white;border:2.5px solid #111;border-radius:14px;padding:16px;max-width:360px;margin:0 auto 16px;page-break-inside:avoid}
-                .name{font-size:24px;font-weight:900;margin-bottom:2px}
-                .sub{font-size:12px;color:#6b7280;margin-bottom:12px}
-                .row{display:flex;gap:12px;align-items:flex-start}
-                .info{flex:1}.tel-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-                .tel{font-size:20px;font-weight:900;color:#ef4444;margin-bottom:10px}
-                .alert-label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-                .alert{font-size:12px;color:#111;margin-bottom:8px}
-                .qr{flex-shrink:0;text-align:center}.qr img{border-radius:6px;display:block}
-                .qr-caption{font-size:9px;color:#9ca3af;margin-top:3px;text-align:center}
-                .hint{font-size:11px;color:#9ca3af;text-align:center;margin-top:8px}
-                @media print{body{background:white;padding:0}.no-print{display:none}}
-            </style></head><body>
-                <div class="card">
-                    <div class="name">${emoji} ${escapeHtml(animal.nom)}</div>
-                    <div class="sub">${escapeHtml(animal.espece || '')}${animal.race ? ' · ' + escapeHtml(animal.race) : ''}${animal.identifiant ? ' · Puce : ' + escapeHtml(animal.identifiant) : ''}</div>
-                    <div class="row">
-                        <div class="info">
-                            <div class="tel-label">Contact si trouvé</div>
-                            <div class="tel">${escapeHtml(animal.contactUrgence || '—')}</div>
-                            ${currentMeds.length > 0 ? `<div class="alert-label">⚠️ Médicaments en cours</div><div class="alert">${escapeHtml(currentMeds.map(m => m.nom).join(', '))}</div>` : ''}
-                            ${animal.alimentationInfo && animal.alimentationInfo.allergies ? `<div class="alert-label">🚫 Allergies alimentaires</div><div class="alert">${escapeHtml(animal.alimentationInfo.allergies)}</div>` : ''}
-                        </div>
-                        ${qrUrl ? `<div class="qr"><img src="${qrUrl}" width="110" height="110" alt="QR code" /><div class="qr-caption">Carnet de santé</div></div>` : ''}
-                    </div>
-                </div>
-                <p class="hint">Imprimez et plastifiez · Taille carte de crédit recommandée</p>
-                <button class="no-print" onclick="window.print()" style="display:block;margin:16px auto;padding:10px 24px;background:#10b981;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">\u{1F5A8}️ Imprimer</button>
-            </body></html>`);
-            win.document.close();
-        };
 
         // ── Service Worker registration ──────────────────────────────────
         if ('serviceWorker' in navigator) {
@@ -1758,16 +1293,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
             );
         }
 
-        // Empty state générique pour les onglets sans données
-        function EmptyList({ emoji = '📋', text, hint }) {
-            return (
-                <div style={{ background: 'white', borderRadius: '10px', padding: '32px 16px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', gridColumn: '1 / -1' }}>
-                    <div style={{ fontSize: '40px', marginBottom: '10px', opacity: 0.2 }}>{emoji}</div>
-                    <p style={{ color: '#9ca3af', fontSize: '14px', margin: '0 0 4px', fontWeight: '500' }}>{text}</p>
-                    {hint && <p style={{ color: '#d1d5db', fontSize: '12px', margin: 0 }}>{hint}</p>}
-                </div>
-            );
-        }
 
         // Landing page + login/signup screen
         function LoginScreen({ auth, db }) {
@@ -2270,67 +1795,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
         }
 
         // QR code linking to the app's URL (or a custom `value`, e.g. a shared dossier link)
-        function CropModal() {
-            const [state, setState] = React.useState(null);
-            const imgRef = React.useRef(null);
-            const cropperRef = React.useRef(null);
-
-            React.useEffect(() => {
-                _cropModal.show = (s) => setState(s);
-                return () => { _cropModal.show = null; };
-            }, []);
-
-            React.useEffect(() => {
-                if (!state) return;
-                if (cropperRef.current) { cropperRef.current.destroy(); cropperRef.current = null; }
-                if (!imgRef.current || !window.Cropper) return;
-                cropperRef.current = new window.Cropper(imgRef.current, {
-                    aspectRatio: state.aspectRatio,
-                    viewMode: 1,
-                    autoCropArea: 0.9,
-                    dragMode: 'move',
-                    guides: true,
-                    highlight: true,
-                    cropBoxMovable: true,
-                    cropBoxResizable: true,
-                });
-                return () => { if (cropperRef.current) { cropperRef.current.destroy(); cropperRef.current = null; } };
-            }, [state]);
-
-            if (!state) return null;
-
-            const confirm = () => {
-                if (cropperRef.current) {
-                    const canvas = cropperRef.current.getCroppedCanvas({ maxWidth: 1400, maxHeight: 1400, fillColor: '#fff' });
-                    state.resolve(canvas.toDataURL('image/jpeg', 0.88));
-                }
-                setState(null);
-            };
-
-            const cancel = () => { state.reject(new Error('cancelled')); setState(null); };
-            const setRatio = (r) => { if (cropperRef.current) cropperRef.current.setAspectRatio(r); };
-            const rotate = (deg) => { if (cropperRef.current) cropperRef.current.rotate(deg); };
-
-            return (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', flexDirection: 'column', background: '#000' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: '#111827', flexShrink: 0 }}>
-                        <button onClick={cancel} style={{ color: '#f87171', background: 'none', border: 'none', fontSize: '15px', fontWeight: '600', cursor: 'pointer', padding: '6px 0' }}>✕ Annuler</button>
-                        <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>✂️ Rogner la photo</span>
-                        <button onClick={confirm} style={{ color: '#34d399', background: 'none', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', padding: '6px 0' }}>✓ Appliquer</button>
-                    </div>
-                    <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                        <img ref={imgRef} src={state.src} style={{ display: 'block', maxWidth: '100%', opacity: 0 }} alt="à rogner" />
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', padding: '10px 16px', background: '#111827', flexShrink: 0, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        {[{ label: '⬜ Carré', r: 1 }, { label: '↔️ Libre', r: NaN }, { label: '4:3', r: 4/3 }, { label: '3:4', r: 3/4 }].map(({ label, r }) => (
-                            <button key={label} onClick={() => setRatio(r)} style={{ padding: '7px 12px', background: '#374151', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>{label}</button>
-                        ))}
-                        <button onClick={() => rotate(-90)} style={{ padding: '7px 12px', background: '#374151', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>↩ −90°</button>
-                        <button onClick={() => rotate(90)} style={{ padding: '7px 12px', background: '#374151', color: 'white', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>↪ +90°</button>
-                    </div>
-                </div>
-            );
-        }
 
         function ShareQRCode({ size = 120, value }) {
             const ref = React.useRef(null);
@@ -2471,61 +1935,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
         }
 
 
-        const NAV_TABS = [
-            { id: 'accueil', label: '🏠 Accueil' },
-            { id: 'dossier', label: '📁 Dossier' },
-            { id: 'vaccins', label: '💉 Vaccins' },
-            { id: 'aliment', label: '🍎 Alimentation' },
-            { id: 'medicaments', label: '💊 Traitements' },
-            { id: 'chirurgies', label: '🔪 Chirurgies' },
-            { id: 'notes', label: '📋 Observations' },
-            { id: 'messages', label: '💬 Messagerie' },
-            { id: 'journal', label: '📖 Journal de vie' },
-            { id: 'documents', label: '📄 Documents' },
-            { id: 'videos', label: '🎥 Vidéos' },
-            { id: 'poids', label: '⚖️ Poids' },
-            { id: 'budget', label: '💰 Budget' },
-            { id: 'veterinaires', label: '🏥 Vétérinaires' },
-            { id: 'urgences', label: '🆘 Urgences & Santé' },
-            { id: 'planning', label: '📅 Planning' },
-            { id: 'calendrier', label: '📆 Calendrier' },
-            { id: 'voyage', label: '✈️ Voyage' },
-            { id: 'rappels', label: '⚠️ Rappels' },
-            { id: 'parametres', label: '⚙️ Paramètres' }
-        ];
-
-        const SIDEBAR_GROUPS = [
-            { key: null, header: null, items: [
-                { id: 'accueil', label: '🏠 Accueil' },
-                { id: 'dossier', label: '📁 Dossier' },
-            ]},
-            { key: 'sante', header: 'Santé', items: [
-                { id: 'vaccins', label: '💉 Vaccins' },
-                { id: 'medicaments', label: '💊 Traitements' },
-                { id: 'chirurgies', label: '🔪 Chirurgies' },
-                { id: 'poids', label: '⚖️ Poids' },
-            ]},
-            { key: 'quotidien', header: 'Quotidien', items: [
-                { id: 'aliment', label: '🍎 Alimentation' },
-                { id: 'notes', label: '📋 Observations' },
-                { id: 'messages', label: '💬 Messagerie' },
-                { id: 'journal', label: '📖 Journal de vie' },
-                { id: 'documents', label: '📄 Documents' },
-                { id: 'videos', label: '🎥 Vidéos' },
-            ]},
-            { key: 'admin', header: 'Administratif', items: [
-                { id: 'budget', label: '💰 Budget' },
-                { id: 'planning', label: '📅 Planning' },
-                { id: 'calendrier', label: '📆 Calendrier' },
-                { id: 'voyage', label: '✈️ Voyage' },
-            ]},
-            { key: null, header: null, items: [
-                { id: 'veterinaires', label: '🏥 Vétérinaires' },
-                { id: 'urgences', label: '🆘 Urgences & Santé' },
-                { id: 'rappels', label: '⚠️ Rappels' },
-                { id: 'parametres', label: '⚙️ Paramètres' },
-            ]},
-        ];
 
         function NavButton({ tab, active, onClick, style = {} }) {
             return (
@@ -3887,45 +3296,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
         }
 
         // Small green pill shown on a medical entry that a subscribed vet added or edited
-        function ValidationBadge({ validePar }) {
-            if (!validePar) return null;
-            const vetName = [validePar.prenom, validePar.nom].filter(Boolean).join(' ') || 'vétérinaire';
-            return (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '6px', padding: '3px 8px', background: '#d1fae5', color: '#047857', fontSize: '11px', fontWeight: '700', borderRadius: '999px' }}>
-                    ✅ Validé par Dr. {vetName}{validePar.date ? ` • ${formatDate(validePar.date)}` : ''}
-                </span>
-            );
-        }
-
-        // Show the animal's photo if available, otherwise fall back to its species emoji
-        // Outline SVG icons used for "modifier"/"supprimer" actions throughout the app
-        function EditIcon({ size = 16 }) {
-            return (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-            );
-        }
-
-        function DeleteIcon({ size = 16 }) {
-            return (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                    <path d="M10 11v6"/>
-                    <path d="M14 11v6"/>
-                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                </svg>
-            );
-        }
-
-        function AnimalAvatar({ animal, size = 28 }) {
-            if (animal.photo) {
-                return <img src={animal.photo} alt={animal.nom} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', verticalAlign: 'middle' }} />;
-            }
-            return <span style={{ fontSize: size, verticalAlign: 'middle' }}>{EMOJIS_ESPECE[animal.espece] || '🐾'}</span>;
-        }
 
         function AnimalSwitcher({ animals, selectedAnimal, setSelectedAnimal }) {
             if (!animals || animals.length < 2) return null;
