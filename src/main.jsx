@@ -6741,6 +6741,7 @@ import CropModal from './components/CropModal';
             const [searchError, setSearchError] = React.useState('');
             const [pendingRequestedIds, setPendingRequestedIds] = React.useState(new Set());
             const [requestLoading, setRequestLoading] = React.useState(null); // animalId en cours
+            const [pendingDeleteItem, setPendingDeleteItem] = React.useState(null); // { animal, type, itemId }
 
             // Synchronise le Custom Claim vetPro au montage (migration des abonnés existants).
             // Si le claim est absent alors que le statut Firestore est 'active', on appelle
@@ -6910,7 +6911,13 @@ import CropModal from './components/CropModal';
             };
 
             const deleteAnimalItem = (animalObj, type, itemId) => {
+                setPendingDeleteItem({ animal: animalObj, type, itemId });
+            };
+            const confirmDeleteAnimalItem = () => {
+                if (!pendingDeleteItem) return;
+                const { animal: animalObj, type, itemId } = pendingDeleteItem;
                 saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).filter(i => i.id !== itemId) });
+                setPendingDeleteItem(null);
             };
 
             const updateAnimalItem = (animalObj, type, itemId, updates) => {
@@ -7170,6 +7177,27 @@ import CropModal from './components/CropModal';
                         )}
                         </>)}
                     </div>
+                    {pendingDeleteItem && (() => {
+                        const TYPE_LABELS = { vaccins: 'ce vaccin', medicaments: 'ce traitement', chirurgies: 'cette chirurgie / intervention', antiparasitaires: 'cet antiparasitaire', vermifuges: 'ce vermifuge', observations: 'cette observation', aliments: 'cette alimentation', poids: 'cette pesée', documents: 'ce document', rdvs: 'ce rendez-vous', budget: 'cette dépense' };
+                        const label = TYPE_LABELS[pendingDeleteItem.type] || 'cet élément';
+                        return (
+                            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                                <div style={{ background: 'white', borderRadius: '16px', padding: '24px', maxWidth: '340px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                                    <p style={{ fontSize: '20px', textAlign: 'center', marginBottom: '8px' }}>🗑️</p>
+                                    <h3 style={{ fontSize: '17px', fontWeight: '700', textAlign: 'center', marginBottom: '8px' }}>Supprimer {label} ?</h3>
+                                    <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', marginBottom: '20px' }}>Cette action est irréversible.</p>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button onClick={() => setPendingDeleteItem(null)} style={{ flex: 1, padding: '12px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}>
+                                            Annuler
+                                        </button>
+                                        <button onClick={confirmDeleteAnimalItem} style={{ flex: 1, padding: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' }}>
+                                            Supprimer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
             );
         }
