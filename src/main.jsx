@@ -2691,6 +2691,23 @@ import CropModal from './components/CropModal';
                                     <label htmlFor="sterilise" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>Stérilisé/Castré</label>
                                 </div>
                                 <input type="text" placeholder="Identifiant vétérinaire (puce électronique, optionnel)" value={newAnimal.identifiant} onChange={(e) => setNewAnimal({ ...newAnimal, identifiant: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', gridColumn: '1 / -1' }} />
+                                <div style={{ gridColumn: '1 / -1', background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '8px', padding: '12px' }}>
+                                    <p style={{ fontSize: '13px', fontWeight: '700', color: '#065f46', marginBottom: '8px' }}>🩺 Vétérinaire habituel (optionnel)</p>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                                        <input type="text" placeholder="Nom du cabinet / vétérinaire"
+                                            value={(newAnimal.veterinaire || {}).nom || ''}
+                                            onChange={(e) => setNewAnimal({ ...newAnimal, veterinaire: { ...(newAnimal.veterinaire || {}), nom: e.target.value } })}
+                                            style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} />
+                                        <input type="tel" placeholder="Téléphone"
+                                            value={(newAnimal.veterinaire || {}).tel || ''}
+                                            onChange={(e) => setNewAnimal({ ...newAnimal, veterinaire: { ...(newAnimal.veterinaire || {}), tel: e.target.value } })}
+                                            style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }} />
+                                        <input type="text" placeholder="Adresse"
+                                            value={(newAnimal.veterinaire || {}).adresse || ''}
+                                            onChange={(e) => setNewAnimal({ ...newAnimal, veterinaire: { ...(newAnimal.veterinaire || {}), adresse: e.target.value } })}
+                                            style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', gridColumn: '1 / -1' }} />
+                                    </div>
+                                </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
                                     <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📷 Photo (optionnel)</label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
