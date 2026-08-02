@@ -2479,6 +2479,7 @@ import CropModal from './components/CropModal';
             const [searchQuery, setSearchQuery] = React.useState('');
             const [openVetId, setOpenVetId] = React.useState(null);
             const [saving, setSaving] = React.useState(false);
+            const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
 
             const handlePhotoChange = (file, setter) => {
                 setPhotoError('');
@@ -2521,6 +2522,7 @@ import CropModal from './components/CropModal';
             const filteredAnimals = animals.filter(a => !searchQuery || (a.nom||'').toLowerCase().includes(searchQuery.toLowerCase()) || (a.espece||'').toLowerCase().includes(searchQuery.toLowerCase()) || (a.race||'').toLowerCase().includes(searchQuery.toLowerCase()));
 
             return (
+                <React.Fragment>
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '12px' }}>Mes animaux ({animals.length})</h2>
                     {animals.length > 3 && (
@@ -2567,7 +2569,7 @@ import CropModal from './components/CropModal';
                                             <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '7px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                 <EditIcon size={15} />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); window.confirm('Supprimer ' + animal.nom + ' et tout son dossier ? Cette action est irréversible.') && deleteAnimal(animal.id); }} style={{ padding: '7px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                            <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(animal.id); }} style={{ padding: '7px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                 <DeleteIcon size={15} />
                                             </button>
                                             <span style={{ color: '#d1d5db', fontSize: '16px', flexShrink: 0 }}>›</span>
@@ -2735,6 +2737,27 @@ import CropModal from './components/CropModal';
                         </button>
                     )}
                 </div>
+                {confirmDeleteId && (() => {
+                    const target = animals.find(a => a.id === confirmDeleteId);
+                    return (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                            <div style={{ background: 'white', borderRadius: '16px', padding: '24px', maxWidth: '340px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                                <p style={{ fontSize: '20px', textAlign: 'center', marginBottom: '8px' }}>🗑️</p>
+                                <h3 style={{ fontSize: '17px', fontWeight: '700', textAlign: 'center', marginBottom: '8px' }}>Supprimer {target ? target.nom : 'cet animal'} ?</h3>
+                                <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', marginBottom: '20px' }}>Cette action est irréversible. Tout le dossier sera effacé.</p>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '12px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}>
+                                        Annuler
+                                    </button>
+                                    <button onClick={() => { deleteAnimal(confirmDeleteId); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' }}>
+                                        Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+                </React.Fragment>
             );
         }
 
