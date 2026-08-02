@@ -821,6 +821,7 @@ import CropModal from './components/CropModal';
                     loadAnimalsFromFirestore(user.uid, householdId, true);
                 } catch (error) {
                     console.error('Erreur saving animal:', error);
+                    alert('Erreur lors de la sauvegarde : ' + (error.message || error));
                 }
             };
 
@@ -2475,6 +2476,7 @@ import CropModal from './components/CropModal';
             const [photoError, setPhotoError] = React.useState('');
             const [searchQuery, setSearchQuery] = React.useState('');
             const [openVetId, setOpenVetId] = React.useState(null);
+            const [saving, setSaving] = React.useState(false);
 
             const handlePhotoChange = (file, setter) => {
                 setPhotoError('');
@@ -2489,18 +2491,28 @@ import CropModal from './components/CropModal';
                 reader.readAsDataURL(file);
             };
 
-            const handleAddAnimal = () => {
+            const handleAddAnimal = async () => {
                 if (newAnimal.nom && newAnimal.espece) {
-                    saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
-                    setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
-                    setShowAddAnimal(false);
+                    setSaving(true);
+                    try {
+                        await saveAnimal({ ...newAnimal, vaccins: [], aliments: [], medicaments: [], observations: [], poids: [], budget: [], veterinaire: null, partages: [] });
+                        setNewAnimal({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
+                        setShowAddAnimal(false);
+                    } finally {
+                        setSaving(false);
+                    }
                 }
             };
 
-            const handleEditAnimal = () => {
+            const handleEditAnimal = async () => {
                 if (editingAnimal && editingAnimal.nom && editingAnimal.espece) {
-                    saveAnimal(editingAnimal);
-                    setEditingAnimal(null);
+                    setSaving(true);
+                    try {
+                        await saveAnimal(editingAnimal);
+                        setEditingAnimal(null);
+                    } finally {
+                        setSaving(false);
+                    }
                 }
             };
 
@@ -2553,7 +2565,7 @@ import CropModal from './components/CropModal';
                                             <button onClick={(e) => { e.stopPropagation(); setEditingAnimal({ ...animal }); }} style={{ padding: '7px', background: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                 <EditIcon size={15} />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); deleteAnimal(animal.id); }} style={{ padding: '7px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                            <button onClick={(e) => { e.stopPropagation(); window.confirm('Supprimer ' + animal.nom + ' et tout son dossier ? Cette action est irréversible.') && deleteAnimal(animal.id); }} style={{ padding: '7px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                 <DeleteIcon size={15} />
                                             </button>
                                             <span style={{ color: '#d1d5db', fontSize: '16px', flexShrink: 0 }}>›</span>
@@ -2643,8 +2655,8 @@ import CropModal from './components/CropModal';
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button onClick={handleEditAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                                        ✅ Enregistrer
+                                    <button onClick={handleEditAnimal} disabled={!!saving} style={{ padding: '10px 20px', background: saving ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600' }}>
+                                        {saving ? '⏳ Enregistrement…' : '✅ Enregistrer'}
                                     </button>
                                     <button onClick={() => setEditingAnimal(null)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
                                         Annuler
@@ -2690,8 +2702,8 @@ import CropModal from './components/CropModal';
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={handleAddAnimal} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
-                                    ✅ Valider
+                                <button onClick={handleAddAnimal} disabled={!!saving} style={{ padding: '10px 20px', background: saving ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600' }}>
+                                    {saving ? '⏳ Enregistrement…' : '✅ Valider'}
                                 </button>
                                 <button onClick={() => setShowAddAnimal(false)} style={{ padding: '10px 20px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
                                     Annuler
@@ -4703,7 +4715,7 @@ import CropModal from './components/CropModal';
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
                                 <input type="text" placeholder="Motif (ex : Vaccination, Consultation...)" value={newRdv.motif} onChange={(e) => setNewRdv({ ...newRdv, motif: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                    <input type="date" value={newRdv.date} onChange={(e) => setNewRdv({ ...newRdv, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    <input type="date" min={new Date().toISOString().split('T')[0]} value={newRdv.date} onChange={(e) => setNewRdv({ ...newRdv, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                     <input type="time" value={newRdv.heure} onChange={(e) => setNewRdv({ ...newRdv, heure: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
                                 </div>
                                 <input type="text" placeholder="Lieu (ex : Clinique Saint-Germain)" value={newRdv.lieu} onChange={(e) => setNewRdv({ ...newRdv, lieu: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
@@ -6805,7 +6817,12 @@ import CropModal from './components/CropModal';
 
             const saveAnimal = async (animalData) => {
                 try {
-                    const { id, ...data } = animalData;
+                    const { id, ...full } = animalData;
+                    // Vets may only update medical arrays and documents — never owner-only fields
+                    const { vaccins, medicaments, chirurgies, antiparasitaires, vermifuges, observations, poids, documents } = full;
+                    const data = { vaccins, medicaments, chirurgies, antiparasitaires, vermifuges, observations, poids, documents };
+                    // Remove undefined keys so Firestore doesn't overwrite with undefined
+                    Object.keys(data).forEach(k => data[k] === undefined && delete data[k]);
                     await updateDoc(doc(db, 'animals', id), data);
                     setAnimal(animalData);
                 } catch (err) {
