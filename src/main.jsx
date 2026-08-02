@@ -610,6 +610,7 @@ import CropModal from './components/CropModal';
             const [isOnline, setIsOnline] = React.useState(navigator.onLine);
             const [syncState, setSyncState] = React.useState('synced'); // 'synced' | 'offline' | 'syncing'
             const [showSearch, setShowSearch] = React.useState(false);
+            const [pendingDeleteItem, setPendingDeleteItem] = React.useState(null); // { animal, type, itemId }
 
             React.useEffect(() => {
                 const onOnline = () => {
@@ -846,10 +847,16 @@ import CropModal from './components/CropModal';
                 saveAnimal(updated);
             };
 
-            // Remove an item from an animal's array field by id and persist to Firestore
+            // Remove an item from an animal's array field — shows confirm modal first
             const deleteAnimalItem = (animal, type, itemId) => {
+                setPendingDeleteItem({ animal, type, itemId });
+            };
+            const confirmDeleteAnimalItem = () => {
+                if (!pendingDeleteItem) return;
+                const { animal, type, itemId } = pendingDeleteItem;
                 const updated = { ...animal, [type]: (animal[type] || []).filter(i => i.id !== itemId) };
                 saveAnimal(updated);
+                setPendingDeleteItem(null);
             };
 
             // Update an existing item in an animal's array field by id and persist to Firestore
@@ -965,6 +972,27 @@ import CropModal from './components/CropModal';
                         {syncState === 'synced' && !isOnline && null}
 
                         <CropModal />
+                        {pendingDeleteItem && (() => {
+                            const TYPE_LABELS = { vaccins: 'ce vaccin', medicaments: 'ce traitement', chirurgies: 'cette chirurgie / intervention', antiparasitaires: 'cet antiparasitaire', vermifuges: 'ce vermifuge', observations: 'cette observation', aliments: 'cette alimentation', poids: 'cette pesée', documents: 'ce document', rdvs: 'ce rendez-vous', budget: 'cette dépense', partages: 'ce partage' };
+                            const label = TYPE_LABELS[pendingDeleteItem.type] || 'cet élément';
+                            return (
+                                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                                    <div style={{ background: 'white', borderRadius: '16px', padding: '24px', maxWidth: '340px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                                        <p style={{ fontSize: '20px', textAlign: 'center', marginBottom: '8px' }}>🗑️</p>
+                                        <h3 style={{ fontSize: '17px', fontWeight: '700', textAlign: 'center', marginBottom: '8px' }}>Supprimer {label} ?</h3>
+                                        <p style={{ fontSize: '14px', color: '#6b7280', textAlign: 'center', marginBottom: '20px' }}>Cette action est irréversible.</p>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <button onClick={() => setPendingDeleteItem(null)} style={{ flex: 1, padding: '12px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600', fontSize: '15px' }}>
+                                                Annuler
+                                            </button>
+                                            <button onClick={confirmDeleteAnimalItem} style={{ flex: 1, padding: '12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '15px' }}>
+                                                Supprimer
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                         {showSearch && <SearchOverlay animals={animals} onClose={() => setShowSearch(false)} navigateTo={navigateTo} setSelectedAnimal={setSelectedAnimal} />}
 
                         <NotificationPrompt animals={animals} reminders={reminders} />
