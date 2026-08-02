@@ -798,6 +798,8 @@ import CropModal from './components/CropModal';
                         // Update existing — exclude the local `id` field from the Firestore document
                         const { id: _id, ...dataWithoutId } = animalData;
                         await updateDoc(doc(db, 'animals', animalData.id), dataWithoutId);
+                        // Optimistic local update so UI reflects change immediately (no getDocs round-trip wait)
+                        setAnimals(prev => prev.map(a => a.id === animalData.id ? animalData : a));
                         // Sync public card — only safe fields, never the full document
                         if (animalData.shareEnabled) {
                             await setDoc(doc(db, 'publicAnimalCards', animalData.id), buildPublicCard(animalData));
