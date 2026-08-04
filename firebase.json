@@ -13,8 +13,8 @@
   "hosting": {
     "public": "dist",
     "rewrites": [
-      { "source": "/app", "destination": "/index.html" },
-      { "source": "/app/**", "destination": "/index.html" }
+      { "source": "/app", "destination": "/app.html" },
+      { "source": "/app/**", "destination": "/app.html" }
     ],
     "redirects": [
       { "source": "/application", "destination": "/app", "type": 301 },
