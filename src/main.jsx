@@ -1400,12 +1400,12 @@ import CropModal from './components/CropModal';
                     <section style={{ background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%)', padding: '52px 20px 36px' }}>
                         <div style={{ maxWidth: '680px', margin: '0 auto', textAlign: 'center' }}>
                             <div style={{ fontSize: '56px', marginBottom: '20px' }}>🐾</div>
-                            <h1 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: '800', color: '#064e3b', lineHeight: 1.15, marginBottom: '20px' }}>
-                                Le carnet de santé numérique de votre animal, toujours avec vous.
-                            </h1>
-                            <p style={{ fontSize: 'clamp(16px, 2vw, 19px)', color: '#065f46', lineHeight: 1.7, maxWidth: '520px', margin: '0 auto 36px' }}>
-                                Vaccins, traitements, documents vétérinaires et informations importantes réunis au même endroit.
+                            <p style={{ fontSize: 'clamp(16px, 2vw, 19px)', color: '#065f46', fontStyle: 'italic', maxWidth: '560px', margin: '0 auto 16px', lineHeight: 1.65 }}>
+                                Vous avez déjà cherché le carnet de santé de votre animal au moment d'un rendez-vous vétérinaire ?
                             </p>
+                            <h1 style={{ fontSize: 'clamp(26px, 4.5vw, 46px)', fontWeight: '800', color: '#064e3b', lineHeight: 1.2, marginBottom: '20px' }}>
+                                Carnet Santé PRO garde ses vaccins, traitements, documents et rappels au même endroit.
+                            </h1>
                             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
                                 <button onClick={() => setShowForm(true)}
                                     style={{ padding: '16px 40px', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '18px', boxShadow: '0 4px 14px rgba(16,185,129,0.4)' }}>
@@ -1416,7 +1416,7 @@ import CropModal from './components/CropModal';
                                     Se connecter
                                 </button>
                             </div>
-                            <p style={{ fontSize: '13px', color: '#6b7280' }}>✅ Gratuit · ✅ Sans publicité intrusive · ✅ Données sécurisées</p>
+                            <p style={{ fontSize: '13px', color: '#6b7280' }}>✅ Gratuit · ✅ Sans installation · ✅ Fonctionne hors connexion</p>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
                                 {['🐕 Chien', '🐈 Chat', '🐇 Lapin', '🐦 Oiseau', '🐴 Cheval', '🦎 Reptile'].map((s, i) => (
                                     <span key={i} style={{ background: 'rgba(6,95,70,0.08)', color: '#065f46', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600' }}>{s}</span>
@@ -1424,6 +1424,16 @@ import CropModal from './components/CropModal';
                             </div>
                         </div>
                     </section>
+
+                    {/* ── MULTI-ANIMAL HIGHLIGHT ── */}
+                    <div style={{ background: '#ecfdf5', borderTop: '4px solid #10b981', borderBottom: '1px solid #d1fae5', padding: '28px 20px', textAlign: 'center' }}>
+                        <p style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: '800', color: '#064e3b', margin: '0 0 8px' }}>
+                            🐶 Plusieurs animaux ? Aucun problème.
+                        </p>
+                        <p style={{ fontSize: '16px', color: '#065f46', margin: 0 }}>
+                            Gérez les dossiers de toute votre famille au même endroit, sur un seul compte.
+                        </p>
+                    </div>
 
                     {/* ── PRODUCT SHOWCASE ── */}
                     <section style={{ background: 'linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 50%, #f9fafb 100%)', padding: '44px 20px' }}>
@@ -1484,26 +1494,27 @@ import CropModal from './components/CropModal';
                         </div>
                     </section>
 
-                    {/* ── POURQUOI UTILISER CARNET SANTÉ PRO ? ── */}
+                    {/* ── BÉNÉFICES RAPIDES ── */}
                     <section style={{ padding: '48px 20px', background: 'white' }}>
                         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '12px', color: '#064e3b' }}>
-                                Pourquoi utiliser Carnet Santé PRO ?
+                            <p style={{ fontSize: '12px', fontWeight: '700', color: '#10b981', letterSpacing: '0.1em', textTransform: 'uppercase', textAlign: 'center', marginBottom: '10px' }}>Ce que vous gagnez</p>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: '800', textAlign: 'center', marginBottom: '8px', color: '#064e3b' }}>
+                                Tout ce dont vous avez besoin
                             </h2>
-                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '32px', fontSize: '16px' }}>Des rappels essentiels pour garder vos compagnons en bonne santé.</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+                            <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: '36px', fontSize: '16px' }}>Conçu pour les propriétaires qui veulent le meilleur pour leur animal.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
                                 {[
-                                    { icon: '💉', title: 'Vaccinations annuelles', text: 'Les rappels vaccinaux protègent votre animal contre des maladies graves comme la parvovirose ou le coryza. Un carnet à jour est obligatoire pour certains voyages, la pension ou le toilettage. Une alerte configurée quelques semaines avant vous évite d\'oublier une injection.' },
-                                    { icon: '🦟', title: 'Antiparasitaires réguliers', text: 'Puces, tiques et moustiques représentent un risque toute l\'année, y compris en appartement. Les tiques véhiculent des maladies sérieuses comme la piroplasmose. Un traitement renouvelé toutes les 4 à 12 semaines protège efficacement votre animal et votre foyer.' },
-                                    { icon: '⚖️', title: 'Suivi du poids', text: 'L\'obésité touche près d\'un animal sur deux en France. Pesez votre animal chaque mois et suivez la courbe dans l\'app. Une variation rapide peut aussi signaler une maladie à ne pas ignorer.' },
-                                    { icon: '🦷', title: 'Hygiène dentaire', text: 'Les problèmes dentaires touchent plus de 80 % des chiens et chats de plus de 3 ans. Un brossage hebdomadaire et un détartrage annuel suffisent à maintenir une bonne santé bucco-dentaire.' },
-                                    { icon: '🍽️', title: 'Alimentation adaptée', text: 'Les besoins nutritionnels varient selon l\'espèce, l\'âge et l\'état de santé. Consignez le régime dans l\'app pour faciliter les ajustements lors des consultations vétérinaires.' },
-                                    { icon: '📋', title: 'Dossier médical centralisé', text: 'Chirurgies passées, allergies, analyses, traitements en cours : votre vétérinaire a besoin de l\'historique complet. En cas d\'urgence, le QR code du collier lui donne accès en quelques secondes.' },
+                                    { icon: '💉', title: 'Ne plus oublier les vaccins', desc: 'Rappels automatiques au bon moment — avant les rappels annuels, les vermifuges et les antiparasitaires.' },
+                                    { icon: '📄', title: 'Tous les documents au même endroit', desc: 'Ordonnances, certificats, analyses, comptes-rendus — numérisés et accessibles en permanence.' },
+                                    { icon: '⚖️', title: 'Suivez son poids', desc: 'Gardez un historique simple de l\'évolution du poids. Parfait pour les animaux en diète ou en croissance.' },
+                                    { icon: '📱', title: 'Toujours accessible', desc: 'Téléphone, tablette ou ordinateur. Fonctionne même sans connexion internet.' },
+                                    { icon: '🐕', title: 'Plusieurs animaux', desc: 'Un seul compte pour toute la famille. Chacun a son dossier complet, accessible partout.' },
+                                    { icon: '🔗', title: 'QR code d\'urgence', desc: 'Accrochez-le au collier. En cas de perte ou d\'urgence, le vétérinaire accède aux infos vitales en quelques secondes.' },
                                 ].map((c, i) => (
-                                    <div key={i} style={{ background: '#f9fafb', borderRadius: '12px', padding: '22px', border: '1px solid #e5e7eb' }}>
+                                    <div key={i} style={{ background: '#f9fafb', borderRadius: '14px', padding: '22px', border: '1px solid #e5e7eb', borderTop: '3px solid #10b981' }}>
                                         <div style={{ fontSize: '28px', marginBottom: '10px' }}>{c.icon}</div>
-                                        <h3 style={{ fontWeight: '700', fontSize: '15px', color: '#064e3b', marginBottom: '8px' }}>{c.title}</h3>
-                                        <p style={{ color: '#4b5563', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{c.text}</p>
+                                        <h3 style={{ fontWeight: '700', fontSize: '15px', color: '#111827', marginBottom: '6px' }}>{c.title}</h3>
+                                        <p style={{ color: '#6b7280', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{c.desc}</p>
                                     </div>
                                 ))}
                             </div>
@@ -1587,6 +1598,39 @@ import CropModal from './components/CropModal';
                                     Créer la fiche de mon animal →
                                 </button>
                             </div>
+                        </div>
+                    </section>
+
+                    {/* ── CONFIANCE / DONNÉES ── */}
+                    <section style={{ padding: '48px 20px', background: '#1f2937' }}>
+                        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+                            <h2 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: '800', textAlign: 'center', color: 'white', marginBottom: '8px' }}>
+                                🔐 Vos données restent les vôtres
+                            </h2>
+                            <p style={{ textAlign: 'center', color: '#9ca3af', marginBottom: '36px', fontSize: '15px' }}>
+                                Vous nous confiez des informations médicales sur votre animal. Voici comment nous les traitons.
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+                                {[
+                                    { icon: '🔒', title: 'Données chiffrées', desc: 'Firebase (Google Cloud Europe), TLS en transit, AES-256 au repos.' },
+                                    { icon: '🐾', title: 'Aucun partage sans votre accord', desc: 'La fiche de garde publique (QR code) est activée uniquement par vous, à la demande.' },
+                                    { icon: '📄', title: 'Documents accessibles uniquement par vous', desc: 'Ordonnances et documents visibles uniquement par les personnes que vous autorisez.' },
+                                    { icon: '🗑️', title: 'Suppression à tout moment', desc: 'Supprimez votre compte et toutes vos données depuis les paramètres. Immédiat et définitif.' },
+                                    { icon: '🇪🇺', title: 'Hébergé en Europe', desc: 'Données stockées sur des serveurs européens, dans le respect des attentes des utilisateurs européens.' },
+                                    { icon: '🚫', title: 'Aucune revente de données', desc: 'Vos informations ne sont jamais vendues ni partagées avec des tiers à des fins commerciales.' },
+                                ].map((item, i) => (
+                                    <div key={i} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '18px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                                        <span style={{ fontSize: '22px', flexShrink: 0, marginTop: '2px' }}>{item.icon}</span>
+                                        <div>
+                                            <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#f9fafb', marginBottom: '4px' }}>{item.title}</h4>
+                                            <p style={{ fontSize: '13px', color: '#9ca3af', margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <p style={{ textAlign: 'center', fontSize: '13px', color: '#6b7280', marginTop: '24px' }}>
+                                Pour en savoir plus : <a href="/privacy.html" style={{ color: '#34d399' }}>Politique de confidentialité complète</a>
+                            </p>
                         </div>
                     </section>
 

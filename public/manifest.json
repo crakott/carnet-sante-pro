@@ -2,7 +2,7 @@
   "name": "Carnet Santé PRO",
   "short_name": "Carnet Santé",
   "description": "Suivi santé de vos animaux — vaccins, médicaments, rappels, vétérinaires",
-  "start_url": "/app",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#10b981",
@@ -19,12 +19,12 @@
   "shortcuts": [
     {
       "name": "Mes animaux",
-      "url": "/app?tab=accueil",
+      "url": "?tab=accueil",
       "description": "Voir tous mes animaux"
     },
     {
       "name": "Rappels",
-      "url": "/app?tab=rappels",
+      "url": "?tab=rappels",
       "description": "Voir les rappels urgents"
     }
   ]
