@@ -3337,13 +3337,13 @@ import CropModal from './components/CropModal';
                 <div style={{ marginTop: '32px' }}>
                     <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '16px', color }}>{emoji} {title}</h2>
                     {showForm ? (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${color}` }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${color}`, overflow: 'hidden' }}>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <input type="text" placeholder={`Nom du produit (ex. Frontline, Milbemax…)`} value={nom} onChange={e => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="text" placeholder={`Nom du produit (ex. Frontline, Milbemax…)`} value={nom} onChange={e => setNom(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
                                 <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Date du dernier traitement</label>
-                                <input type="date" value={dernierTraitement} onChange={e => setDernierTraitement(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="date" value={dernierTraitement} onChange={e => setDernierTraitement(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
                                 <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>Fréquence (tous les X mois)</label>
-                                <input type="number" min="1" max="24" value={intervalMois} onChange={e => setIntervalMois(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="number" min="1" max="24" value={intervalMois} onChange={e => setIntervalMois(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
                                 <p style={{ color: '#9ca3af', fontSize: '12px' }}>Prochain traitement calculé automatiquement : {formatDate(calcProchain(dernierTraitement, intervalMois))}</p>
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
@@ -3523,18 +3523,18 @@ import CropModal from './components/CropModal';
 
                     {/* Add Vaccin */}
                     {showForm ? (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981', overflow: 'hidden' }}>
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un vaccin</h3>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewVaccin({ ...newVaccin, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                <select onChange={(e) => { if (e.target.value && e.target.value !== 'autres') setNewVaccin({ ...newVaccin, nom: e.target.value }); }} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }}>
                                     <option value="">Vaccins courants</option>
                                     {(VACCINS_COURANTS[animal.espece] || []).map(v => <option key={v} value={v}>{v}</option>)}
                                     <option value="autres">Autres</option>
                                 </select>
-                                <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({ ...newVaccin, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({ ...newVaccin, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <input type="text" placeholder="N° de lot (facultatif)" value={newVaccin.lot} onChange={(e) => setNewVaccin({ ...newVaccin, lot: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <input type="text" placeholder="Nom du vaccin" value={newVaccin.nom} onChange={(e) => setNewVaccin({ ...newVaccin, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <input type="date" value={newVaccin.date} onChange={(e) => setNewVaccin({ ...newVaccin, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <input type="text" placeholder="N° de lot (facultatif)" value={newVaccin.lot} onChange={(e) => setNewVaccin({ ...newVaccin, lot: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', minWidth: 0 }}>
                                     <div>
                                         <label style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginBottom: '4px' }}>Durée de validité</label>
                                         <select value={newVaccin.delaiJours} onChange={(e) => setNewVaccin({ ...newVaccin, delaiJours: parseInt(e.target.value) })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }}>
@@ -3628,22 +3628,22 @@ import CropModal from './components/CropModal';
 
                     {/* Add Medicament */}
                     {showForm ? (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #ec4899' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #ec4899', overflow: 'hidden' }}>
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter un traitement</h3>
                             <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', color: '#92400e', marginBottom: '4px' }}>
                                 ⚠️ Saisissez uniquement un médicament <strong>prescrit ou recommandé par votre vétérinaire</strong>. Ne donnez jamais de médicament humain à un animal sans avis vétérinaire — certains sont mortels pour les chats et les chiens (paracétamol, ibuprofène…).
                             </div>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <input type="text" placeholder="Nom du médicament prescrit par le vétérinaire" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                                    <input type="number" placeholder="Dosage" value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                    <select value={newMed.unite} onChange={(e) => setNewMed({ ...newMed, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                <input type="text" placeholder="Nom du médicament prescrit par le vétérinaire" value={newMed.nom} onChange={(e) => setNewMed({ ...newMed, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', minWidth: 0 }}>
+                                    <input type="number" placeholder="Dosage" value={newMed.dosage} onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box', minWidth: 0 }} />
+                                    <select value={newMed.unite} onChange={(e) => setNewMed({ ...newMed, unite: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }}>
                                         <option>g</option><option>mg</option><option>ml</option><option>UI</option>
                                     </select>
                                 </div>
                                 <input type="number" placeholder="Fréquence (x/jour)" min="1" step="1" value={newMed.frequence}
                                     onChange={(e) => { setNewMed({ ...newMed, frequence: e.target.value }); setMedHeures(defaultHeuresPrise(e.target.value)); }}
-                                    style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                    style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
                                 {medHeures.length > 0 && (
                                     <div>
                                         <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>⏰ Heures de prise (pour les rappels sur téléphone verrouillé)</label>
@@ -3651,13 +3651,13 @@ import CropModal from './components/CropModal';
                                             {medHeures.map((h, i) => (
                                                 <input key={i} type="time" value={h}
                                                     onChange={(e) => { const u = [...medHeures]; u[i] = e.target.value; setMedHeures(u); }}
-                                                    style={{ padding: '8px', border: '1px solid #ec4899', borderRadius: '6px', fontSize: '15px', fontWeight: '600', color: '#ec4899' }} />
+                                                    style={{ padding: '8px', border: '1px solid #ec4899', borderRadius: '6px', fontSize: '15px', fontWeight: '600', color: '#ec4899', boxSizing: 'border-box' }} />
                                             ))}
                                         </div>
                                     </div>
                                 )}
-                                <input type="number" placeholder="Durée (jours)" value={newMed.duree} onChange={(e) => setNewMed({ ...newMed, duree: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({ ...newMed, dateDebut: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="number" placeholder="Durée (jours)" value={newMed.duree} onChange={(e) => setNewMed({ ...newMed, duree: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <input type="date" value={newMed.dateDebut} onChange={(e) => setNewMed({ ...newMed, dateDebut: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAddMed} style={{ padding: '10px 20px', background: '#ec4899', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
@@ -3920,14 +3920,14 @@ import CropModal from './components/CropModal';
                     })()}
 
                     {showForm ? (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #0891b2', overflow: 'hidden' }}>
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une observation</h3>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+                                <select value={type} onChange={(e) => setType(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }}>
                                     {Object.entries(TYPE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                                 </select>
-                                <textarea placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '100px', fontFamily: 'inherit', fontSize: '14px' }} />
-                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <textarea placeholder="Description..." value={description} onChange={(e) => setDescription(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '100px', fontFamily: 'inherit', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
 
                                 <div>
                                     <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>📸 Ajouter une photo</label>
@@ -4118,12 +4118,12 @@ import CropModal from './components/CropModal';
                     <AnimalProfileCard animal={animal} />
 
                     {showForm ? (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${CHIRURGIE_COLOR}` }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: `2px solid ${CHIRURGIE_COLOR}`, overflow: 'hidden' }}>
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une chirurgie / intervention</h3>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <input type="text" placeholder="Type d'intervention (ex. Stérilisation, Détartrage, Extraction dentaire…)" value={newChirurgie.nom} onChange={(e) => setNewChirurgie({ ...newChirurgie, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <input type="date" value={newChirurgie.date} onChange={(e) => setNewChirurgie({ ...newChirurgie, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <textarea placeholder="Notes (déroulement, suites opératoires, anesthésie…)" value={newChirurgie.notes} onChange={(e) => setNewChirurgie({ ...newChirurgie, notes: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px' }} />
+                                <input type="text" placeholder="Type d'intervention (ex. Stérilisation, Détartrage, Extraction dentaire…)" value={newChirurgie.nom} onChange={(e) => setNewChirurgie({ ...newChirurgie, nom: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <input type="date" value={newChirurgie.date} onChange={(e) => setNewChirurgie({ ...newChirurgie, date: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <textarea placeholder="Notes (déroulement, suites opératoires, anesthésie…)" value={newChirurgie.notes} onChange={(e) => setNewChirurgie({ ...newChirurgie, notes: e.target.value })} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} />
                                 <div>
                                     <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '6px' }}>📷 Photo (optionnel)</label>
                                     <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files[0]; if (!f || !f.type.startsWith('image/')) return; const fr = new FileReader(); fr.onload = (ev) => openCropModal(ev.target.result, NaN).then(cropped => setNewChirurgie(prev => ({ ...prev, photo: cropped }))).catch(() => {}); fr.readAsDataURL(f); }} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%' }} />
@@ -4587,11 +4587,11 @@ import CropModal from './components/CropModal';
                     )}
 
                     {showForm ? (
-                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981' }}>
+                        <div style={{ background: 'white', padding: '20px', borderRadius: '8px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', border: '2px solid #10b981', overflow: 'hidden' }}>
                             <h3 style={{ marginBottom: '16px', fontWeight: '600' }}>Ajouter une mesure</h3>
                             <div style={{ display: 'grid', gap: '12px', marginBottom: '12px' }}>
-                                <input type="number" step="0.1" placeholder="Poids (kg)" value={valeur} onChange={(e) => setValeur(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
-                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }} />
+                                <input type="number" step="0.1" placeholder="Poids (kg)" value={valeur} onChange={(e) => setValeur(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
+                                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }} />
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={handleAdd} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>➕ Ajouter</button>
