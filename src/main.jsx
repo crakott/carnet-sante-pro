@@ -1,6 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, getAdditionalUserInfo } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendPasswordResetEmail, getAdditionalUserInfo } from 'firebase/auth';
+// Plugin Google Auth Capacitor — chargé dynamiquement, ne plante pas sur navigateur web
+let _GoogleAuth = null;
+(async () => { try { const m = await import('@codetrix-studio/capacitor-google-auth'); _GoogleAuth = m.GoogleAuth; } catch(e) {} })();
 import { collection, addDoc, query, where, orderBy, getDocs, getDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { app, auth, db, functions } from './firebase/config';
@@ -1128,17 +1131,34 @@ import CropModal from './components/CropModal';
                 } catch (err) { setError(err.message); }
             };
 
-            // Capacitor (app native Android/iOS) : signInWithPopup échoue dans WebView
+            // Détection app native Capacitor (Android/iOS)
             const isNativeApp = !!(window.Capacitor && window.Capacitor.isNative);
 
             const handleGoogleAuth = async () => {
                 setError('');
                 try {
-                    const result = await signInWithPopup(auth, new GoogleAuthProvider());
-                    if (getAdditionalUserInfo(result)?.isNewUser) {
-                        await createSettingsDoc(result.user.uid, isVet ? 'veterinaire' : 'proprietaire');
+                    if (isNativeApp) {
+                        // App native Android : utiliser le plugin Capacitor Google Auth
+                        if (!_GoogleAuth) throw new Error('Plugin Google Auth non chargé');
+                        _GoogleAuth.initialize({
+                            clientId: '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com',
+                            scopes: ['profile', 'email'],
+                            grantOfflineAccess: true,
+                        });
+                        const googleUser = await _GoogleAuth.signIn();
+                        const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+                        const result = await signInWithCredential(auth, credential);
+                        if (getAdditionalUserInfo(result)?.isNewUser) {
+                            await createSettingsDoc(result.user.uid, isVet ? 'veterinaire' : 'proprietaire');
+                        }
+                    } else {
+                        // Web / navigateur : signInWithPopup standard
+                        const result = await signInWithPopup(auth, new GoogleAuthProvider());
+                        if (getAdditionalUserInfo(result)?.isNewUser) {
+                            await createSettingsDoc(result.user.uid, isVet ? 'veterinaire' : 'proprietaire');
+                        }
                     }
-                } catch (err) { setError(err.message); }
+                } catch (err) { setError(err.message || 'Erreur connexion Google'); }
             };
 
             return (
@@ -1154,8 +1174,7 @@ import CropModal from './components/CropModal';
                         <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '4px' }}>{isSignup ? 'Créez votre compte gratuit' : 'Connectez-vous à votre espace'}</p>
                     </div>
 
-                    {!isNativeApp && (
-                        <>
+                    <>
                         <button
                             type="button"
                             onClick={handleGoogleAuth}
@@ -1175,8 +1194,7 @@ import CropModal from './components/CropModal';
                             <span style={{ color: '#9ca3af', fontSize: '13px' }}>ou par email</span>
                             <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
                         </div>
-                        </>
-                    )}
+                    </>
 
                     {isSignup && (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '14px' }}>

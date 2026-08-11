@@ -10,6 +10,8 @@
     "test:rules": "firebase emulators:exec --only firestore --project carnet-sante-pro-test 'vitest run tests/firestore.rules.test.js'"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.0",
+    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4",
     "firebase": "^10.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
