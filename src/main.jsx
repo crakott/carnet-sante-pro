@@ -611,6 +611,26 @@ import CropModal from './components/CropModal';
             const [syncState, setSyncState] = React.useState('synced'); // 'synced' | 'offline' | 'syncing'
             const [showSearch, setShowSearch] = React.useState(false);
             const [pendingDeleteItem, setPendingDeleteItem] = React.useState(null); // { animal, type, itemId }
+            const [deferredInstallPrompt, setDeferredInstallPrompt] = React.useState(null);
+            const [showInstallBanner, setShowInstallBanner] = React.useState(false);
+
+            // PWA install banner — capture beforeinstallprompt to show a custom "Installer" button
+            React.useEffect(() => {
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+                if (isStandalone || localStorage.getItem('pwaInstallDismissed')) return;
+                const handler = (e) => {
+                    e.preventDefault();
+                    setDeferredInstallPrompt(e);
+                    setShowInstallBanner(true);
+                };
+                const onInstalled = () => { setShowInstallBanner(false); setDeferredInstallPrompt(null); };
+                window.addEventListener('beforeinstallprompt', handler);
+                window.addEventListener('appinstalled', onInstalled);
+                return () => {
+                    window.removeEventListener('beforeinstallprompt', handler);
+                    window.removeEventListener('appinstalled', onInstalled);
+                };
+            }, []);
 
             React.useEffect(() => {
                 const onOnline = () => {
@@ -998,6 +1018,32 @@ import CropModal from './components/CropModal';
                         <NotificationPrompt animals={animals} reminders={reminders} />
 
                         <JoinHouseholdBanner householdId={householdId} joinHousehold={joinHousehold} leaveHousehold={leaveHousehold} />
+
+                        {showInstallBanner && (
+                            <div style={{ background: '#064e3b', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '2px solid #10b981' }}>
+                                <span style={{ fontSize: '26px', flexShrink: 0 }}>📱</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{ color: 'white', fontWeight: '700', fontSize: '14px', margin: 0 }}>Installer Carnet Santé PRO</p>
+                                    <p style={{ color: '#a7f3d0', fontSize: '12px', margin: 0 }}>Accès rapide depuis l'écran d'accueil, fonctionne hors connexion</p>
+                                </div>
+                                <button onClick={async () => {
+                                    if (deferredInstallPrompt) {
+                                        deferredInstallPrompt.prompt();
+                                        const { outcome } = await deferredInstallPrompt.userChoice;
+                                        setDeferredInstallPrompt(null);
+                                        setShowInstallBanner(false);
+                                    }
+                                }} style={{ padding: '9px 18px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                    Installer
+                                </button>
+                                <button onClick={() => {
+                                    setShowInstallBanner(false);
+                                    localStorage.setItem('pwaInstallDismissed', '1');
+                                }} style={{ padding: '8px', background: 'transparent', color: '#a7f3d0', border: 'none', cursor: 'pointer', fontSize: '20px', lineHeight: 1, flexShrink: 0 }}>
+                                    ✕
+                                </button>
+                            </div>
+                        )}
 
                         <div style={{ flex: 1, width: '100%', maxWidth: isDesktop ? '980px' : '100%', margin: isDesktop ? '0 auto' : 0, padding: isDesktop ? '0 24px' : 0 }}>
                         <Content
