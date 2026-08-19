@@ -1131,8 +1131,13 @@ import CropModal from './components/CropModal';
                 } catch (err) { setError(err.message); }
             };
 
-            // Détection app native Capacitor (Android/iOS)
-            const isNativeApp = !!(window.Capacitor && window.Capacitor.isNative);
+            // Détection app native Capacitor (Android/iOS).
+            // NB : `Capacitor.isNative` n'existe pas dans l'API Capacitor (v3+) — la propriété
+            // correcte est la méthode `isNativePlatform()`. Avec l'ancien code, isNativeApp était
+            // TOUJOURS false, y compris dans l'app Android, donc le flux natif GoogleAuth.signIn
+            // ci-dessous n'était jamais utilisé et l'app retombait sur signInWithPopup, qui échoue
+            // dans la WebView Capacitor.
+            const isNativeApp = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
 
             const handleGoogleAuth = async () => {
                 setError('');
@@ -1140,7 +1145,7 @@ import CropModal from './components/CropModal';
                     if (isNativeApp) {
                         // App native Android : utiliser le plugin Capacitor Google Auth
                         if (!_GoogleAuth) throw new Error('Plugin Google Auth non chargé');
-                        _GoogleAuth.initialize({
+                        await _GoogleAuth.initialize({
                             clientId: '1059301417055-i01l03c4ssgfjrt8ikigohju742iv2ik.apps.googleusercontent.com',
                             scopes: ['profile', 'email'],
                             grantOfflineAccess: true,
