@@ -4041,10 +4041,10 @@ import CropModal from './components/CropModal';
                                         >
                                             <p style={{ fontWeight: '600' }}>{TYPE_LABELS[o.type] || o.type}</p>
                                             <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(o.date)}</p>
+                                            {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
                                             <ValidationBadge validePar={o.validePar} />
                                         </EditableRow>
                                     </div>
-                                    {o.description && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{o.description}</p>}
                                     {(o.photo || o.audio) && (() => {
                                         const obsText = [
                                             `Animal : ${animal.nom}${animal.espece ? ` (${EMOJIS_ESPECE[animal.espece] || ''} ${animal.espece})` : ''}`,
@@ -4228,10 +4228,10 @@ import CropModal from './components/CropModal';
                                         >
                                             <p style={{ fontWeight: '600' }}>{c.nom}</p>
                                             <p style={{ fontSize: '12px', color: '#6b7280' }}>{formatDate(c.date)}</p>
+                                            {c.notes && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{c.notes}</p>}
                                             <ValidationBadge validePar={c.validePar} />
                                         </EditableRow>
                                     </div>
-                                    {c.notes && <p style={{ fontSize: '14px', color: '#374151', marginTop: '8px', whiteSpace: 'pre-wrap' }}>{c.notes}</p>}
                                     {c.photo && <img src={c.photo} alt="Intervention" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '6px', marginTop: '8px' }} />}
                                 </div>
                             ))
