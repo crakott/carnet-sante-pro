@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:rules": "firebase emulators:exec --only firestore --project carnet-sante-pro-test 'vitest run tests/firestore.rules.test.js'"
+    "test:rules": "firebase emulators:exec --only firestore --project carnet-sante-pro-test \"vitest run tests/firestore.rules.test.js\""
   },
   "dependencies": {
     "@capacitor/core": "^8.5.0",

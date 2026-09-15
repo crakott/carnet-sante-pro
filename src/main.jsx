@@ -666,6 +666,28 @@ import CropModal from './components/CropModal';
                 return unsubscribe;
             }, []);
 
+            // Statut fondateur / animaux illimités — écoute en temps réel (pas un simple fetch
+            // ponctuel), car ce champ peut changer pendant que l'app est ouverte : attribution
+            // asynchrone du rang fondateur juste après l'inscription (assignFounderStatus), ou
+            // retour de paiement Stripe (redirection vers l'app possible avant même que le
+            // webhook n'ait fini de traiter l'événement). Se superpose à applySettings sans le
+            // modifier — mise à jour additive uniquement.
+            React.useEffect(() => {
+                if (!user) return;
+                const unsub = onSnapshot(doc(db, 'settings', user.uid), (snap) => {
+                    if (!snap.exists()) return;
+                    const s = snap.data();
+                    setUserProfile(prev => ({
+                        ...prev,
+                        isFounder: s.isFounder || false,
+                        founderRank: s.founderRank ?? null,
+                        unlimitedAnimals: s.unlimitedAnimals || false,
+                        animalCount: s.animalCount ?? 0,
+                    }));
+                });
+                return unsub;
+            }, [user]);
+
             // Responsive layout: switch between sidebar (desktop) and hamburger menu (mobile)
             React.useEffect(() => {
                 const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -707,7 +729,11 @@ import CropModal from './components/CropModal';
             const applySettings = (settings, uid) => {
                 const s = settings.reminders || {};
                 setReminderSettings({ vaccin: s.vaccin ?? 3, medicament: s.medicament ?? 3, antiparasitaire: s.antiparasitaire ?? 14, vermifuge: s.vermifuge ?? 14 });
-                setUserProfile({ nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '', userId: uid });
+                setUserProfile({
+                    nom: settings.nom || '', prenom: settings.prenom || '', dateNaissance: settings.dateNaissance || '', userId: uid,
+                    isFounder: settings.isFounder || false, founderRank: settings.founderRank ?? null,
+                    unlimitedAnimals: settings.unlimitedAnimals || false, animalCount: settings.animalCount ?? 0,
+                });
                 setUserRole(settings.role || 'proprietaire');
                 setHouseholdId(settings.householdId || null);
                 return settings.householdId || null;
@@ -2619,7 +2645,7 @@ import CropModal from './components/CropModal';
         }
 
         // Tabs Content
-        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal, reminders }) {
+        function HomeTab({ animals, selectedAnimal, setSelectedAnimal, setActiveTab, saveAnimal, deleteAnimal, reminders, userProfile }) {
             const [showAddAnimal, setShowAddAnimal] = React.useState(false);
             const [newAnimal, setNewAnimal] = React.useState({ nom: '', espece: '', dateNaissance: '', sexe: '', race: '', sterilise: false, identifiant: '', photo: '' });
             const [editingAnimal, setEditingAnimal] = React.useState(null);
@@ -2628,6 +2654,30 @@ import CropModal from './components/CropModal';
             const [openVetId, setOpenVetId] = React.useState(null);
             const [saving, setSaving] = React.useState(false);
             const [confirmDeleteId, setConfirmDeleteId] = React.useState(null);
+            const [showPaywall, setShowPaywall] = React.useState(false);
+            const [unlockLoading, setUnlockLoading] = React.useState(false);
+            const [unlockError, setUnlockError] = React.useState('');
+
+            // Fondateur (5000 premiers comptes) ou paiement unique effectué = animaux illimités.
+            // Sinon 1 animal gratuit. animalCount est géré côté serveur (source de vérité pour
+            // les règles Firestore) ; ce contrôle côté client n'est qu'un confort d'UX.
+            const hasUnlimitedAnimals = !!(userProfile?.isFounder || userProfile?.unlimitedAnimals);
+            const canAddFreeAnimal = hasUnlimitedAnimals || (userProfile?.animalCount ?? 0) < 1;
+
+            const handleUnlock = async () => {
+                setUnlockError('');
+                setUnlockLoading(true);
+                try {
+                    const createUnlockCheckoutSession = httpsCallable(functions, 'createUnlockCheckoutSession');
+                    const result = await createUnlockCheckoutSession();
+                    window.location.href = result.data.url;
+                } catch (err) {
+                    setUnlockError('Erreur lors de la création du paiement : ' + err.message);
+                    setUnlockLoading(false);
+                }
+            };
+
+            const unlockResult = new URLSearchParams(window.location.search).get('unlock');
 
             const handlePhotoChange = (file, setter) => {
                 setPhotoError('');
@@ -2672,6 +2722,16 @@ import CropModal from './components/CropModal';
             return (
                 <React.Fragment>
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                    {unlockResult === 'success' && (
+                        <div style={{ background: '#d1fae5', border: '1px solid #10b981', color: '#065f46', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '14px' }}>
+                            ✅ Paiement reçu ! Les animaux illimités sont en cours d'activation (quelques secondes)…
+                        </div>
+                    )}
+                    {unlockResult === 'cancel' && (
+                        <div style={{ background: '#f3f4f6', border: '1px solid #d1d5db', color: '#374151', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '14px' }}>
+                            Paiement annulé.
+                        </div>
+                    )}
                     <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '12px' }}>Mes animaux ({animals.length})</h2>
                     {animals.length > 3 && (
                         <input
@@ -2880,11 +2940,35 @@ import CropModal from './components/CropModal';
                             </div>
                         </div>
                     ) : (
-                        <button onClick={() => setShowAddAnimal(true)} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                        <button onClick={() => canAddFreeAnimal ? setShowAddAnimal(true) : setShowPaywall(true)} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
                             ➕ Ajouter un animal
                         </button>
                     )}
                 </div>
+
+                {/* Paywall — déblocage animaux illimités (paiement unique 4,99 €, lien Stripe externe) */}
+                {showPaywall && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <div style={{ background: 'white', borderRadius: '16px', padding: '28px', maxWidth: '380px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '36px', marginBottom: '8px' }}>🐾🔒</p>
+                            <h3 style={{ fontSize: '19px', fontWeight: '800', marginBottom: '8px' }}>Débloquer les animaux illimités</h3>
+                            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
+                                La version gratuite permet de suivre 1 animal. Débloquez le nombre illimité d'animaux avec un paiement unique — à vie, sans abonnement.
+                            </p>
+                            <div style={{ background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+                                <p style={{ fontSize: '28px', fontWeight: '800', color: '#10b981', margin: 0 }}>4,99 €<span style={{ fontSize: '13px', fontWeight: '500', color: '#6b7280' }}> — une seule fois</span></p>
+                            </div>
+                            <button onClick={handleUnlock} disabled={unlockLoading} style={{ width: '100%', padding: '13px', background: unlockLoading ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: unlockLoading ? 'wait' : 'pointer', fontSize: '15px', marginBottom: '10px' }}>
+                                {unlockLoading ? 'Redirection vers le paiement…' : '🔓 Débloquer pour 4,99 €'}
+                            </button>
+                            <button onClick={() => setShowPaywall(false)} style={{ width: '100%', padding: '11px', background: '#e5e7eb', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+                                Plus tard
+                            </button>
+                            {unlockError && <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '10px' }}>{unlockError}</p>}
+                            <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '12px' }}>Paiement sécurisé par Stripe.</p>
+                        </div>
+                    </div>
+                )}
                 {confirmDeleteId && (() => {
                     const target = animals.find(a => a.id === confirmDeleteId);
                     return (

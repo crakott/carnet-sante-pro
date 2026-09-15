@@ -52,7 +52,7 @@ let testEnv
  * appeler .firestore() plusieurs fois sur le même contexte déclenche
  * "Firestore has already been started". On stocke donc le résultat ici.
  */
-let ownerADb, ownerBDb, vetADb, vetBDb, vetFakeDb, householdMemberDb, anonDb
+let ownerADb, ownerBDb, vetADb, vetBDb, vetFakeDb, householdMemberDb, anonDb, founderDb, unlimitedDb
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
@@ -73,6 +73,10 @@ beforeAll(async () => {
   vetFakeDb        = testEnv.authenticatedContext('uid-vet-fake').firestore()
   householdMemberDb = testEnv.authenticatedContext('uid-household-member').firestore()
   anonDb           = testEnv.unauthenticatedContext().firestore()
+  // founder : compte fondateur (5000 premiers), animaux illimités
+  founderDb        = testEnv.authenticatedContext('uid-founder').firestore()
+  // unlimited : compte non-fondateur mais ayant payé le déblocage (4,99 €)
+  unlimitedDb      = testEnv.authenticatedContext('uid-unlimited').firestore()
 }, 30_000)
 
 afterAll(async () => {
@@ -132,6 +136,33 @@ async function seedFirestore() {
       subscriptionStatus: 'active',
       nom:                'Hacker',
       prenom:             'Evil',
+    })
+
+    // ownerB : compte non-fondateur, déjà à la limite gratuite (1 animal) → création bloquée
+    await setDoc(doc(db, 'settings', 'uid-owner-b'), {
+      userId:      'uid-owner-b',
+      role:        'proprietaire',
+      isFounder:   false,
+      animalCount: 1,
+    })
+
+    // founder : un des 5000 premiers comptes → animaux illimités quel que soit animalCount
+    await setDoc(doc(db, 'settings', 'uid-founder'), {
+      userId:       'uid-founder',
+      role:         'proprietaire',
+      isFounder:    true,
+      founderRank:  42,
+      unlimitedAnimals: true,
+      animalCount:  5,
+    })
+
+    // unlimited : non-fondateur mais a payé le déblocage (4,99 €) → animaux illimités
+    await setDoc(doc(db, 'settings', 'uid-unlimited'), {
+      userId:           'uid-unlimited',
+      role:             'proprietaire',
+      isFounder:        false,
+      unlimitedAnimals: true,
+      animalCount:      3,
     })
 
     // Fiche publique (publicAnimalCards)
@@ -198,6 +229,42 @@ describe('animals/{animalId} — lecture', () => {
 
   it('anonymous ne peut PAS lire', async () => {
     await assertFails(getDoc(doc(anonDb, 'animals', 'animal-1')))
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// animals/{animalId} — CRÉATION (limite gratuite / fondateur / débloqué)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('animals/{animalId} — création', () => {
+  it("ownerA (animalCount non défini — pas encore migré) peut créer son 1er animal", async () => {
+    await assertSucceeds(
+      setDoc(doc(ownerADb, 'animals', 'animal-nouveau-a'), { userId: 'uid-owner-a', nom: 'Milo', espece: 'Chat' })
+    )
+  })
+
+  it('ownerB (déjà à la limite gratuite, animalCount = 1, non fondateur) ne peut PAS créer un 2e animal', async () => {
+    await assertFails(
+      setDoc(doc(ownerBDb, 'animals', 'animal-nouveau-b'), { userId: 'uid-owner-b', nom: 'Filou', espece: 'Chien' })
+    )
+  })
+
+  it('founder (isFounder: true) peut créer un animal même avec animalCount déjà élevé', async () => {
+    await assertSucceeds(
+      setDoc(doc(founderDb, 'animals', 'animal-nouveau-founder'), { userId: 'uid-founder', nom: 'Nala', espece: 'Chat' })
+    )
+  })
+
+  it('unlimited (a payé le déblocage) peut créer un animal même avec animalCount déjà élevé', async () => {
+    await assertSucceeds(
+      setDoc(doc(unlimitedDb, 'animals', 'animal-nouveau-unlimited'), { userId: 'uid-unlimited', nom: 'Balto', espece: 'Chien' })
+    )
+  })
+
+  it("ownerA ne peut PAS créer un animal au nom d'un autre utilisateur (userId usurpé)", async () => {
+    await assertFails(
+      setDoc(doc(ownerADb, 'animals', 'animal-usurpe'), { userId: 'uid-owner-b', nom: 'Volé', espece: 'Chien' })
+    )
   })
 })
 
@@ -283,6 +350,24 @@ describe('settings/{settingId} — mise à jour', () => {
   it('ownerA ne peut PAS écrire stripeCustomerId (champ protégé serveur)', async () => {
     await assertFails(
       updateDoc(doc(ownerADb, 'settings', 'uid-owner-a'), { stripeCustomerId: 'cus_fake123' })
+    )
+  })
+
+  it('ownerA ne peut PAS s\'auto-déclarer fondateur (isFounder — champ protégé serveur)', async () => {
+    await assertFails(
+      updateDoc(doc(ownerADb, 'settings', 'uid-owner-a'), { isFounder: true })
+    )
+  })
+
+  it('ownerA ne peut PAS s\'auto-déclarer animaux illimités (unlimitedAnimals — champ protégé serveur)', async () => {
+    await assertFails(
+      updateDoc(doc(ownerADb, 'settings', 'uid-owner-a'), { unlimitedAnimals: true })
+    )
+  })
+
+  it('ownerA ne peut PAS modifier animalCount (champ protégé serveur, géré par Cloud Function)', async () => {
+    await assertFails(
+      updateDoc(doc(ownerADb, 'settings', 'uid-owner-a'), { animalCount: 0 })
     )
   })
 

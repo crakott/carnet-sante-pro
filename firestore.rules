@@ -3,7 +3,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /animals/{animalId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      // Création : autorisée pour le propriétaire de la fiche, ET seulement s'il a le droit
+      // d'ajouter un animal de plus — fondateur (5000 premiers comptes, gratuit à vie),
+      // débloqué (paiement unique 4,99 €), ou encore sous la limite gratuite (1 animal).
+      // animalCount est géré exclusivement côté serveur (Cloud Function), jamais par le client.
+      // IMPORTANT : on utilise .data.get('champ', valeurParDéfaut) et non .data.champ — accéder
+      // à un champ absent avec la notation pointée lève une erreur d'évaluation dans le langage
+      // des règles Firestore (contrairement à JS où ce serait juste `undefined`), ce qui bloque
+      // par erreur les comptes existants pas encore migrés (sans isFounder/animalCount défini).
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && (
+          get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.get('isFounder', false) == true
+          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.get('unlimitedAnimals', false) == true
+          || get(/databases/$(database)/documents/settings/$(request.auth.uid)).data.get('animalCount', 0) < 1
+        );
 
       // Foyer partagé : un membre du même foyer (households/{householdId}.members) a un accès
       // complet (comme le propriétaire) à tous les animaux du foyer
@@ -77,13 +92,15 @@ service cloud.firestore {
       allow update: if request.auth != null
         && request.auth.uid == resource.data.userId
         && !request.resource.data.diff(resource.data).affectedKeys()
-             .hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'role']);
+             .hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'role', 'isFounder', 'founderRank', 'unlimitedAnimals', 'animalCount']);
 
       // Création : interdire les champs gérés côté serveur (même protection que allow update).
       // role est autorisé à la création (choix vétérinaire/propriétaire à l'inscription).
+      // isFounder/founderRank/unlimitedAnimals/animalCount sont positionnés par la Cloud
+      // Function assignFounderStatus juste après cette création — jamais par le client.
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.userId
-        && !request.resource.data.keys().hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId']);
+        && !request.resource.data.keys().hasAny(['subscriptionStatus', 'stripeCustomerId', 'stripeSubscriptionId', 'isFounder', 'founderRank', 'unlimitedAnimals', 'animalCount']);
 
       // Foyer partagé : un membre du même foyer peut lire les settings (nom/prénom) des
       // autres membres pour afficher la liste des membres du foyer

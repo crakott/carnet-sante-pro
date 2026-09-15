@@ -1,6 +1,6 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentDeleted } = require('firebase-functions/v2/firestore');
 const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const Stripe = require('stripe');
@@ -13,6 +13,13 @@ const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 const stripePriceId = defineString('STRIPE_PRICE_ID');
 const appUrl = defineString('APP_URL');
+const adminMigrationSecret = defineSecret('ADMIN_MIGRATION_SECRET');
+
+// Monétisation propriétaires : les 5000 premiers comptes (fondateurs) restent gratuits à
+// vie avec animaux illimités. Au-delà, 1 animal gratuit puis paiement unique pour débloquer
+// le nombre illimité d'animaux.
+const FOUNDER_LIMIT = 5000;
+const UNLOCK_PRICE_CENTS = 499; // 4,99 €
 
 // Crée une session Stripe Checkout pour l'abonnement mensuel "Espace Vétérinaire" (49,99 €/mois)
 exports.createCheckoutSession = onCall({ region: REGION, secrets: [stripeSecretKey] }, async (request) => {
@@ -107,7 +114,15 @@ exports.stripeWebhook = onRequest({ region: REGION, secrets: [stripeSecretKey, s
     case 'checkout.session.completed': {
       const session = event.data.object;
       const uid = session.metadata?.firebaseUID || session.client_reference_id;
-      if (uid) {
+      if (!uid) break;
+
+      if (session.mode === 'payment' && session.metadata?.type === 'unlock_animals') {
+        // Paiement unique "animaux illimités" (4,99 €) — pas un abonnement.
+        await db.doc(`settings/${uid}`).set({
+          unlimitedAnimals: true,
+          stripeCustomerId: session.customer,
+        }, { merge: true });
+      } else {
         await db.doc(`settings/${uid}`).set({
           subscriptionStatus: 'active',
           stripeCustomerId: session.customer,
@@ -431,4 +446,161 @@ exports.searchAnimalsForVet = onCall({ region: REGION }, async (request) => {
     });
 
   return { results };
+});
+
+// Crée une session Stripe Checkout pour le paiement unique (4,99 €) qui débloque le nombre
+// illimité d'animaux. C'est un LIEN EXTERNE (page Stripe hébergée) — jamais Google Play
+// Billing — conformément au choix DMA/EEA validé pour ce projet. Le client navigue vers
+// l'URL retournée (même mécanisme que createCheckoutSession pour l'abonnement vétérinaire).
+exports.createUnlockCheckoutSession = onCall({ region: REGION, secrets: [stripeSecretKey] }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Vous devez être connecté.');
+  }
+
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const settingsRef = db.doc(`settings/${uid}`);
+  const settingsSnap = await settingsRef.get();
+  const settings = settingsSnap.data() || {};
+
+  if (settings.isFounder || settings.unlimitedAnimals) {
+    throw new HttpsError('failed-precondition', 'Vous avez déjà un accès illimité.');
+  }
+
+  const stripe = new Stripe(stripeSecretKey.value());
+
+  let customerId = settings.stripeCustomerId;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: request.auth.token.email,
+      metadata: { firebaseUID: uid },
+    });
+    customerId = customer.id;
+    await settingsRef.set({ stripeCustomerId: customerId }, { merge: true });
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    customer: customerId,
+    line_items: [{
+      price_data: {
+        currency: 'eur',
+        unit_amount: UNLOCK_PRICE_CENTS,
+        product_data: {
+          name: 'Carnet Santé PRO — Animaux illimités',
+          description: "Débloque le suivi d'un nombre illimité d'animaux (achat unique, à vie).",
+        },
+      },
+      quantity: 1,
+    }],
+    success_url: `${appUrl.value()}/?unlock=success`,
+    cancel_url: `${appUrl.value()}/?unlock=cancel`,
+    client_reference_id: uid,
+    metadata: { firebaseUID: uid, type: 'unlock_animals' },
+  });
+
+  return { url: session.url };
+});
+
+// Attribue le statut fondateur (gratuit à vie, animaux illimités) aux 5000 premiers
+// comptes, de façon atomique via une transaction sur le compteur meta/founderCounter.
+// Se déclenche à chaque création de settings/{uid} (inscription email OU Google), donc
+// quel que soit le chemin de code qui a créé le document. Idempotent : ignore les documents
+// qui ont déjà le champ isFounder (protège contre un double déclenchement).
+exports.assignFounderStatus = onDocumentCreated({ document: 'settings/{uid}', region: REGION }, async (event) => {
+  const snap = event.data;
+  if (!snap) return;
+  const data = snap.data();
+  if (data.isFounder !== undefined) return;
+
+  const db = admin.firestore();
+  const counterRef = db.doc('meta/founderCounter');
+
+  await db.runTransaction(async (tx) => {
+    const counterSnap = await tx.get(counterRef);
+    const count = counterSnap.exists ? (counterSnap.data().count || 0) : 0;
+    const isFounder = count < FOUNDER_LIMIT;
+
+    if (isFounder) {
+      tx.set(counterRef, { count: count + 1 }, { merge: true });
+    }
+
+    tx.set(snap.ref, {
+      isFounder,
+      founderRank: isFounder ? count + 1 : null,
+      unlimitedAnimals: isFounder,
+      animalCount: data.animalCount ?? 0,
+    }, { merge: true });
+  });
+});
+
+// Tient à jour settings/{uid}.animalCount — champ géré exclusivement côté serveur (protégé
+// en écriture côté client par firestore.rules) et utilisé par les règles pour appliquer la
+// limite "1 animal gratuit" tant que l'utilisateur n'est ni fondateur ni débloqué.
+exports.onAnimalCreated = onDocumentCreated({ document: 'animals/{animalId}', region: REGION }, async (event) => {
+  const uid = event.data?.data()?.userId;
+  if (!uid) return;
+  await admin.firestore().doc(`settings/${uid}`).set({
+    animalCount: admin.firestore.FieldValue.increment(1),
+  }, { merge: true });
+});
+
+exports.onAnimalDeleted = onDocumentDeleted({ document: 'animals/{animalId}', region: REGION }, async (event) => {
+  const uid = event.data?.data()?.userId;
+  if (!uid) return;
+  await admin.firestore().doc(`settings/${uid}`).set({
+    animalCount: admin.firestore.FieldValue.increment(-1),
+  }, { merge: true });
+});
+
+// Fonction à USAGE UNIQUE : attribue rétroactivement le statut fondateur aux comptes déjà
+// existants avant le déploiement de cette fonctionnalité (ils font partie des 5000 premiers
+// par définition) et initialise leur animalCount à partir des animaux qu'ils possèdent déjà
+// réellement. Idempotente (ignore les documents qui ont déjà isFounder) — sans danger si
+// appelée plusieurs fois. Protégée par un secret à passer en query string :
+//   https://europe-west1-<projet>.cloudfunctions.net/migrateFounders?secret=xxx
+// À appeler UNE FOIS après le déploiement (avant que de nouveaux utilisateurs s'inscrivent,
+// pour garder des rangs fondateurs propres), puis peut être laissée en place ou supprimée.
+exports.migrateFounders = onRequest({ region: REGION, secrets: [adminMigrationSecret] }, async (req, res) => {
+  if (req.query.secret !== adminMigrationSecret.value()) {
+    res.status(403).send('Forbidden');
+    return;
+  }
+
+  const db = admin.firestore();
+  const counterRef = db.doc('meta/founderCounter');
+  const [settingsSnap, animalsSnap] = await Promise.all([
+    db.collection('settings').get(),
+    db.collection('animals').get(),
+  ]);
+
+  const animalCounts = {};
+  animalsSnap.docs.forEach(d => {
+    const uid = d.data().userId;
+    if (uid) animalCounts[uid] = (animalCounts[uid] || 0) + 1;
+  });
+
+  let migrated = 0;
+  await db.runTransaction(async (tx) => {
+    const counterSnap = await tx.get(counterRef);
+    let count = counterSnap.exists ? (counterSnap.data().count || 0) : 0;
+
+    for (const settingDoc of settingsSnap.docs) {
+      const data = settingDoc.data();
+      if (data.isFounder !== undefined) continue;
+      const isFounder = count < FOUNDER_LIMIT;
+      if (isFounder) count += 1;
+      tx.set(settingDoc.ref, {
+        isFounder,
+        founderRank: isFounder ? count : null,
+        unlimitedAnimals: isFounder,
+        animalCount: animalCounts[settingDoc.id] || 0,
+      }, { merge: true });
+      migrated += 1;
+    }
+
+    tx.set(counterRef, { count }, { merge: true });
+  });
+
+  res.json({ migrated, message: `${migrated} compte(s) existant(s) migré(s) en fondateurs.` });
 });
