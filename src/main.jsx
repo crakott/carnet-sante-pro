@@ -2657,6 +2657,7 @@ import CropModal from './components/CropModal';
             const [showPaywall, setShowPaywall] = React.useState(false);
             const [unlockLoading, setUnlockLoading] = React.useState(false);
             const [unlockError, setUnlockError] = React.useState('');
+            const [unlockCelebrationDismissed, setUnlockCelebrationDismissed] = React.useState(false);
 
             // Fondateur (5000 premiers comptes) ou paiement unique effectué = animaux illimités.
             // Sinon 1 animal gratuit. animalCount est géré côté serveur (source de vérité pour
@@ -2722,10 +2723,20 @@ import CropModal from './components/CropModal';
             return (
                 <React.Fragment>
                 <div className="animate-fade-in" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-                    {unlockResult === 'success' && (
-                        <div style={{ background: '#d1fae5', border: '1px solid #10b981', color: '#065f46', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '14px' }}>
-                            ✅ Paiement reçu ! Les animaux illimités sont en cours d'activation (quelques secondes)…
-                        </div>
+                    {unlockResult === 'success' && !unlockCelebrationDismissed && (
+                        <SuccessCelebration
+                            icon="🐾"
+                            activated={hasUnlimitedAnimals}
+                            title={hasUnlimitedAnimals ? 'Animaux illimités débloqués !' : 'Paiement reçu !'}
+                            activatingText="Votre paiement a bien été reçu. On active le déblocage des animaux illimités sur votre compte, ça ne prend que quelques secondes…"
+                            activatedText="Vous pouvez désormais ajouter autant d'animaux que vous le souhaitez, sans limite — merci pour votre soutien 🎉"
+                            onClose={() => {
+                                setUnlockCelebrationDismissed(true);
+                                const url = new URL(window.location.href);
+                                url.searchParams.delete('unlock');
+                                window.history.replaceState({}, '', url.pathname + url.search);
+                            }}
+                        />
                     )}
                     {unlockResult === 'cancel' && (
                         <div style={{ background: '#f3f4f6', border: '1px solid #d1d5db', color: '#374151', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '14px' }}>
@@ -6094,6 +6105,41 @@ import CropModal from './components/CropModal';
             );
         }
 
+        // Full-screen celebration overlay shown right after a successful Stripe redirect
+        // (?unlock=success ou ?vet_checkout=success). `activated` reflète l'état réel côté
+        // serveur (écouté en temps réel via userProfile / subStatus) : tant que le webhook
+        // Stripe n'a pas encore mis à jour Firestore, on affiche "activation en cours" avec
+        // un petit loader ; dès que le champ bascule, on passe à l'état confirmé. `onClose`
+        // doit aussi retirer le paramètre de succès de l'URL pour qu'un rafraîchissement de
+        // la page ne réaffiche pas l'écran indéfiniment.
+        function SuccessCelebration({ activated, title, activatingText, activatedText, onClose, icon = '🎉' }) {
+            return (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.55)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="animate-fade-in" style={{ background: 'white', borderRadius: '20px', padding: '36px 28px', maxWidth: '380px', width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.35)', textAlign: 'center' }}>
+                        <div className="animate-pop-in" style={{ width: '76px', height: '76px', borderRadius: '50%', background: activated ? '#d1fae5' : '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '36px' }}>
+                            <span className={activated ? 'animate-ring-pulse' : ''} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', borderRadius: '50%' }}>
+                                {activated ? '✅' : icon}
+                            </span>
+                        </div>
+                        <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '10px' }}>{title}</h3>
+                        <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '22px', lineHeight: 1.5 }}>
+                            {activated ? activatedText : activatingText}
+                        </p>
+                        {!activated && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '20px', color: '#9ca3af', fontSize: '13px' }}>
+                                <span className="animate-spin" style={{ width: '14px', height: '14px', border: '2px solid #e5e7eb', borderTopColor: '#10b981', borderRadius: '50%', display: 'inline-block' }} />
+                                Activation en cours…
+                            </div>
+                        )}
+                        <button onClick={onClose} style={{ width: '100%', padding: '13px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '15px' }}>
+                            {activated ? 'Continuer 🎉' : "OK, j'attends"}
+                        </button>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '14px' }}>Merci pour votre confiance 💚</p>
+                    </div>
+                </div>
+            );
+        }
+
         // Generic collapsible card used for each Paramètres section ("volet déroulant")
         function CollapsibleSection({ icon, iconBg, iconColor, title, defaultOpen = false, center, style, children }) {
             const [open, setOpen] = React.useState(defaultOpen);
@@ -6339,6 +6385,19 @@ import CropModal from './components/CropModal';
 
                     {/* ── Owner profile ── */}
                     <CollapsibleSection icon="👤" iconBg="#e0e7ff" iconColor="#6366f1" title="Mon profil">
+                        {userProfile?.isFounder && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', border: '1px solid #fbbf24', borderRadius: '10px', padding: '14px 16px', marginBottom: '18px' }}>
+                                <span style={{ fontSize: '28px', lineHeight: 1 }}>🏆</span>
+                                <div>
+                                    <p style={{ margin: 0, fontWeight: '800', fontSize: '14px', color: '#92400e' }}>
+                                        Membre Fondateur{userProfile.founderRank ? ` #${userProfile.founderRank}` : ''}
+                                    </p>
+                                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#b45309' }}>
+                                        Vous faites partie des 5000 premiers comptes — animaux illimités offerts à vie 🎉
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '14px' }}>Prénom</label>
@@ -6928,6 +6987,7 @@ import CropModal from './components/CropModal';
             const [subStatus, setSubStatus] = React.useState(null); // null (chargement) | 'active' | 'inactive' | 'past_due' | 'canceled' | ...
             const [checkoutLoading, setCheckoutLoading] = React.useState(false);
             const [billingError, setBillingError] = React.useState('');
+            const [subCelebrationDismissed, setSubCelebrationDismissed] = React.useState(false);
             const [authorizedAnimals, setAuthorizedAnimals] = React.useState(null); // null = chargement
             const [animal, setAnimal] = React.useState(null);
             const [error, setError] = React.useState('');
@@ -7129,14 +7189,36 @@ import CropModal from './components/CropModal';
                 saveAnimal({ ...animalObj, [type]: (animalObj[type] || []).map(i => i.id === itemId ? { ...i, ...updates, ...extra } : i) });
             };
 
+            // Calculé une seule fois ici (pas dans les branches de rendu ci-dessous) car le
+            // statut peut basculer de "subscribe screen" à "dashboard" entre deux rendus dès
+            // que l'écoute temps réel de subStatus détecte l'activation — l'overlay de
+            // célébration doit survivre à cette transition d'écran.
+            const vetCheckoutResult = new URLSearchParams(window.location.search).get('vet_checkout');
+            const dismissVetCelebration = () => {
+                setSubCelebrationDismissed(true);
+                const url = new URL(window.location.href);
+                url.searchParams.delete('vet_checkout');
+                window.history.replaceState({}, '', url.pathname + url.search);
+            };
+            const vetSuccessCelebration = vetCheckoutResult === 'success' && !subCelebrationDismissed && (
+                <SuccessCelebration
+                    icon="🩺"
+                    activated={subStatus === 'active'}
+                    title={subStatus === 'active' ? 'Abonnement activé !' : 'Paiement reçu !'}
+                    activatingText="Votre paiement a bien été reçu. On active votre accès à l'espace vétérinaire, ça ne prend que quelques secondes…"
+                    activatedText="Votre abonnement est actif. Vous pouvez dès maintenant rechercher un animal et enrichir son carnet de santé — merci pour votre confiance 🩺"
+                    onClose={dismissVetCelebration}
+                />
+            );
+
             if (subStatus === null) {
                 return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
             }
 
             if (subStatus !== 'active') {
-                const checkoutResult = new URLSearchParams(window.location.search).get('vet_checkout');
                 return (
                     <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                        {vetSuccessCelebration}
                         <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
                             <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
                             <button onClick={() => signOut(auth)} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#1f2937', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
@@ -7157,10 +7239,7 @@ import CropModal from './components/CropModal';
                                     {checkoutLoading ? 'Redirection vers le paiement…' : "S'abonner — 49,99 €/mois"}
                                 </button>
                             </div>
-                            {checkoutResult === 'success' && (
-                                <p style={{ color: '#10b981', fontSize: '14px', marginBottom: '12px' }}>✅ Paiement reçu ! Activation de votre abonnement en cours (quelques secondes)…</p>
-                            )}
-                            {checkoutResult === 'cancel' && (
+                            {vetCheckoutResult === 'cancel' && (
                                 <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '12px' }}>Paiement annulé.</p>
                             )}
                             {billingError && <p style={{ color: '#ef4444', fontSize: '14px' }}>{billingError}</p>}
@@ -7172,6 +7251,7 @@ import CropModal from './components/CropModal';
 
             return (
                 <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                    {vetSuccessCelebration}
                     <nav style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px', position: 'sticky', top: 0, zIndex: 10 }}>
                         <span style={{ fontWeight: '800', fontSize: '18px', color: '#10b981' }}>🩺 Carnet Santé PRO — Espace Vétérinaire</span>
                         <div style={{ display: 'flex', gap: '8px' }}>
