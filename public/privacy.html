@@ -55,7 +55,7 @@
     </header>
 
     <main>
-        <p class="date">Dernière mise à jour : août 2026</p>
+        <p class="date">Dernière mise à jour : septembre 2026</p>
 
         <!-- 1. Responsable -->
         <div class="card">
@@ -97,6 +97,12 @@
 
             <h3>2.4 Données de navigation</h3>
             <p>Google Tag Manager et Google Analytics collectent des données anonymisées sur votre utilisation de l'application (pages visitées, durée, type d'appareil) afin d'améliorer le service.</p>
+
+            <h3>2.5 Notifications</h3>
+            <p>Si vous activez les notifications (rappels de vaccins, traitements, rendez-vous, messages d'un vétérinaire), un identifiant technique de notification (jeton Firebase Cloud Messaging) propre à votre appareil est enregistré dans votre compte. Il est supprimé si vous désactivez les notifications ou supprimez votre compte.</p>
+
+            <h3>2.6 Données de paiement</h3>
+            <p>Si vous souscrivez à l'abonnement professionnel vétérinaire (49,99&nbsp;€/mois) ou effectuez l'achat unique de déblocage «&nbsp;animaux illimités&nbsp;» (4,99&nbsp;€), le paiement est intégralement traité par notre prestataire <strong>Stripe</strong>. Nous ne recevons et ne stockons jamais votre numéro de carte bancaire&nbsp;: seuls votre email, l'identifiant de transaction Stripe et le statut de votre abonnement/achat sont conservés dans votre compte pour activer les fonctionnalités correspondantes.</p>
         </div>
 
         <!-- 3. Services tiers -->
@@ -136,7 +142,7 @@
                 <tr>
                     <td><span class="badge">Paiement</span>Stripe</td>
                     <td>Stripe, Inc.</td>
-                    <td>Traitement des paiements (abonnement vétérinaire) — nom, email, données de facturation</td>
+                    <td>Traitement des paiements (abonnement vétérinaire et achat unique de déblocage) — email, données de facturation</td>
                     <td><a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener">Stripe</a></td>
                 </tr>
                 <tr>
@@ -183,6 +189,10 @@
                 <tr>
                     <td>Données de localisation</td>
                     <td>Non conservées (utilisées uniquement en temps réel)</td>
+                </tr>
+                <tr>
+                    <td>Jeton de notification (FCM)</td>
+                    <td>Jusqu'à désactivation des notifications ou suppression du compte</td>
                 </tr>
             </table>
         </div>
